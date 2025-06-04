@@ -1,0 +1,8 @@
+package net.hyper.immortalcultivation.item.realm1;
+
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
+
+public class SpiritStone1LQItem extends Item {
+    public SpiritStone1LQItem(){super((new Item.Properties()).stacksTo(64).fireResistant().rarity(Rarity.COMMON));}
+}
