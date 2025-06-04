@@ -1,7 +1,5 @@
 {
-  "itemGroup.immortal_cultivation": "Example Mod Tab",
+  "creativetab.immortal_cultivation.immortal_cultivation_items_tab": "Immortal Cultivation Items",
 
-  "block.immortal_cultivation.example_block": "Example Block",
-
-  "item.immortal_cultivation.low_grade_spirit_stone": "Low Grade Spirit Stone"
+  "item.immortal_cultivation.low_quality_spirit_stone": "Low Quality Spirit Stone"
 }
