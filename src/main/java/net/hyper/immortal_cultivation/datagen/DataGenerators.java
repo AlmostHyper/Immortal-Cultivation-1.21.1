@@ -27,6 +27,7 @@ public class DataGenerators {
 
         generator.addProvider(event.includeServer(), new LootTableProvider(packOutput, Collections.emptySet(),
                 List.of(new LootTableProvider.SubProviderEntry(ICModBlockLootTableProvider::new, LootContextParamSets.BLOCK)), lookupProvider));
+        generator.addProvider(event.includeServer(), new ICModRecipeProvider(packOutput, lookupProvider));
 
 
         BlockTagsProvider blockTagsProvider = new ICModBlockTagProvider(packOutput, lookupProvider, existingFileHelper);
@@ -35,6 +36,5 @@ public class DataGenerators {
 
         generator.addProvider(event.includeClient(), new ICModItemModelProvider(packOutput, existingFileHelper));
         generator.addProvider(event.includeClient(), new ICModBlockStateProvider(packOutput, existingFileHelper));
-
     }
 }
