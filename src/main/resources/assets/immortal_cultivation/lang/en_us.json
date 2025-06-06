@@ -1,5 +1,11 @@
 {
-  "creativetab.immortal_cultivation.immortal_cultivation_items_tab": "Immortal Cultivation Items",
+  "creativetab.immortal_cultivation.immortal_cultivation_blocks": "Immortal Cultivation Blocks",
+  "creativetab.immortal_cultivation.immortal_cultivation_items": "Immortal Cultivation Items",
+
+  "block.immortal_cultivation.low_quality_spirit_stone_block": "Low Quality Spirit Stone Block",
+  "block.immortal_cultivation.medium_quality_spirit_stone_block": "Medium Quality Spirit Stone Block",
+  "block.immortal_cultivation.high_quality_spirit_stone_block": "High Quality Spirit Stone Block",
+  "block.immortal_cultivation.top_quality_spirit_stone_block": "Top Quality Spirit Stone Block",
 
   "item.immortal_cultivation.low_quality_spirit_stone": "Low Quality Spirit Stone",
   "item.immortal_cultivation.medium_quality_spirit_stone": "Medium Quality Spirit Stone",

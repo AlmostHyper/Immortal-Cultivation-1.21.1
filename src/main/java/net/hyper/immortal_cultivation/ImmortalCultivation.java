@@ -1,5 +1,6 @@
 package net.hyper.immortal_cultivation;
 
+import net.hyper.immortal_cultivation.registry.ICModBlocks;
 import net.hyper.immortal_cultivation.registry.ICModTabs;
 import net.hyper.immortal_cultivation.registry.ICModItems;
 import org.slf4j.Logger;
@@ -28,8 +29,12 @@ public class ImmortalCultivation
     public ImmortalCultivation(IEventBus modEventBus, ModContainer modContainer) {
 
         NeoForge.EVENT_BUS.register(this);
+
         ICModTabs.REGISTRY.register(modEventBus);
+
+        ICModBlocks.REGISTRY.register(modEventBus);
         ICModItems.REGISTRY.register(modEventBus);
+
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, ImmortalCultivationConfig.SPEC);

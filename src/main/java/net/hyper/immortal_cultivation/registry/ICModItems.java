@@ -5,6 +5,7 @@ import net.hyper.immortal_cultivation.item.realm_1.SpiritStone2MQItem;
 import net.hyper.immortal_cultivation.item.realm_1.SpiritStone3HQItem;
 import net.hyper.immortal_cultivation.item.realm_1.SpiritStone4TQItem;
 import net.minecraft.world.item.Item;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -21,6 +22,10 @@ public class ICModItems {
         MEDIUM_QUALITY_SPIRIT_STONE = REGISTRY.register("medium_quality_spirit_stone", SpiritStone2MQItem::new);
         HIGH_QUALITY_SPIRIT_STONE = REGISTRY.register("high_quality_spirit_stone", SpiritStone3HQItem::new);
         TOP_QUALITY_SPIRIT_STONE = REGISTRY.register("top_quality_spirit_stone", SpiritStone4TQItem::new);
+    }
+
+    public static void register(IEventBus eventBus) {
+        REGISTRY.register(eventBus);
     }
 }
 
