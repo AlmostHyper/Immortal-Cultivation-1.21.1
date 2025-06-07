@@ -1,6 +1,7 @@
 package net.hyper.immortal_cultivation.datagen;
 
 import net.hyper.immortal_cultivation.registry.ICModBlocks;
+import net.hyper.immortal_cultivation.registry.ICModItems;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -27,9 +28,20 @@ public class ICModBlockLootTableProvider extends BlockLootSubProvider {
     @Override
     protected void generate() {
         dropSelf(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get());
+        dropSelf(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
         dropSelf(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get());
+        dropSelf(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
         dropSelf(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get());
+        dropSelf(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
         dropSelf(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get());
+        dropSelf(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
+
+        add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), ICModItems.LOW_QUALITY_SPIRIT_STONE.get()));
+        add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.LOW_QUALITY_SPIRIT_STONE.get()));
+        add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()));
+        add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()));
+        add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()));
+        add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.TOP_QUALITY_SPIRIT_STONE.get()));
 
     }
 

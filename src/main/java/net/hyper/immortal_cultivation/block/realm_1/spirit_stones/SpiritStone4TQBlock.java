@@ -1,4 +1,4 @@
-package net.hyper.immortal_cultivation.block.realm_1;
+package net.hyper.immortal_cultivation.block.realm_1.spirit_stones;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;
@@ -6,8 +6,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockState;
 
-public class SpiritStone4TQCompressedBlock extends Block {
-    public SpiritStone4TQCompressedBlock() {
+public class SpiritStone4TQBlock extends Block {
+    public SpiritStone4TQBlock() {
         super(Properties.of().sound(SoundType.AMETHYST).strength(1.0F,20.0F).requiresCorrectToolForDrops());
     }
 

@@ -16,9 +16,19 @@ public class ICModBlockStateProvider extends BlockStateProvider {
     @Override
     protected void registerStatesAndModels() {
         blockWithItem(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK);
+        blockWithItem(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
         blockWithItem(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK);
+        blockWithItem(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
         blockWithItem(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK);
+        blockWithItem(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
         blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK);
+        blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
 
     }
 

@@ -1,4 +1,4 @@
-package net.hyper.immortal_cultivation.item.realm_1;
+package net.hyper.immortal_cultivation.item.realm_1.spirit_stones;
 
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;

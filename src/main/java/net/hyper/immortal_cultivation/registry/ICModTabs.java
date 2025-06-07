@@ -18,12 +18,18 @@ public class ICModTabs {
             () -> CreativeModeTab.builder().icon(() -> new ItemStack(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get()))
                     .title(Component.translatable("creativetab.immortal_cultivation.immortal_cultivation_blocks"))
                     .displayItems((parameters, output) -> {
+                        output.accept(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK);
+                        output.accept(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
                         output.accept(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK);
                         output.accept(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
+                        output.accept(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK);
+                        output.accept(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
                         output.accept(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK);
                         output.accept(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
+                        output.accept(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
                         output.accept(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK);
                         output.accept(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
+                        output.accept(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
                         output.accept(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK);
                         output.accept(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
 

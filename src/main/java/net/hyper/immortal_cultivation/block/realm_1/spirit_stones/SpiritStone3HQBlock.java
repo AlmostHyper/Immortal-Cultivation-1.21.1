@@ -1,4 +1,4 @@
-package net.hyper.immortal_cultivation.block.realm_1;
+package net.hyper.immortal_cultivation.block.realm_1.spirit_stones;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.BlockGetter;

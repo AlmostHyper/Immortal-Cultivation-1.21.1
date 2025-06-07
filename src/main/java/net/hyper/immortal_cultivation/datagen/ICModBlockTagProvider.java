@@ -20,9 +20,18 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
     protected void addTags(HolderLookup.Provider provider) {
         tag(BlockTags.MINEABLE_WITH_PICKAXE)
             .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
             .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
             .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
-            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get());
-
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
     }
 }
