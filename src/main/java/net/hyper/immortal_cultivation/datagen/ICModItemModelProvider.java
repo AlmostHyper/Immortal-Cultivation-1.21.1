@@ -17,6 +17,17 @@ public class ICModItemModelProvider extends ItemModelProvider {
         basicItem(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get());
         basicItem(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get());
         basicItem(ICModItems.TOP_QUALITY_SPIRIT_STONE.get());
-
+        basicItem(ICModItems.EARTH_ASPECTED_ORE.get());
+        basicItem(ICModItems.EARTH_ASPECTED_INGOT.get());
+        basicItem(ICModItems.FIRE_ASPECTED_ORE.get());
+        basicItem(ICModItems.FIRE_ASPECTED_INGOT.get());
+        basicItem(ICModItems.METAL_ASPECTED_ORE.get());
+        basicItem(ICModItems.METAL_ASPECTED_INGOT.get());
+        basicItem(ICModItems.SKY_IRON_ORE.get());
+        basicItem(ICModItems.SKY_IRON_INGOT.get());
+        basicItem(ICModItems.WATER_ASPECTED_ORE.get());
+        basicItem(ICModItems.WATER_ASPECTED_INGOT.get());
+        basicItem(ICModItems.WOOD_ASPECTED_ORE.get());
+        basicItem(ICModItems.WOOD_ASPECTED_INGOT.get());
     }
 }

@@ -32,11 +32,18 @@ public class ICModTabs {
                         output.accept(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
                         output.accept(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK);
                         output.accept(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
+                        output.accept(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK);
+                        output.accept(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK);
+                        output.accept(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK);
+                        output.accept(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK);
+                        output.accept(ICModBlocks.SKY_IRON_ORE_BLOCK);
+                        output.accept(ICModBlocks.WATER_ASPECTED_ORE_BLOCK);
+                        output.accept(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
 
                     }).build());
 
     public static final Supplier<CreativeModeTab> IMMORTAL_CULTIVATION_ITEMS_TAB = REGISTRY.register("immortal_cultivation_items_tab",
-            () -> CreativeModeTab.builder().icon(() -> new ItemStack(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()))
+            () -> CreativeModeTab.builder().icon(() -> new ItemStack(ICModItems.TOP_QUALITY_SPIRIT_STONE.get()))
                     .withTabsBefore(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "immortal_cultivation_blocks_tab"))
                     .title(Component.translatable("creativetab.immortal_cultivation.immortal_cultivation_items"))
                     .displayItems((parameters, output) -> {
@@ -44,6 +51,18 @@ public class ICModTabs {
                         output.accept(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE);
                         output.accept(ICModItems.HIGH_QUALITY_SPIRIT_STONE);
                         output.accept(ICModItems.TOP_QUALITY_SPIRIT_STONE);
+                        output.accept(ICModItems.EARTH_ASPECTED_ORE);
+                        output.accept(ICModItems.EARTH_ASPECTED_INGOT);
+                        output.accept(ICModItems.FIRE_ASPECTED_ORE);
+                        output.accept(ICModItems.FIRE_ASPECTED_INGOT);
+                        output.accept(ICModItems.METAL_ASPECTED_ORE);
+                        output.accept(ICModItems.METAL_ASPECTED_INGOT);
+                        output.accept(ICModItems.SKY_IRON_ORE);
+                        output.accept(ICModItems.SKY_IRON_INGOT);
+                        output.accept(ICModItems.WATER_ASPECTED_ORE);
+                        output.accept(ICModItems.WATER_ASPECTED_INGOT);
+                        output.accept(ICModItems.WOOD_ASPECTED_ORE);
+                        output.accept(ICModItems.WOOD_ASPECTED_INGOT);
 
                     }).build());
 

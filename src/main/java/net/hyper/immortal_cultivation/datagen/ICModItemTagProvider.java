@@ -8,6 +8,7 @@ import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.ItemTagsProvider;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
+import net.neoforged.neoforge.common.Tags;
 import net.neoforged.neoforge.common.data.ExistingFileHelper;
 import org.jetbrains.annotations.Nullable;
 
@@ -27,5 +28,20 @@ public class ICModItemTagProvider extends ItemTagsProvider {
                 .add(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
                 .add(ICModItems.TOP_QUALITY_SPIRIT_STONE.get());
 
+        tag(Tags.Items.ORES)
+                .add(ICModItems.EARTH_ASPECTED_ORE.get())
+                .add(ICModItems.FIRE_ASPECTED_ORE.get())
+                .add(ICModItems.METAL_ASPECTED_ORE.get())
+                .add(ICModItems.SKY_IRON_ORE.get())
+                .add(ICModItems.WATER_ASPECTED_ORE.get())
+                .add(ICModItems.WOOD_ASPECTED_ORE.get());
+
+        tag(Tags.Items.INGOTS)
+                .add(ICModItems.EARTH_ASPECTED_INGOT.get())
+                .add(ICModItems.FIRE_ASPECTED_INGOT.get())
+                .add(ICModItems.METAL_ASPECTED_INGOT.get())
+                .add(ICModItems.SKY_IRON_INGOT.get())
+                .add(ICModItems.WATER_ASPECTED_INGOT.get())
+                .add(ICModItems.WOOD_ASPECTED_INGOT.get());
     }
 }

@@ -29,18 +29,17 @@ public class ICModBlockStateProvider extends BlockStateProvider {
         blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK);
         blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
         blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
+        blockWithItem(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK);
+        blockWithItem(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK);
+        blockWithItem(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.SKY_IRON_ORE_BLOCK);
+        blockWithItem(ICModBlocks.WATER_ASPECTED_ORE_BLOCK);
+        blockWithItem(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
 
     }
 
     private void blockWithItem(DeferredBlock<?> deferredBlock) {
         simpleBlockWithItem(deferredBlock.get(), cubeAll(deferredBlock.get()));
-    }
-
-    private void blockItem(DeferredBlock<?> deferredBlock) {
-        simpleBlockItem(deferredBlock.get(), new ModelFile.UncheckedModelFile("immortal_cultivation:block/" + deferredBlock.getId().getPath()));
-    }
-
-    private void blockItem(DeferredBlock<?> deferredBlock, String appendix) {
-        simpleBlockItem(deferredBlock.get(), new ModelFile.UncheckedModelFile("immortal_cultivation:block/" + deferredBlock.getId().getPath() + appendix));
     }
 }

@@ -1,14 +1,11 @@
 package net.hyper.immortal_cultivation.registry;
 
-import net.hyper.immortal_cultivation.block.realm_1.spirit_stones.*;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.Item;
+import net.hyper.immortal_cultivation.block.metals.*;
+import net.hyper.immortal_cultivation.block.spirit_stones.*;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredBlock;
 import net.neoforged.neoforge.registries.DeferredRegister;
-
-import java.util.function.Supplier;
 
 public class ICModBlocks {
     public static final DeferredRegister.Blocks REGISTRY = DeferredRegister.createBlocks("immortal_cultivation");
@@ -27,6 +24,13 @@ public class ICModBlocks {
     public static final DeferredBlock<Block> TOP_QUALITY_SPIRIT_STONE_BLOCK;
     public static final DeferredBlock<Block> TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK;
     public static final DeferredBlock<Block> TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK;
+    public static final DeferredBlock<Block> EARTH_ASPECTED_ORE_BLOCK;
+    public static final DeferredBlock<Block> FIRE_ASPECTED_ORE_BLOCK;
+    public static final DeferredBlock<Block> FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK;
+    public static final DeferredBlock<Block> METAL_ASPECTED_DEEPSLATE_ORE_BLOCK;
+    public static final DeferredBlock<Block> SKY_IRON_ORE_BLOCK;
+    public static final DeferredBlock<Block> WATER_ASPECTED_ORE_BLOCK;
+    public static final DeferredBlock<Block> WATER_ASPECTED_DEEPSLATE_ORE_BLOCK;
 
 
     static {
@@ -44,17 +48,13 @@ public class ICModBlocks {
         TOP_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("top_quality_spirit_stone_block", SpiritStone4TQBlock::new);
         TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("top_quality_spirit_stone_deepslate_ore_block", SpiritStone4TQDeepslateOreBlock::new);
         TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("top_quality_spirit_stone_compressed_block", SpiritStone4TQCompressedBlock::new);
-
-    }
-
-    private static <T extends net.minecraft.world.level.block.Block> DeferredBlock<T> registerBlock(String name, Supplier<T> block) {
-        DeferredBlock<T> toReturn = REGISTRY.register(name, block);
-        registerBlockItem(name, toReturn);
-        return toReturn;
-    }
-
-    private static <T extends Block> void registerBlockItem(String name, DeferredBlock<T> block) {
-        ICModItems.REGISTRY.register(name, () -> new BlockItem(block.get(), new Item.Properties()));
+        EARTH_ASPECTED_ORE_BLOCK = REGISTRY.register("earth_aspected_ore_block", EarthAspectedOreBlock::new);
+        FIRE_ASPECTED_ORE_BLOCK = REGISTRY.register("fire_aspected_ore_block", FireAspectedOreBlock::new);
+        FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("fire_aspected_deepslate_ore_block", FireAspectedDeepslateOreBlock::new);
+        METAL_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("metal_aspected_deepslate_ore_block", MetalAspectedDeepslateOreBlock::new);
+        SKY_IRON_ORE_BLOCK = REGISTRY.register("sky_iron_ore_block", SkyIronOreBlock::new);
+        WATER_ASPECTED_ORE_BLOCK = REGISTRY.register("water_aspected_ore_block", WaterAspectedOreBlock::new);
+        WATER_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("water_aspected_deepslate_ore_block", WaterAspectedDeepslateOreBlock::new);
     }
 
     public static void register(IEventBus eventBus) {

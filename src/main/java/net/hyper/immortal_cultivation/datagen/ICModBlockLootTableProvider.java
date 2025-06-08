@@ -34,7 +34,6 @@ public class ICModBlockLootTableProvider extends BlockLootSubProvider {
         dropSelf(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get());
         dropSelf(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
         dropSelf(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get());
-        dropSelf(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
 
         add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), ICModItems.LOW_QUALITY_SPIRIT_STONE.get()));
         add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.LOW_QUALITY_SPIRIT_STONE.get()));
@@ -42,15 +41,14 @@ public class ICModBlockLootTableProvider extends BlockLootSubProvider {
         add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()));
         add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()));
         add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.TOP_QUALITY_SPIRIT_STONE.get()));
+        add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get(), ICModItems.EARTH_ASPECTED_ORE.get()));
+        add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get(), ICModItems.FIRE_ASPECTED_ORE.get()));
+        add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.FIRE_ASPECTED_ORE.get()));
+        add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.METAL_ASPECTED_ORE.get()));
+        add(ICModBlocks.SKY_IRON_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.SKY_IRON_ORE_BLOCK.get(), ICModItems.SKY_IRON_ORE.get()));
+        add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get(), ICModItems.WATER_ASPECTED_ORE.get()));
+        add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.WATER_ASPECTED_ORE.get()));
 
-    }
-
-    protected LootTable.Builder createMultipleOreDrops(Block pBlock, Item item, float minDrops, float maxDrops) {
-        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
-        return this.createSilkTouchDispatchTable(pBlock,
-                this.applyExplosionDecay(pBlock, LootItem.lootTableItem(item)
-                        .apply(SetItemCountFunction.setCount(UniformGenerator.between(minDrops, maxDrops)))
-                        .apply(ApplyBonusCount.addOreBonusCount(registrylookup.getOrThrow(Enchantments.FORTUNE)))));
     }
 
     @Override
