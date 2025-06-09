@@ -15,6 +15,7 @@ public class ICModBlockStateProvider extends BlockStateProvider {
 
     @Override
     protected void registerStatesAndModels() {
+        // Spirit Stones
         blockWithItem(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK);
         blockWithItem(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK);
         blockWithItem(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
@@ -29,14 +30,17 @@ public class ICModBlockStateProvider extends BlockStateProvider {
         blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK);
         blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
         blockWithItem(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
+
+        // Ores
         blockWithItem(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK);
         blockWithItem(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK);
+        blockWithItem(ICModBlocks.WATER_ASPECTED_ORE_BLOCK);
+        blockWithItem(ICModBlocks.SKY_IRON_ORE_BLOCK);
+
+        // Deepslate Ores
         blockWithItem(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK);
         blockWithItem(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK);
-        blockWithItem(ICModBlocks.SKY_IRON_ORE_BLOCK);
-        blockWithItem(ICModBlocks.WATER_ASPECTED_ORE_BLOCK);
         blockWithItem(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
-
     }
 
     private void blockWithItem(DeferredBlock<?> deferredBlock) {

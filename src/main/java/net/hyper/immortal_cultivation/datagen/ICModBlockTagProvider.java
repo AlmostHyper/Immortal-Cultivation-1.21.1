@@ -19,6 +19,7 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
     @Override
     protected void addTags(HolderLookup.Provider provider) {
         tag(BlockTags.MINEABLE_WITH_PICKAXE)
+            // Spirit Stones
             .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
             .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
             .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
@@ -33,113 +34,142 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
             .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
             .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+
+            // Ores
             .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
-            .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
             .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+
+            // Deepslate Ores
+            .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_WOODEN_TOOL)
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
-                .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+            // Spirit Stones
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+
+            // Ores
+            .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
+
+            // Deepslate Ores
+            .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_STONE_TOOL)
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
-                .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+            // Spirit Stones
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+
+            // Ores
+            .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
+
+            // Deepslate Ores
+            .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_GOLD_TOOL)
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
-                .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+            // Spirit Stones
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+
+            // Ores
+            .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
+
+            // Deepslate Ores
+            .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_IRON_TOOL)
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
-                .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
-                .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+            // Spirit Stones
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+
+            // Ores
+            .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
+
+            // Deepslate Ores
+            .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_DIAMOND_TOOL)
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
+            // Spirit Stones
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+
+            // Ores
+            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_NETHERITE_TOOL)
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-                .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
+            // Spirit Stones
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
     }
 }
