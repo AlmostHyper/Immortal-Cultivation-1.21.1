@@ -6,6 +6,7 @@ import net.hyper.immortal_cultivation.util.ICModTags;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
 import net.minecraft.data.tags.ItemTagsProvider;
+import net.minecraft.tags.ItemTags;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.neoforged.neoforge.common.Tags;
@@ -44,7 +45,7 @@ public class ICModItemTagProvider extends ItemTagsProvider {
             .add(ICModItems.WATER_ASPECTED_INGOT.get())
             .add(ICModItems.WOOD_ASPECTED_INGOT.get());
 
-        tag(Tags.Items.MELEE_WEAPON_TOOLS)
+        tag(ItemTags.SWORDS)
             .add(ICModItems.EARTH_ASPECTED_SWORD.get())
             .add(ICModItems.FIRE_ASPECTED_SWORD.get())
             .add(ICModItems.METAL_ASPECTED_SWORD.get())
@@ -52,30 +53,36 @@ public class ICModItemTagProvider extends ItemTagsProvider {
             .add(ICModItems.WOOD_ASPECTED_SWORD.get())
             .add(ICModItems.SKY_IRON_SWORD.get());
 
-        tag(Tags.Items.TOOLS)
+        tag(ItemTags.PICKAXES)
             .add(ICModItems.EARTH_ASPECTED_PICKAXE.get())
-            .add(ICModItems.EARTH_ASPECTED_AXE.get())
-            .add(ICModItems.EARTH_ASPECTED_SHOVEL.get())
-            .add(ICModItems.EARTH_ASPECTED_HOE.get())
             .add(ICModItems.FIRE_ASPECTED_PICKAXE.get())
-            .add(ICModItems.FIRE_ASPECTED_AXE.get())
-            .add(ICModItems.FIRE_ASPECTED_SHOVEL.get())
-            .add(ICModItems.FIRE_ASPECTED_HOE.get())
             .add(ICModItems.METAL_ASPECTED_PICKAXE.get())
-            .add(ICModItems.METAL_ASPECTED_AXE.get())
-            .add(ICModItems.METAL_ASPECTED_SHOVEL.get())
-            .add(ICModItems.METAL_ASPECTED_HOE.get())
             .add(ICModItems.WATER_ASPECTED_PICKAXE.get())
-            .add(ICModItems.WATER_ASPECTED_AXE.get())
-            .add(ICModItems.WATER_ASPECTED_SHOVEL.get())
-            .add(ICModItems.WATER_ASPECTED_HOE.get())
             .add(ICModItems.WOOD_ASPECTED_PICKAXE.get())
+            .add(ICModItems.SKY_IRON_PICKAXE.get());
+
+        tag(ItemTags.AXES)
+            .add(ICModItems.EARTH_ASPECTED_AXE.get())
+            .add(ICModItems.FIRE_ASPECTED_AXE.get())
+            .add(ICModItems.METAL_ASPECTED_AXE.get())
+            .add(ICModItems.WATER_ASPECTED_AXE.get())
             .add(ICModItems.WOOD_ASPECTED_AXE.get())
+            .add(ICModItems.SKY_IRON_AXE.get());
+
+        tag(ItemTags.SHOVELS)
+            .add(ICModItems.EARTH_ASPECTED_SHOVEL.get())
+            .add(ICModItems.FIRE_ASPECTED_SHOVEL.get())
+            .add(ICModItems.METAL_ASPECTED_SHOVEL.get())
+            .add(ICModItems.WATER_ASPECTED_SHOVEL.get())
             .add(ICModItems.WOOD_ASPECTED_SHOVEL.get())
+            .add(ICModItems.SKY_IRON_SHOVEL.get());
+
+        tag(ItemTags.HOES)
+            .add(ICModItems.EARTH_ASPECTED_HOE.get())
+            .add(ICModItems.FIRE_ASPECTED_HOE.get())
+            .add(ICModItems.METAL_ASPECTED_HOE.get())
+            .add(ICModItems.WATER_ASPECTED_HOE.get())
             .add(ICModItems.WOOD_ASPECTED_HOE.get())
-            .add(ICModItems.SKY_IRON_PICKAXE.get())
-            .add(ICModItems.SKY_IRON_AXE.get())
-            .add(ICModItems.SKY_IRON_SHOVEL.get())
             .add(ICModItems.SKY_IRON_HOE.get());
     }
 }

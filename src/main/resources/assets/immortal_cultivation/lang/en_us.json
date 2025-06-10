@@ -1,6 +1,8 @@
 {
   "creativetab.immortal_cultivation.immortal_cultivation_blocks": "Immortal Cultivation Blocks",
   "creativetab.immortal_cultivation.immortal_cultivation_items": "Immortal Cultivation Items",
+  "creativetab.immortal_cultivation.immortal_cultivation_tools": "Immortal Cultivation Tools",
+  "creativetab.immortal_cultivation.immortal_cultivation_weapons": "Immortal Cultivation Weapons",
 
   "block.immortal_cultivation.low_quality_spirit_stone_block": "Low Quality Spirit Stone Block",
   "block.immortal_cultivation.low_quality_spirit_stone_ore_block": "Low Quality Spirit Stone Ore",
@@ -39,5 +41,40 @@
   "item.immortal_cultivation.water_aspected_ore": "Raw Water-Aspected Ore",
   "item.immortal_cultivation.water_aspected_ingot": "Water-Aspected Ingot",
   "item.immortal_cultivation.wood_aspected_ore": "Raw Wood-Aspected Ore",
-  "item.immortal_cultivation.wood_aspected_ingot": "Wood-Aspected Ingot"
+  "item.immortal_cultivation.wood_aspected_ingot": "Wood-Aspected Ingot",
+
+  "item.immortal_cultivation.earth_aspected_sword": "Earth-Aspected Sword",
+  "item.immortal_cultivation.fire_aspected_sword": "Fire-Aspected Sword",
+  "item.immortal_cultivation.metal_aspected_sword": "Metal-Aspected Sword",
+  "item.immortal_cultivation.water_aspected_sword": "Water-Aspected Sword",
+  "item.immortal_cultivation.wood_aspected_sword": "Wood-Aspected Sword",
+  "item.immortal_cultivation.sky_iron_sword": "Sky Iron Sword",
+
+  "item.immortal_cultivation.earth_aspected_pickaxe": "Earth-Aspected Pickaxe",
+  "item.immortal_cultivation.fire_aspected_pickaxe": "Fire-Aspected Pickaxe",
+  "item.immortal_cultivation.metal_aspected_pickaxe": "Metal-Aspected Pickaxe",
+  "item.immortal_cultivation.water_aspected_pickaxe": "Water-Aspected Pickaxe",
+  "item.immortal_cultivation.wood_aspected_pickaxe": "Wood-Aspected Pickaxe",
+  "item.immortal_cultivation.sky_iron_pickaxe": "Sky Iron Pickaxe",
+
+  "item.immortal_cultivation.earth_aspected_axe": "Earth-Aspected Axe",
+  "item.immortal_cultivation.fire_aspected_axe": "Fire-Aspected Axe",
+  "item.immortal_cultivation.metal_aspected_axe": "Metal-Aspected Axe",
+  "item.immortal_cultivation.water_aspected_axe": "Water-Aspected Axe",
+  "item.immortal_cultivation.wood_aspected_axe": "Wood-Aspected Axe",
+  "item.immortal_cultivation.sky_iron_axe": "Sky Iron Axe",
+
+  "item.immortal_cultivation.earth_aspected_shovel": "Earth-Aspected Shovel",
+  "item.immortal_cultivation.fire_aspected_shovel": "Fire-Aspected Shovel",
+  "item.immortal_cultivation.metal_aspected_shovel": "Metal-Aspected Shovel",
+  "item.immortal_cultivation.water_aspected_shovel": "Water-Aspected Shovel",
+  "item.immortal_cultivation.wood_aspected_shovel": "Wood-Aspected Shovel",
+  "item.immortal_cultivation.sky_iron_shovel": "Sky Iron Shovel",
+
+  "item.immortal_cultivation.earth_aspected_hoe": "Earth-Aspected Hoe",
+  "item.immortal_cultivation.fire_aspected_hoe": "Fire-Aspected Hoe",
+  "item.immortal_cultivation.metal_aspected_hoe": "Metal-Aspected Hoe",
+  "item.immortal_cultivation.water_aspected_hoe": "Water-Aspected Hoe",
+  "item.immortal_cultivation.wood_aspected_hoe": "Wood-Aspected Hoe",
+  "item.immortal_cultivation.sky_iron_hoe": "Sky Iron Hoe"
 }

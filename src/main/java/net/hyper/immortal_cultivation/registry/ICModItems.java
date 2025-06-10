@@ -140,7 +140,7 @@ public class ICModItems {
         TOP_QUALITY_SPIRIT_STONE = REGISTRY.register("top_quality_spirit_stone", () -> R1SpiritStoneItems.TOP_QUALITY_SPIRIT_STONE);
 
         // Ores
-        EARTH_ASPECTED_ORE = REGISTRY.register("earth_aspected_ore", () -> EarthAspectedItems.EARTH_ASPECTED_ORE);
+        EARTH_ASPECTED_ORE = REGISTRY.register("earth_aspected_ore", EarthAspectedItems.EARTH_ASPECTED_ORE());
         FIRE_ASPECTED_ORE = REGISTRY.register("fire_aspected_ore", () -> FireAspectedItems.FIRE_ASPECTED_ORE);
         METAL_ASPECTED_ORE = REGISTRY.register("metal_aspected_ore", () -> MetalAspectedItems.METAL_ASPECTED_ORE);
         WATER_ASPECTED_ORE = REGISTRY.register("water_aspected_ore", () -> WaterAspectedItems.WATER_ASPECTED_ORE);
@@ -148,7 +148,7 @@ public class ICModItems {
         SKY_IRON_ORE = REGISTRY.register("sky_iron_ore", () -> SkyIronItems.SKY_IRON_ORE);
 
         // Ingots
-        EARTH_ASPECTED_INGOT = REGISTRY.register("earth_aspected_ingot", () -> EarthAspectedItems.EARTH_ASPECTED_INGOT);
+        EARTH_ASPECTED_INGOT = REGISTRY.register("earth_aspected_ingot", EarthAspectedItems.EARTH_ASPECTED_INGOT());
         FIRE_ASPECTED_INGOT = REGISTRY.register("fire_aspected_ingot", () -> FireAspectedItems.FIRE_ASPECTED_INGOT);
         METAL_ASPECTED_INGOT = REGISTRY.register("metal_aspected_ingot", () -> MetalAspectedItems.METAL_ASPECTED_INGOT);
         WATER_ASPECTED_INGOT = REGISTRY.register("water_aspected_ingot", () -> WaterAspectedItems.WATER_ASPECTED_INGOT);
@@ -156,7 +156,7 @@ public class ICModItems {
         SKY_IRON_INGOT = REGISTRY.register("sky_iron_ingot", () -> SkyIronItems.SKY_IRON_INGOT);
 
         // Swords
-        EARTH_ASPECTED_SWORD = REGISTRY.register("earth_aspected_sword", () -> (SwordItem) EarthAspectedItems.EARTH_ASPECTED_SWORD);
+        EARTH_ASPECTED_SWORD = REGISTRY.register("earth_aspected_sword", EarthAspectedItems.EARTH_ASPECTED_SWORD());
         FIRE_ASPECTED_SWORD = REGISTRY.register("fire_aspected_sword", () -> (SwordItem) FireAspectedItems.FIRE_ASPECTED_SWORD);
         METAL_ASPECTED_SWORD = REGISTRY.register("metal_aspected_sword", () -> (SwordItem) MetalAspectedItems.METAL_ASPECTED_SWORD);
         SKY_IRON_SWORD = REGISTRY.register("sky_iron_sword", () -> (SwordItem) SkyIronItems.SKY_IRON_SWORD);
@@ -164,7 +164,7 @@ public class ICModItems {
         WOOD_ASPECTED_SWORD = REGISTRY.register("wood_aspected_sword", () -> (SwordItem) WoodAspectedItems.WOOD_ASPECTED_SWORD);
 
         // Pickaxes
-        EARTH_ASPECTED_PICKAXE = REGISTRY.register("earth_aspected_pickaxe", () -> (PickaxeItem) EarthAspectedItems.EARTH_ASPECTED_PICKAXE);
+        EARTH_ASPECTED_PICKAXE = REGISTRY.register("earth_aspected_pickaxe", EarthAspectedItems.EARTH_ASPECTED_PICKAXE());
         FIRE_ASPECTED_PICKAXE = REGISTRY.register("fire_aspected_pickaxe", () -> (PickaxeItem) FireAspectedItems.FIRE_ASPECTED_PICKAXE);
         METAL_ASPECTED_PICKAXE = REGISTRY.register("metal_aspected_pickaxe", () -> (PickaxeItem) MetalAspectedItems.METAL_ASPECTED_PICKAXE);
         SKY_IRON_PICKAXE = REGISTRY.register("sky_iron_pickaxe", () -> (PickaxeItem) SkyIronItems.SKY_IRON_PICKAXE);
@@ -172,7 +172,7 @@ public class ICModItems {
         WOOD_ASPECTED_PICKAXE = REGISTRY.register("wood_aspected_pickaxe", () -> (PickaxeItem) WoodAspectedItems.WOOD_ASPECTED_PICKAXE);
 
         // Axes
-        EARTH_ASPECTED_AXE = REGISTRY.register("earth_aspected_axe", () -> (AxeItem) EarthAspectedItems.EARTH_ASPECTED_AXE);
+        EARTH_ASPECTED_AXE = REGISTRY.register("earth_aspected_axe", EarthAspectedItems.EARTH_ASPECTED_AXE());
         FIRE_ASPECTED_AXE = REGISTRY.register("fire_aspected_axe", () -> (AxeItem) FireAspectedItems.FIRE_ASPECTED_AXE);
         METAL_ASPECTED_AXE = REGISTRY.register("metal_aspected_axe", () -> (AxeItem) MetalAspectedItems.METAL_ASPECTED_AXE);
         SKY_IRON_AXE = REGISTRY.register("sky_iron_axe", () -> (AxeItem) SkyIronItems.SKY_IRON_AXE);
@@ -180,7 +180,7 @@ public class ICModItems {
         WOOD_ASPECTED_AXE = REGISTRY.register("wood_aspected_axe", () -> (AxeItem) WoodAspectedItems.WOOD_ASPECTED_AXE);
 
         // Shovels
-        EARTH_ASPECTED_SHOVEL = REGISTRY.register("earth_aspected_shovel", () -> (ShovelItem) EarthAspectedItems.EARTH_ASPECTED_SHOVEL);
+        EARTH_ASPECTED_SHOVEL = REGISTRY.register("earth_aspected_shovel", EarthAspectedItems.EARTH_ASPECTED_SHOVEL());
         FIRE_ASPECTED_SHOVEL = REGISTRY.register("fire_aspected_shovel", () -> (ShovelItem) FireAspectedItems.FIRE_ASPECTED_SHOVEL);
         METAL_ASPECTED_SHOVEL = REGISTRY.register("metal_aspected_shovel", () -> (ShovelItem) MetalAspectedItems.METAL_ASPECTED_SHOVEL);
         SKY_IRON_SHOVEL = REGISTRY.register("sky_iron_shovel", () -> (ShovelItem) SkyIronItems.SKY_IRON_SHOVEL);
@@ -188,7 +188,7 @@ public class ICModItems {
         WOOD_ASPECTED_SHOVEL = REGISTRY.register("wood_aspected_shovel", () -> (ShovelItem) WoodAspectedItems.WOOD_ASPECTED_SHOVEL);
 
         // Hoes
-        EARTH_ASPECTED_HOE = REGISTRY.register("earth_aspected_hoe", () -> (HoeItem) EarthAspectedItems.EARTH_ASPECTED_HOE);
+        EARTH_ASPECTED_HOE = REGISTRY.register("earth_aspected_hoe", EarthAspectedItems.EARTH_ASPECTED_HOE());
         FIRE_ASPECTED_HOE = REGISTRY.register("fire_aspected_hoe", () -> (HoeItem) FireAspectedItems.FIRE_ASPECTED_HOE);
         METAL_ASPECTED_HOE = REGISTRY.register("metal_aspected_hoe", () -> (HoeItem) MetalAspectedItems.METAL_ASPECTED_HOE);
         SKY_IRON_HOE = REGISTRY.register("sky_iron_hoe", () -> (HoeItem) SkyIronItems.SKY_IRON_HOE);

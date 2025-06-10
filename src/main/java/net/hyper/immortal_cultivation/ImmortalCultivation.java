@@ -1,5 +1,6 @@
 package net.hyper.immortal_cultivation;
 
+import net.hyper.immortal_cultivation.component.ICModDataComponents;
 import net.hyper.immortal_cultivation.registry.ICModBlocks;
 import net.hyper.immortal_cultivation.registry.ICModTabs;
 import net.hyper.immortal_cultivation.registry.ICModItems;

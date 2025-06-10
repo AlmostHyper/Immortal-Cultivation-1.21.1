@@ -40,31 +40,31 @@ public class ICModBlocks {
     static {
 
         // Spirit Stones
-        LOW_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("low_quality_spirit_stone_block", () -> R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK);
-        LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("low_quality_spirit_stone_compressed_block", () -> R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
-        MEDIUM_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("medium_quality_spirit_stone_block", () -> R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK);
-        MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("medium_quality_spirit_stone_compressed_block", () -> R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
-        HIGH_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("high_quality_spirit_stone_block", () -> R1SpiritStoneBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK);
-        HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("high_quality_spirit_stone_compressed_block", () -> R1SpiritStoneBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
-        TOP_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("top_quality_spirit_stone_block", () -> R1SpiritStoneBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK);
-        TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("top_quality_spirit_stone_compressed_block", () -> R1SpiritStoneBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
+        LOW_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("low_quality_spirit_stone_block", R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK());
+        LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("low_quality_spirit_stone_compressed_block", R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK());
+        MEDIUM_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("medium_quality_spirit_stone_block", R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK());
+        MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("medium_quality_spirit_stone_compressed_block", R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK());
+        HIGH_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("high_quality_spirit_stone_block", R1SpiritStoneBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK());
+        HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("high_quality_spirit_stone_compressed_block", R1SpiritStoneBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK());
+        TOP_QUALITY_SPIRIT_STONE_BLOCK = REGISTRY.register("top_quality_spirit_stone_block", R1SpiritStoneBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK());
+        TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = REGISTRY.register("top_quality_spirit_stone_compressed_block", R1SpiritStoneBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK());
 
         // Ores
-        LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK = REGISTRY.register("low_quality_spirit_stone_ore_block", () -> R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK);
-        MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK = REGISTRY.register("medium_quality_spirit_stone_ore_block", () -> R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK);
-        EARTH_ASPECTED_ORE_BLOCK = REGISTRY.register("earth_aspected_ore_block", () -> EarthAspectedBlocks.EARTH_ASPECTED_ORE_BLOCK);
-        FIRE_ASPECTED_ORE_BLOCK = REGISTRY.register("fire_aspected_ore_block", () -> FireAspectedBlocks.FIRE_ASPECTED_ORE_BLOCK);
-        WATER_ASPECTED_ORE_BLOCK = REGISTRY.register("water_aspected_ore_block", () -> WaterAspectedBlocks.WATER_ASPECTED_ORE_BLOCK);
-        SKY_IRON_ORE_BLOCK = REGISTRY.register("sky_iron_ore_block", () -> SkyIronBlocks.SKY_IRON_ORE_BLOCK);
+        LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK = REGISTRY.register("low_quality_spirit_stone_ore_block", R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK());
+        MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK = REGISTRY.register("medium_quality_spirit_stone_ore_block", R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK());
+        EARTH_ASPECTED_ORE_BLOCK = REGISTRY.register("earth_aspected_ore_block", EarthAspectedBlocks.EARTH_ASPECTED_ORE_BLOCK());
+        FIRE_ASPECTED_ORE_BLOCK = REGISTRY.register("fire_aspected_ore_block", FireAspectedBlocks.FIRE_ASPECTED_ORE_BLOCK());
+        WATER_ASPECTED_ORE_BLOCK = REGISTRY.register("water_aspected_ore_block", WaterAspectedBlocks.WATER_ASPECTED_ORE_BLOCK());
+        SKY_IRON_ORE_BLOCK = REGISTRY.register("sky_iron_ore_block", WoodAspectedBlocks.WOOD_ASPECTED_ORE_BLOCK());
 
         // Deepslate Ores
-        LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("low_quality_spirit_stone_deepslate_ore_block", () -> R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_BLOCK);
-        MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("medium_quality_spirit_stone_deepslate_ore_block", () -> R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_BLOCK);
-        HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("high_quality_spirit_stone_deepslate_ore_block", () -> R1SpiritStoneBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_BLOCK);
-        TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("top_quality_spirit_stone_deepslate_ore_block", () -> R1SpiritStoneBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_BLOCK);
-        FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("fire_aspected_deepslate_ore_block", () -> FireAspectedBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK);
-        METAL_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("metal_aspected_deepslate_ore_block", () -> MetalAspectedBlocks.METAL_ASPECTED_ORE_BLOCK);
-        WATER_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("water_aspected_deepslate_ore_block", () -> WaterAspectedBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
+        LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("low_quality_spirit_stone_deepslate_ore_block", R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK());
+        MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("medium_quality_spirit_stone_deepslate_ore_block", R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK());
+        HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("high_quality_spirit_stone_deepslate_ore_block", R1SpiritStoneBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK());
+        TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = REGISTRY.register("top_quality_spirit_stone_deepslate_ore_block", R1SpiritStoneBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK());
+        FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("fire_aspected_deepslate_ore_block", FireAspectedBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK());
+        METAL_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("metal_aspected_deepslate_ore_block", MetalAspectedBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK());
+        WATER_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("water_aspected_deepslate_ore_block", WaterAspectedBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK());
 
     }
 
