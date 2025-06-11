@@ -1,12 +1,14 @@
 package net.hyper.immortal_cultivation.cultivation.realms;
 
+import net.minecraft.world.entity.ai.attributes.Attribute;
 import net.minecraft.world.entity.player.Player;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class CultivationRealm {
+public abstract class CultivationRealm  {
+
     // Base Values
     public abstract double getBaseHealth();
     public abstract double getBaseAttackDamage();

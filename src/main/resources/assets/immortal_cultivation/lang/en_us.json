@@ -3,6 +3,7 @@
   "creativetab.immortal_cultivation.immortal_cultivation_items": "Immortal Cultivation Items",
   "creativetab.immortal_cultivation.immortal_cultivation_tools": "Immortal Cultivation Tools",
   "creativetab.immortal_cultivation.immortal_cultivation_weapons": "Immortal Cultivation Weapons",
+  "creativetab.immortal_cultivation.immortal_cultivation_armors": "Immortal Cultivation Armors",
 
   "block.immortal_cultivation.low_quality_spirit_stone_block": "Low Quality Spirit Stone Block",
   "block.immortal_cultivation.low_quality_spirit_stone_ore_block": "Low Quality Spirit Stone Ore",
@@ -76,5 +77,33 @@
   "item.immortal_cultivation.metal_aspected_hoe": "Metal-Aspected Hoe",
   "item.immortal_cultivation.water_aspected_hoe": "Water-Aspected Hoe",
   "item.immortal_cultivation.wood_aspected_hoe": "Wood-Aspected Hoe",
-  "item.immortal_cultivation.sky_iron_hoe": "Sky Iron Hoe"
+  "item.immortal_cultivation.sky_iron_hoe": "Sky Iron Hoe",
+
+  "item.immortal_cultivation.earth_aspected_helmet": "Earth-Aspected Helmet",
+  "item.immortal_cultivation.fire_aspected_helmet": "Fire-Aspected Helmet",
+  "item.immortal_cultivation.metal_aspected_helmet": "Metal-Aspected Helmet",
+  "item.immortal_cultivation.water_aspected_helmet": "Water-Aspected Helmet",
+  "item.immortal_cultivation.wood_aspected_helmet": "Wood-Aspected Helmet",
+  "item.immortal_cultivation.sky_iron_helmet": "Sky Iron Helmet",
+
+  "item.immortal_cultivation.earth_aspected_chestplate": "Earth-Aspected Chestplate",
+  "item.immortal_cultivation.fire_aspected_chestplate": "Fire-Aspected Chestplate",
+  "item.immortal_cultivation.metal_aspected_chestplate": "Metal-Aspected Chestplate",
+  "item.immortal_cultivation.water_aspected_chestplate": "Water-Aspected Chestplate",
+  "item.immortal_cultivation.wood_aspected_chestplate": "Wood-Aspected Chestplate",
+  "item.immortal_cultivation.sky_iron_chestplate": "Sky Iron Chestplate",
+
+  "item.immortal_cultivation.earth_aspected_leggings": "Earth-Aspected Leggings",
+  "item.immortal_cultivation.fire_aspected_leggings": "Fire-Aspected Leggings",
+  "item.immortal_cultivation.metal_aspected_leggings": "Metal-Aspected Leggings",
+  "item.immortal_cultivation.water_aspected_leggings": "Water-Aspected Leggings",
+  "item.immortal_cultivation.wood_aspected_leggings": "Wood-Aspected Leggings",
+  "item.immortal_cultivation.sky_iron_leggings": "Sky Iron Leggings",
+
+  "item.immortal_cultivation.earth_aspected_boots": "Earth-Aspected Boots",
+  "item.immortal_cultivation.fire_aspected_boots": "Fire-Aspected Boots",
+  "item.immortal_cultivation.metal_aspected_boots": "Metal-Aspected Boots",
+  "item.immortal_cultivation.water_aspected_boots": "Water-Aspected Boots",
+  "item.immortal_cultivation.wood_aspected_boots": "Wood-Aspected Boots",
+  "item.immortal_cultivation.sky_iron_boots": "Sky Iron Boots"
 }

@@ -1,4 +1,11 @@
 package net.hyper.immortal_cultivation.cultivation;
 
-public class CultivationQi {
+import net.minecraft.world.entity.ai.attributes.Attribute;
+import net.minecraft.world.entity.ai.attributes.RangedAttribute;
+
+public class CultivationQi extends Attribute {
+
+    protected CultivationQi(String descriptionId, double defaultValue) {
+        super(descriptionId, defaultValue);
+    }
 }

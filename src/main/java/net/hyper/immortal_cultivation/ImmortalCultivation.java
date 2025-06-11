@@ -1,10 +1,7 @@
 package net.hyper.immortal_cultivation;
 
 import net.hyper.immortal_cultivation.component.ICModDataComponents;
-import net.hyper.immortal_cultivation.registry.ICModArmorMaterials;
-import net.hyper.immortal_cultivation.registry.ICModBlocks;
-import net.hyper.immortal_cultivation.registry.ICModTabs;
-import net.hyper.immortal_cultivation.registry.ICModItems;
+import net.hyper.immortal_cultivation.registry.*;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -37,6 +34,9 @@ public class ImmortalCultivation
 
         ICModTabs.REGISTRY.register(modEventBus);
         ICModArmorMaterials.REGISTRY.register(modEventBus);
+
+        ICModCultivationRealms.REGISTRY.register(modEventBus);
+        ICModAttributes.REGISTRY.register(modEventBus);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, ImmortalCultivationConfig.SPEC);

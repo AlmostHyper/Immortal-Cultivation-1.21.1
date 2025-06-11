@@ -1,5 +1,6 @@
 package net.hyper.immortal_cultivation.item.metals;
 
+import net.hyper.immortal_cultivation.item.armors.ICModArmorItems;
 import net.hyper.immortal_cultivation.item.tools.ICModToolTiers;
 import net.hyper.immortal_cultivation.registry.ICModArmorMaterials;
 import net.minecraft.world.item.*;
@@ -33,7 +34,7 @@ public class WaterAspectedItems {
     }
     public static Supplier<ShovelItem> WATER_ASPECTED_SHOVEL() {
         return () -> new ShovelItem(ICModToolTiers.WATER_ASPECTED, new Item.Properties().rarity(Rarity.UNCOMMON).attributes(ShovelItem.createAttributes
-            (ICModToolTiers.WATER_ASPECTED, 2.0F, -3.0F)));
+            (ICModToolTiers.WATER_ASPECTED, 1.5F, -3.0F)));
     }
     public static Supplier<HoeItem> WATER_ASPECTED_HOE() {
         return () -> new HoeItem(ICModToolTiers.WATER_ASPECTED, new Item.Properties().rarity(Rarity.UNCOMMON).attributes(HoeItem.createAttributes
@@ -41,19 +42,19 @@ public class WaterAspectedItems {
     }
 
     public static Supplier<ArmorItem> WATER_ASPECTED_HELMET() {
-        return () -> new ArmorItem(ICModArmorMaterials.WATER_ASPECTED, ArmorItem.Type.HELMET,
-            new Item.Properties().durability(ArmorItem.Type.HELMET.getDurability(35)));
+        return () -> new ICModArmorItems(ICModArmorMaterials.WATER_ASPECTED, ArmorItem.Type.HELMET,
+            new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.HELMET.getDurability(35)));
     }
     public static Supplier<ArmorItem> WATER_ASPECTED_CHESTPLATE() {
-        return () -> new ArmorItem(ICModArmorMaterials.WATER_ASPECTED, ArmorItem.Type.CHESTPLATE,
-            new Item.Properties().durability(ArmorItem.Type.CHESTPLATE.getDurability(35)));
+        return () -> new ICModArmorItems(ICModArmorMaterials.WATER_ASPECTED, ArmorItem.Type.CHESTPLATE,
+            new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.CHESTPLATE.getDurability(35)));
     }
     public static Supplier<ArmorItem> WATER_ASPECTED_LEGGINGS() {
-        return () -> new ArmorItem(ICModArmorMaterials.WATER_ASPECTED, ArmorItem.Type.LEGGINGS,
-            new Item.Properties().durability(ArmorItem.Type.LEGGINGS.getDurability(35)));
+        return () -> new ICModArmorItems(ICModArmorMaterials.WATER_ASPECTED, ArmorItem.Type.LEGGINGS,
+            new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.LEGGINGS.getDurability(35)));
     }
     public static Supplier<ArmorItem> WATER_ASPECTED_BOOTS() {
-        return () -> new ArmorItem(ICModArmorMaterials.WATER_ASPECTED, ArmorItem.Type.BOOTS,
-            new Item.Properties().durability(ArmorItem.Type.BOOTS.getDurability(35)));
+        return () -> new ICModArmorItems(ICModArmorMaterials.WATER_ASPECTED, ArmorItem.Type.BOOTS,
+            new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.BOOTS.getDurability(35)));
     }
 }

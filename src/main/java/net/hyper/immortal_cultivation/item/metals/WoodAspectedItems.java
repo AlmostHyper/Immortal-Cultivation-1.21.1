@@ -1,5 +1,6 @@
 package net.hyper.immortal_cultivation.item.metals;
 
+import net.hyper.immortal_cultivation.item.armors.ICModArmorItems;
 import net.hyper.immortal_cultivation.item.tools.ICModToolTiers;
 import net.hyper.immortal_cultivation.registry.ICModArmorMaterials;
 import net.minecraft.world.item.*;
@@ -33,7 +34,7 @@ public class WoodAspectedItems {
     }
     public static Supplier<ShovelItem> WOOD_ASPECTED_SHOVEL() {
         return () -> new ShovelItem(ICModToolTiers.WOOD_ASPECTED, new Item.Properties().rarity(Rarity.UNCOMMON).attributes(ShovelItem.createAttributes
-            (ICModToolTiers.WOOD_ASPECTED, 2.0F, -3.0F)));
+            (ICModToolTiers.WOOD_ASPECTED, 1.5F, -3.0F)));
     }
     public static Supplier<HoeItem> WOOD_ASPECTED_HOE() {
         return () -> new HoeItem(ICModToolTiers.WOOD_ASPECTED, new Item.Properties().rarity(Rarity.UNCOMMON).attributes(HoeItem.createAttributes
@@ -41,19 +42,19 @@ public class WoodAspectedItems {
     }
 
     public static Supplier<ArmorItem> WOOD_ASPECTED_HELMET() {
-        return () -> new ArmorItem(ICModArmorMaterials.WOOD_ASPECTED, ArmorItem.Type.HELMET,
-            new Item.Properties().durability(ArmorItem.Type.HELMET.getDurability(35)));
+        return () -> new ICModArmorItems(ICModArmorMaterials.WOOD_ASPECTED, ArmorItem.Type.HELMET,
+            new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.HELMET.getDurability(35)));
     }
     public static Supplier<ArmorItem> WOOD_ASPECTED_CHESTPLATE() {
-        return () -> new ArmorItem(ICModArmorMaterials.WOOD_ASPECTED, ArmorItem.Type.CHESTPLATE,
-            new Item.Properties().durability(ArmorItem.Type.CHESTPLATE.getDurability(35)));
+        return () -> new ICModArmorItems(ICModArmorMaterials.WOOD_ASPECTED, ArmorItem.Type.CHESTPLATE,
+            new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.CHESTPLATE.getDurability(35)));
     }
     public static Supplier<ArmorItem> WOOD_ASPECTED_LEGGINGS() {
-        return () -> new ArmorItem(ICModArmorMaterials.WOOD_ASPECTED, ArmorItem.Type.LEGGINGS,
-            new Item.Properties().durability(ArmorItem.Type.LEGGINGS.getDurability(35)));
+        return () -> new ICModArmorItems(ICModArmorMaterials.WOOD_ASPECTED, ArmorItem.Type.LEGGINGS,
+            new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.LEGGINGS.getDurability(35)));
     }
     public static Supplier<ArmorItem> WOOD_ASPECTED_BOOTS() {
-        return () -> new ArmorItem(ICModArmorMaterials.WOOD_ASPECTED, ArmorItem.Type.BOOTS,
-            new Item.Properties().durability(ArmorItem.Type.BOOTS.getDurability(35)));
+        return () -> new ICModArmorItems(ICModArmorMaterials.WOOD_ASPECTED, ArmorItem.Type.BOOTS,
+            new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.BOOTS.getDurability(35)));
     }
 }

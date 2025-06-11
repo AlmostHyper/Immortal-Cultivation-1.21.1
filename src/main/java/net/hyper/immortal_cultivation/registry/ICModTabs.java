@@ -69,30 +69,31 @@ public class ICModTabs {
                     .withTabsBefore(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "immortal_cultivation_items_tab"))
                     .title(Component.translatable("creativetab.immortal_cultivation.immortal_cultivation_tools"))
                     .displayItems((parameters, output) -> {
+                        output.accept(ICModItems.EARTH_ASPECTED_SHOVEL);
                         output.accept(ICModItems.EARTH_ASPECTED_PICKAXE);
                         output.accept(ICModItems.EARTH_ASPECTED_AXE);
-                        output.accept(ICModItems.EARTH_ASPECTED_SHOVEL);
                         output.accept(ICModItems.EARTH_ASPECTED_HOE);
+                        output.accept(ICModItems.FIRE_ASPECTED_SHOVEL);
                         output.accept(ICModItems.FIRE_ASPECTED_PICKAXE);
                         output.accept(ICModItems.FIRE_ASPECTED_AXE);
-                        output.accept(ICModItems.FIRE_ASPECTED_SHOVEL);
                         output.accept(ICModItems.FIRE_ASPECTED_HOE);
+                        output.accept(ICModItems.METAL_ASPECTED_SHOVEL);
                         output.accept(ICModItems.METAL_ASPECTED_PICKAXE);
                         output.accept(ICModItems.METAL_ASPECTED_AXE);
-                        output.accept(ICModItems.METAL_ASPECTED_SHOVEL);
                         output.accept(ICModItems.METAL_ASPECTED_HOE);
+                        output.accept(ICModItems.WATER_ASPECTED_SHOVEL);
                         output.accept(ICModItems.WATER_ASPECTED_PICKAXE);
                         output.accept(ICModItems.WATER_ASPECTED_AXE);
-                        output.accept(ICModItems.WATER_ASPECTED_SHOVEL);
                         output.accept(ICModItems.WATER_ASPECTED_HOE);
+                        output.accept(ICModItems.WOOD_ASPECTED_SHOVEL);
                         output.accept(ICModItems.WOOD_ASPECTED_PICKAXE);
                         output.accept(ICModItems.WOOD_ASPECTED_AXE);
-                        output.accept(ICModItems.WOOD_ASPECTED_SHOVEL);
                         output.accept(ICModItems.WOOD_ASPECTED_HOE);
+                        output.accept(ICModItems.SKY_IRON_SHOVEL);
                         output.accept(ICModItems.SKY_IRON_PICKAXE);
                         output.accept(ICModItems.SKY_IRON_AXE);
-                        output.accept(ICModItems.SKY_IRON_SHOVEL);
                         output.accept(ICModItems.SKY_IRON_HOE);
+
                     }).build());
 
     public static final Supplier<CreativeModeTab> IMMORTAL_CULTIVATION_WEAPONS_TAB = REGISTRY.register("immortal_cultivation_weapons_tab",
@@ -106,6 +107,44 @@ public class ICModTabs {
                         output.accept(ICModItems.WATER_ASPECTED_SWORD);
                         output.accept(ICModItems.WOOD_ASPECTED_SWORD);
                         output.accept(ICModItems.SKY_IRON_SWORD);
+                        output.accept(ICModItems.EARTH_ASPECTED_AXE);
+                        output.accept(ICModItems.FIRE_ASPECTED_AXE);
+                        output.accept(ICModItems.METAL_ASPECTED_AXE);
+                        output.accept(ICModItems.WATER_ASPECTED_AXE);
+                        output.accept(ICModItems.WOOD_ASPECTED_AXE);
+                        output.accept(ICModItems.SKY_IRON_AXE);
+                    }).build());
+
+    public static final Supplier<CreativeModeTab> IMMORTAL_CULTIVATION_ARMORS_TAB = REGISTRY.register("immortal_cultivation_armors_tab",
+            () -> CreativeModeTab.builder().icon(() -> new ItemStack(ICModItems.SKY_IRON_HELMET.get()))
+                    .withTabsBefore(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "immortal_cultivation_weapons_tab"))
+                    .title(Component.translatable("creativetab.immortal_cultivation.immortal_cultivation_armors"))
+                    .displayItems((parameters, output) -> {
+                        output.accept(ICModItems.EARTH_ASPECTED_HELMET);
+                        output.accept(ICModItems.EARTH_ASPECTED_CHESTPLATE);
+                        output.accept(ICModItems.EARTH_ASPECTED_LEGGINGS);
+                        output.accept(ICModItems.EARTH_ASPECTED_BOOTS);
+                        output.accept(ICModItems.FIRE_ASPECTED_HELMET);
+                        output.accept(ICModItems.FIRE_ASPECTED_CHESTPLATE);
+                        output.accept(ICModItems.FIRE_ASPECTED_LEGGINGS);
+                        output.accept(ICModItems.FIRE_ASPECTED_BOOTS);
+                        output.accept(ICModItems.METAL_ASPECTED_HELMET);
+                        output.accept(ICModItems.METAL_ASPECTED_CHESTPLATE);
+                        output.accept(ICModItems.METAL_ASPECTED_LEGGINGS);
+                        output.accept(ICModItems.METAL_ASPECTED_BOOTS);
+                        output.accept(ICModItems.WATER_ASPECTED_HELMET);
+                        output.accept(ICModItems.WATER_ASPECTED_CHESTPLATE);
+                        output.accept(ICModItems.WATER_ASPECTED_LEGGINGS);
+                        output.accept(ICModItems.WATER_ASPECTED_BOOTS);
+                        output.accept(ICModItems.WOOD_ASPECTED_HELMET);
+                        output.accept(ICModItems.WOOD_ASPECTED_CHESTPLATE);
+                        output.accept(ICModItems.WOOD_ASPECTED_LEGGINGS);
+                        output.accept(ICModItems.WOOD_ASPECTED_BOOTS);
+                        output.accept(ICModItems.SKY_IRON_HELMET);
+                        output.accept(ICModItems.SKY_IRON_CHESTPLATE);
+                        output.accept(ICModItems.SKY_IRON_LEGGINGS);
+                        output.accept(ICModItems.SKY_IRON_BOOTS);
+
                     }).build());
 
     public static void register(IEventBus eventBus) {
