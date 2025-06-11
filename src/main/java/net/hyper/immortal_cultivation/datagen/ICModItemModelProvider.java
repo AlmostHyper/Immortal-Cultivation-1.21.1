@@ -74,5 +74,37 @@ public class ICModItemModelProvider extends ItemModelProvider {
         handheldItem(ICModItems.WATER_ASPECTED_HOE.get());
         handheldItem(ICModItems.WOOD_ASPECTED_HOE.get());
         handheldItem(ICModItems.SKY_IRON_HOE.get());
+
+        // Helmets
+        basicItem(ICModItems.EARTH_ASPECTED_HELMET.get());
+        basicItem(ICModItems.FIRE_ASPECTED_HELMET.get());
+        basicItem(ICModItems.METAL_ASPECTED_HELMET.get());
+        basicItem(ICModItems.WATER_ASPECTED_HELMET.get());
+        basicItem(ICModItems.WOOD_ASPECTED_HELMET.get());
+        basicItem(ICModItems.SKY_IRON_HELMET.get());
+
+        // Chestplates
+        basicItem(ICModItems.EARTH_ASPECTED_CHESTPLATE.get());
+        basicItem(ICModItems.FIRE_ASPECTED_CHESTPLATE.get());
+        basicItem(ICModItems.METAL_ASPECTED_CHESTPLATE.get());
+        basicItem(ICModItems.WATER_ASPECTED_CHESTPLATE.get());
+        basicItem(ICModItems.WOOD_ASPECTED_CHESTPLATE.get());
+        basicItem(ICModItems.SKY_IRON_CHESTPLATE.get());
+
+        // Leggings
+        basicItem(ICModItems.EARTH_ASPECTED_LEGGINGS.get());
+        basicItem(ICModItems.FIRE_ASPECTED_LEGGINGS.get());
+        basicItem(ICModItems.METAL_ASPECTED_LEGGINGS.get());
+        basicItem(ICModItems.WATER_ASPECTED_LEGGINGS.get());
+        basicItem(ICModItems.WOOD_ASPECTED_LEGGINGS.get());
+        basicItem(ICModItems.SKY_IRON_LEGGINGS.get());
+
+        // Boots
+        basicItem(ICModItems.EARTH_ASPECTED_BOOTS.get());
+        basicItem(ICModItems.FIRE_ASPECTED_BOOTS.get());
+        basicItem(ICModItems.METAL_ASPECTED_BOOTS.get());
+        basicItem(ICModItems.WATER_ASPECTED_BOOTS.get());
+        basicItem(ICModItems.WOOD_ASPECTED_BOOTS.get());
+        basicItem(ICModItems.SKY_IRON_BOOTS.get());
     }
 }

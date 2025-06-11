@@ -63,12 +63,6 @@ public class R1SpiritStoneBlocks extends SpiritStoneBlock {
             .requiresCorrectToolForDrops());
     }
     // High Quality
-    public static Supplier<Block> HIGH_QUALITY_SPIRIT_STONE_ORE_BLOCK() {
-        return () -> new Block(BlockBehaviour.Properties.of()
-            .sound(SoundType.AMETHYST)
-            .strength(1.5F, 15.0F)
-            .requiresCorrectToolForDrops());
-    }
     public static Supplier<Block> HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK() {
         return () -> new Block(BlockBehaviour.Properties.of()
             .sound(SoundType.AMETHYST)
@@ -85,13 +79,6 @@ public class R1SpiritStoneBlocks extends SpiritStoneBlock {
         return () -> new Block(BlockBehaviour.Properties.of()
             .sound(SoundType.AMETHYST)
             .strength(1.5F, 15.0F)
-            .requiresCorrectToolForDrops());
-    }
-    // Top Quality
-    public static Supplier<Block> TOP_QUALITY_SPIRIT_STONE_ORE_BLOCK() {
-        return () -> new Block(BlockBehaviour.Properties.of()
-            .sound(SoundType.AMETHYST)
-            .strength(2.0F, 20.0F)
             .requiresCorrectToolForDrops());
     }
     public static Supplier<Block> TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK() {

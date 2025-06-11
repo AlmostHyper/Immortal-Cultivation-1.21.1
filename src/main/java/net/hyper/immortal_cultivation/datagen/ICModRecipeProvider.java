@@ -331,6 +331,166 @@ public class ICModRecipeProvider extends RecipeProvider implements IConditionBui
             .define('I', Items.STICK)
             .unlockedBy("has_sky_iron_ingot", has(ICModItems.SKY_IRON_INGOT)).save(recipeOutput);
 
+        // Helmets
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.EARTH_ASPECTED_HELMET.get())
+            .pattern("EEE")
+            .pattern("E E")
+            .define('E', ICModItems.EARTH_ASPECTED_INGOT.get())
+            .unlockedBy("has_earth_aspected_ingot", has(ICModItems.EARTH_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.FIRE_ASPECTED_HELMET.get())
+            .pattern("FFF")
+            .pattern("F F")
+            .define('F', ICModItems.FIRE_ASPECTED_INGOT.get())
+            .unlockedBy("has_fire_aspected_ingot", has(ICModItems.FIRE_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.METAL_ASPECTED_HELMET.get())
+            .pattern("MMM")
+            .pattern("M M")
+            .define('M', ICModItems.METAL_ASPECTED_INGOT.get())
+            .unlockedBy("has_metal_aspected_ingot", has(ICModItems.METAL_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.WATER_ASPECTED_HELMET.get())
+            .pattern("WWW")
+            .pattern("W W")
+            .define('W', ICModItems.WATER_ASPECTED_INGOT.get())
+            .unlockedBy("has_water_aspected_ingot", has(ICModItems.WATER_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.WOOD_ASPECTED_HELMET.get())
+            .pattern("WWW")
+            .pattern("W W")
+            .define('W', ICModItems.WOOD_ASPECTED_INGOT.get())
+            .unlockedBy("has_wood_aspected_ingot", has(ICModItems.WOOD_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.SKY_IRON_HELMET.get())
+            .pattern("SSS")
+            .pattern("S S")
+            .define('S', ICModItems.SKY_IRON_INGOT.get())
+            .unlockedBy("has_sky_iron_ingot", has(ICModItems.SKY_IRON_INGOT)).save(recipeOutput);
+
+        // Chestplates
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.EARTH_ASPECTED_CHESTPLATE.get())
+            .pattern("E E")
+            .pattern("EEE")
+            .pattern("EEE")
+            .define('E', ICModItems.EARTH_ASPECTED_INGOT.get())
+            .unlockedBy("has_earth_aspected_ingot", has(ICModItems.EARTH_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.FIRE_ASPECTED_CHESTPLATE.get())
+            .pattern("F F")
+            .pattern("FFF")
+            .pattern("FFF")
+            .define('F', ICModItems.FIRE_ASPECTED_INGOT.get())
+            .unlockedBy("has_fire_aspected_ingot", has(ICModItems.FIRE_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.METAL_ASPECTED_CHESTPLATE.get())
+            .pattern("M M")
+            .pattern("MMM")
+            .pattern("MMM")
+            .define('M', ICModItems.METAL_ASPECTED_INGOT.get())
+            .unlockedBy("has_metal_aspected_ingot", has(ICModItems.METAL_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.WATER_ASPECTED_CHESTPLATE.get())
+            .pattern("W W")
+            .pattern("WWW")
+            .pattern("WWW")
+            .define('W', ICModItems.WATER_ASPECTED_INGOT.get())
+            .unlockedBy("has_water_aspected_ingot", has(ICModItems.WATER_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.WOOD_ASPECTED_CHESTPLATE.get())
+            .pattern("W W")
+            .pattern("WWW")
+            .pattern("WWW")
+            .define('W', ICModItems.WOOD_ASPECTED_INGOT.get())
+            .unlockedBy("has_wood_aspected_ingot", has(ICModItems.WOOD_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.SKY_IRON_CHESTPLATE.get())
+            .pattern("S S")
+            .pattern("SSS")
+            .pattern("SSS")
+            .define('S', ICModItems.SKY_IRON_INGOT.get())
+            .unlockedBy("has_sky_iron_ingot", has(ICModItems.SKY_IRON_INGOT)).save(recipeOutput);
+
+        // Leggings
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.EARTH_ASPECTED_LEGGINGS.get())
+            .pattern("EEE")
+            .pattern("E E")
+            .pattern("E E")
+            .define('E', ICModItems.EARTH_ASPECTED_INGOT.get())
+            .unlockedBy("has_earth_aspected_ingot", has(ICModItems.EARTH_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.FIRE_ASPECTED_LEGGINGS.get())
+            .pattern("FFF")
+            .pattern("F F")
+            .pattern("F F")
+            .define('F', ICModItems.FIRE_ASPECTED_INGOT.get())
+            .unlockedBy("has_fire_aspected_ingot", has(ICModItems.FIRE_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.METAL_ASPECTED_LEGGINGS.get())
+            .pattern("MMM")
+            .pattern("M M")
+            .pattern("M M")
+            .define('M', ICModItems.METAL_ASPECTED_INGOT.get())
+            .unlockedBy("has_metal_aspected_ingot", has(ICModItems.METAL_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.WATER_ASPECTED_LEGGINGS.get())
+            .pattern("WWW")
+            .pattern("W W")
+            .pattern("W W")
+            .define('W', ICModItems.WATER_ASPECTED_INGOT.get())
+            .unlockedBy("has_water_aspected_ingot", has(ICModItems.WATER_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.WOOD_ASPECTED_LEGGINGS.get())
+            .pattern("WWW")
+            .pattern("W W")
+            .pattern("W W")
+            .define('W', ICModItems.WOOD_ASPECTED_INGOT.get())
+            .unlockedBy("has_wood_aspected_ingot", has(ICModItems.WOOD_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.SKY_IRON_LEGGINGS.get())
+            .pattern("SSS")
+            .pattern("S S")
+            .pattern("S S")
+            .define('S', ICModItems.SKY_IRON_INGOT.get())
+            .unlockedBy("has_sky_iron_ingot", has(ICModItems.SKY_IRON_INGOT)).save(recipeOutput);
+
+        // Boots
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.EARTH_ASPECTED_BOOTS.get())
+            .pattern("E E")
+            .pattern("E E")
+            .define('E', ICModItems.EARTH_ASPECTED_INGOT.get())
+            .unlockedBy("has_earth_aspected_ingot", has(ICModItems.EARTH_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.FIRE_ASPECTED_BOOTS.get())
+            .pattern("F F")
+            .pattern("F F")
+            .define('F', ICModItems.FIRE_ASPECTED_INGOT.get())
+            .unlockedBy("has_fire_aspected_ingot", has(ICModItems.FIRE_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.METAL_ASPECTED_BOOTS.get())
+            .pattern("M M")
+            .pattern("M M")
+            .define('M', ICModItems.METAL_ASPECTED_INGOT.get())
+            .unlockedBy("has_metal_aspected_ingot", has(ICModItems.METAL_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.WATER_ASPECTED_BOOTS.get())
+            .pattern("W W")
+            .pattern("W W")
+            .define('W', ICModItems.WATER_ASPECTED_INGOT.get())
+            .unlockedBy("has_water_aspected_ingot", has(ICModItems.WATER_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.WOOD_ASPECTED_BOOTS.get())
+            .pattern("W W")
+            .pattern("W W")
+            .define('W', ICModItems.WOOD_ASPECTED_INGOT.get())
+            .unlockedBy("has_wood_aspected_ingot", has(ICModItems.WOOD_ASPECTED_INGOT)).save(recipeOutput);
+
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModItems.SKY_IRON_BOOTS.get())
+            .pattern("S S")
+            .pattern("S S")
+            .define('S', ICModItems.SKY_IRON_INGOT.get())
+            .unlockedBy("has_sky_iron_ingot", has(ICModItems.SKY_IRON_INGOT)).save(recipeOutput);
+
         // Shapeless
         // Spirit Stones
         ShapelessRecipeBuilder.shapeless(RecipeCategory.MISC, ICModItems.LOW_QUALITY_SPIRIT_STONE.get(), 9)

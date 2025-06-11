@@ -84,5 +84,37 @@ public class ICModItemTagProvider extends ItemTagsProvider {
             .add(ICModItems.WATER_ASPECTED_HOE.get())
             .add(ICModItems.WOOD_ASPECTED_HOE.get())
             .add(ICModItems.SKY_IRON_HOE.get());
+
+        tag(ItemTags.HEAD_ARMOR)
+            .add(ICModItems.EARTH_ASPECTED_HELMET.get())
+            .add(ICModItems.FIRE_ASPECTED_HELMET.get())
+            .add(ICModItems.METAL_ASPECTED_HELMET.get())
+            .add(ICModItems.WATER_ASPECTED_HELMET.get())
+            .add(ICModItems.WOOD_ASPECTED_HELMET.get())
+            .add(ICModItems.SKY_IRON_HELMET.get());
+
+        tag(ItemTags.CHEST_ARMOR)
+            .add(ICModItems.EARTH_ASPECTED_CHESTPLATE.get())
+            .add(ICModItems.FIRE_ASPECTED_CHESTPLATE.get())
+            .add(ICModItems.METAL_ASPECTED_CHESTPLATE.get())
+            .add(ICModItems.WATER_ASPECTED_CHESTPLATE.get())
+            .add(ICModItems.WOOD_ASPECTED_CHESTPLATE.get())
+            .add(ICModItems.SKY_IRON_CHESTPLATE.get());
+
+        tag(ItemTags.LEG_ARMOR)
+            .add(ICModItems.EARTH_ASPECTED_LEGGINGS.get())
+            .add(ICModItems.FIRE_ASPECTED_LEGGINGS.get())
+            .add(ICModItems.METAL_ASPECTED_LEGGINGS.get())
+            .add(ICModItems.WATER_ASPECTED_LEGGINGS.get())
+            .add(ICModItems.WOOD_ASPECTED_LEGGINGS.get())
+            .add(ICModItems.SKY_IRON_LEGGINGS.get());
+
+        tag(ItemTags.FOOT_ARMOR)
+            .add(ICModItems.EARTH_ASPECTED_BOOTS.get())
+            .add(ICModItems.FIRE_ASPECTED_BOOTS.get())
+            .add(ICModItems.METAL_ASPECTED_BOOTS.get())
+            .add(ICModItems.WATER_ASPECTED_BOOTS.get())
+            .add(ICModItems.WOOD_ASPECTED_BOOTS.get())
+            .add(ICModItems.SKY_IRON_BOOTS.get());
     }
 }

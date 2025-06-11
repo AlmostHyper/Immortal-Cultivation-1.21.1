@@ -1,6 +1,7 @@
 package net.hyper.immortal_cultivation.item.metals;
 
 import net.hyper.immortal_cultivation.item.tools.ICModToolTiers;
+import net.hyper.immortal_cultivation.registry.ICModArmorMaterials;
 import net.minecraft.client.renderer.item.ItemProperties;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.block.Block;
@@ -21,6 +22,7 @@ public class EarthAspectedItems {
             .stacksTo(64)
             .rarity(Rarity.UNCOMMON));
     }
+
     public static Supplier<SwordItem> EARTH_ASPECTED_SWORD() {
         return () -> new SwordItem(ICModToolTiers.EARTH_ASPECTED, new Item.Properties().rarity(Rarity.UNCOMMON).attributes(SwordItem.createAttributes
             (ICModToolTiers.EARTH_ASPECTED, 3.5F, -2.4F)));
@@ -40,5 +42,22 @@ public class EarthAspectedItems {
     public static Supplier<HoeItem> EARTH_ASPECTED_HOE() {
         return () -> new HoeItem(ICModToolTiers.EARTH_ASPECTED, new Item.Properties().rarity(Rarity.UNCOMMON).attributes(HoeItem.createAttributes
             (ICModToolTiers.EARTH_ASPECTED, -3.0F, 0.0F)));
+    }
+
+    public static Supplier<ArmorItem> EARTH_ASPECTED_HELMET() {
+        return () -> new ArmorItem(ICModArmorMaterials.EARTH_ASPECTED, ArmorItem.Type.HELMET,
+            new Item.Properties().durability(ArmorItem.Type.HELMET.getDurability(35)));
+    }
+    public static Supplier<ArmorItem> EARTH_ASPECTED_CHESTPLATE() {
+        return () -> new ArmorItem(ICModArmorMaterials.EARTH_ASPECTED, ArmorItem.Type.CHESTPLATE,
+            new Item.Properties().durability(ArmorItem.Type.CHESTPLATE.getDurability(35)));
+    }
+    public static Supplier<ArmorItem> EARTH_ASPECTED_LEGGINGS() {
+        return () -> new ArmorItem(ICModArmorMaterials.EARTH_ASPECTED, ArmorItem.Type.LEGGINGS,
+            new Item.Properties().durability(ArmorItem.Type.LEGGINGS.getDurability(35)));
+    }
+    public static Supplier<ArmorItem> EARTH_ASPECTED_BOOTS() {
+        return () -> new ArmorItem(ICModArmorMaterials.EARTH_ASPECTED, ArmorItem.Type.BOOTS,
+            new Item.Properties().durability(ArmorItem.Type.BOOTS.getDurability(35)));
     }
 }
