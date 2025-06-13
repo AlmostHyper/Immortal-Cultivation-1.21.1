@@ -1,4 +1,4 @@
 package net.hyper.immortal_cultivation.component;
 
-public class ICModDataComponents {
+public record EntityQiData() {
 }

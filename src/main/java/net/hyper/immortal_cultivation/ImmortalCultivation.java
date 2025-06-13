@@ -1,6 +1,5 @@
 package net.hyper.immortal_cultivation;
 
-import net.hyper.immortal_cultivation.component.ICModDataComponents;
 import net.hyper.immortal_cultivation.registry.*;
 import org.slf4j.Logger;
 
@@ -37,6 +36,7 @@ public class ImmortalCultivation
 
         ICModCultivationRealms.REGISTRY.register(modEventBus);
         ICModAttributes.REGISTRY.register(modEventBus);
+        ICModAttachments.REGISTRY.register(modEventBus);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, ImmortalCultivationConfig.SPEC);
