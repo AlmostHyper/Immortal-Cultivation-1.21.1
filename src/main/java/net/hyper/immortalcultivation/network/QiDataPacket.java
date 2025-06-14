@@ -1,0 +1,43 @@
+package net.hyper.immortalcultivation.network;
+
+import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.registry.ICModAttachments;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+
+public record QiDataPacket(long qi) implements CustomPacketPayload {
+    public static final CustomPacketPayload.Type<QiDataPacket> ID =
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "qi_data"));
+
+    public static final StreamCodec<RegistryFriendlyByteBuf, QiDataPacket> STREAM_CODEC =
+        StreamCodec.composite(
+            ByteBufCodecs.VAR_LONG, QiDataPacket::qi,
+            QiDataPacket::new
+        );
+
+    @Override
+    public Type<? extends CustomPacketPayload> type() {
+        return ID;
+    }
+
+    public static void handleClient(QiDataPacket msg, IPayloadContext ctx) {
+        if (ctx.flow().isClientbound()) {
+            ctx.enqueueWork(() -> {
+                Minecraft mc = Minecraft.getInstance();
+                LocalPlayer player = mc.player;
+                if (player != null) {
+                    var qi = player.getData(ICModAttachments.PLAYER_QI.get());
+                    if (qi != null) {
+                        qi.updateFromServer(msg.qi);
+                    }
+                }
+            });
+        }
+    }
+}

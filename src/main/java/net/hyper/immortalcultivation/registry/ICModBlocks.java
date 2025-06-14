@@ -1,5 +1,6 @@
 package net.hyper.immortalcultivation.registry;
 
+import net.hyper.immortalcultivation.block.crops.EarthCropBlock;
 import net.hyper.immortalcultivation.block.metals.*;
 import net.hyper.immortalcultivation.block.spirit_stones.*;
 import net.minecraft.world.level.block.Block;
@@ -37,6 +38,9 @@ public class ICModBlocks {
     public static final DeferredBlock<Block> METAL_ASPECTED_DEEPSLATE_ORE_BLOCK;
     public static final DeferredBlock<Block> WATER_ASPECTED_DEEPSLATE_ORE_BLOCK;
 
+    // Earth Crops
+    public static final DeferredBlock<Block> YELLOW_EARTH_ROOT_BLOCK;
+
     static {
 
         // Spirit Stones
@@ -65,6 +69,9 @@ public class ICModBlocks {
         FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("fire_aspected_deepslate_ore_block", FireAspectedBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK());
         METAL_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("metal_aspected_deepslate_ore_block", MetalAspectedBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK());
         WATER_ASPECTED_DEEPSLATE_ORE_BLOCK = REGISTRY.register("water_aspected_deepslate_ore_block", WaterAspectedBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK());
+
+        // Earth Crops
+        YELLOW_EARTH_ROOT_BLOCK = REGISTRY.register("yellow_earth_root_block", EarthCropBlock.YELLOW_EARTH_ROOT());
 
     }
 

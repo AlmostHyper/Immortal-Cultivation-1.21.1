@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.cultivation.realms;
 
-import net.hyper.immortalcultivation.cultivation.PlayerQiData;
+import net.hyper.immortalcultivation.cultivation.IPlayerQiData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class CultivationRealm {
+public abstract class CultivationRealm implements IPlayerQiData {
 
     // === Core Identification ===
 
@@ -129,7 +129,7 @@ public abstract class CultivationRealm {
      * @param qiData Player's Qi data
      * @return true if Qi threshold is met
      */
-    public boolean meetsQiThreshold(PlayerQiData qiData) {
+    public boolean meetsQiThreshold(IPlayerQiData qiData) {
         return qiData.getCurrentQi() >= getBreakthroughQiThreshold();
     }
 
@@ -139,7 +139,7 @@ public abstract class CultivationRealm {
      * @param qiData Player's Qi data
      * @return true if breakthrough is possible
      */
-    public boolean canBreakthrough(Player player, PlayerQiData qiData) {
+    public boolean canBreakthrough(Player player, IPlayerQiData qiData) {
         return meetsQiThreshold(qiData) &&
             !getNextCultivationRealms(player).isEmpty() &&
             meetsAdditionalRequirements(player, qiData);
@@ -151,7 +151,7 @@ public abstract class CultivationRealm {
      * @param qiData Player's Qi data
      * @return true if additional requirements are met
      */
-    protected boolean meetsAdditionalRequirements(Player player, PlayerQiData qiData) {
+    protected boolean meetsAdditionalRequirements(Player player, IPlayerQiData qiData) {
         return true; // Default: no additional requirements
     }
 
@@ -199,7 +199,7 @@ public abstract class CultivationRealm {
      * @return Next realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getStandardBreakthrough(Player player, PlayerQiData qiData) {
+    public CultivationRealm getStandardBreakthrough(Player player, IPlayerQiData qiData) {
         List<CultivationRealm> nextRealms = getNextCultivationRealms(player);
         return nextRealms.isEmpty() ? null : nextRealms.get(0);
     }
@@ -211,7 +211,7 @@ public abstract class CultivationRealm {
      * @return Special realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getSpecialBreakthrough(Player player, PlayerQiData qiData) {
+    public CultivationRealm getSpecialBreakthrough(Player player, IPlayerQiData qiData) {
         return null; // Override in specific realms
     }
 
@@ -222,7 +222,7 @@ public abstract class CultivationRealm {
      * @return Boundary realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getBoundaryBreakthrough(Player player, PlayerQiData qiData) {
+    public CultivationRealm getBoundaryBreakthrough(Player player, IPlayerQiData qiData) {
         return null; // Override in specific realms
     }
 
@@ -233,7 +233,7 @@ public abstract class CultivationRealm {
      * @return Best breakthrough realm, or null if none available
      */
     @Nullable
-    public CultivationRealm getBestBreakthrough(Player player, PlayerQiData qiData) {
+    public CultivationRealm getBestBreakthrough(Player player, IPlayerQiData qiData) {
         // Priority: Special > Boundary > Standard
         CultivationRealm special = getSpecialBreakthrough(player, qiData);
         if (special != null) return special;
@@ -315,7 +315,7 @@ public abstract class CultivationRealm {
      * @param qiData Player's Qi data
      * @param previousRealm The realm they came from
      */
-    public void onRealmAdvancement(Player player, PlayerQiData qiData, @Nullable CultivationRealm previousRealm) {
+    public void onRealmAdvancement(Player player, IPlayerQiData qiData, @Nullable CultivationRealm previousRealm) {
         // Default implementation - override for custom effects
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(
@@ -331,7 +331,7 @@ public abstract class CultivationRealm {
      * @param qiData Player's Qi data
      * @param nextRealm The realm they're going to
      */
-    public void onRealmExit(Player player, PlayerQiData qiData, @Nullable CultivationRealm nextRealm) {
+    public void onRealmExit(Player player, IPlayerQiData qiData, @Nullable CultivationRealm nextRealm) {
         // Override for cleanup or farewell effects
     }
 
@@ -340,7 +340,7 @@ public abstract class CultivationRealm {
      * @param player The player
      * @param qiData Player's Qi data
      */
-    public void applyRealmModifiers(Player player, PlayerQiData qiData) {
+    public void applyRealmModifiers(Player player, IPlayerQiData qiData) {
         // Override for special realm effects
     }
 

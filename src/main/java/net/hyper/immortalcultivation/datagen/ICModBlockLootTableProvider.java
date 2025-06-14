@@ -1,7 +1,10 @@
 package net.hyper.immortalcultivation.datagen;
 
+import net.hyper.immortalcultivation.block.crops.EarthCropBlock;
+import net.hyper.immortalcultivation.block.crops.ICModCropBlock;
 import net.hyper.immortalcultivation.registry.ICModBlocks;
 import net.hyper.immortalcultivation.registry.ICModItems;
+import net.minecraft.advancements.critereon.StatePropertiesPredicate;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.Registries;
@@ -11,10 +14,15 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.state.BlockBehaviour;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
 import net.minecraft.world.level.storage.loot.functions.ApplyBonusCount;
 import net.minecraft.world.level.storage.loot.functions.SetItemCountFunction;
+import net.minecraft.world.level.storage.loot.predicates.LootItemBlockStatePropertyCondition;
+import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 
 import java.util.Set;
@@ -53,10 +61,28 @@ public class ICModBlockLootTableProvider extends BlockLootSubProvider {
         add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.FIRE_ASPECTED_ORE.get()));
         add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.METAL_ASPECTED_ORE.get()));
         add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.WATER_ASPECTED_ORE.get()));
+
+        // Earth Plants
+        add(ICModBlocks.YELLOW_EARTH_ROOT_BLOCK.get(), block -> createCropDrops(ICModBlocks.YELLOW_EARTH_ROOT_BLOCK.get(), ICModItems.YELLOW_EARTH_ROOT.get(), ICModItems.YELLOW_EARTH_ROOT.get(), createMatureCropCondition(ICModBlocks.YELLOW_EARTH_ROOT_BLOCK.get(), EarthCropBlock.AGE)));
     }
+
+    // Helper Methods
 
     @Override
     protected Iterable<Block> getKnownBlocks() {
         return ICModBlocks.REGISTRY.getEntries().stream().map(Holder::value)::iterator;
+    }
+
+    public static <T extends Block> LootItemCondition.Builder createMatureCropCondition(
+        T cropBlock, IntegerProperty ageProperty) {
+
+        int maxAge = ageProperty.getPossibleValues().stream()
+            .mapToInt(Integer::intValue)
+            .max()
+            .orElseThrow(() -> new IllegalArgumentException("Could not determine max age"));
+
+        return LootItemBlockStatePropertyCondition.hasBlockStateProperties(cropBlock)
+            .setProperties(StatePropertiesPredicate.Builder.properties()
+                .hasProperty(ageProperty, maxAge));
     }
 }

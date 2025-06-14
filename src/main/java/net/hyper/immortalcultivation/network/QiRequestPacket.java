@@ -1,6 +1,7 @@
 package net.hyper.immortalcultivation.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModAttachments;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -25,7 +26,7 @@ public record QiRequestPacket() implements CustomPacketPayload {
         if (ctx.flow().isServerbound()) {
             ctx.enqueueWork(() -> {
                 if (ctx.player() instanceof ServerPlayer serverPlayer) {
-                    var qi = serverPlayer.getData(ICModAttachments.PLAYER_QI.get());
+                    var qi = serverPlayer.getData(ICModAttachmentTypes.PLAYER_QI.get());
                     if (qi != null) {
                         qi.forceSync();
                     }

@@ -106,5 +106,8 @@ public class ICModItemModelProvider extends ItemModelProvider {
         basicItem(ICModItems.WATER_ASPECTED_BOOTS.get());
         basicItem(ICModItems.WOOD_ASPECTED_BOOTS.get());
         basicItem(ICModItems.SKY_IRON_BOOTS.get());
+
+        // Earth Plants
+        basicItem(ICModItems.YELLOW_EARTH_ROOT.get());
     }
 }

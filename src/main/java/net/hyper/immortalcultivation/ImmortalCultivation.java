@@ -27,6 +27,7 @@ public class ImmortalCultivation
     public ImmortalCultivation(IEventBus modEventBus, ModContainer modContainer) {
 
         NeoForge.EVENT_BUS.register(this);
+        modEventBus.addListener(ICModNetwork::register);
 
         ICModBlocks.REGISTRY.register(modEventBus);
         ICModItems.REGISTRY.register(modEventBus);
@@ -34,9 +35,7 @@ public class ImmortalCultivation
         ICModTabs.REGISTRY.register(modEventBus);
         ICModArmorMaterials.REGISTRY.register(modEventBus);
 
-        ICModCultivationRealms.REGISTRY.register(modEventBus);
         ICModAttributes.REGISTRY.register(modEventBus);
-        ICModAttachments.REGISTRY.register(modEventBus);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, ImmortalCultivationConfig.SPEC);

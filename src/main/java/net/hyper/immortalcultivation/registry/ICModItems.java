@@ -1,5 +1,7 @@
 package net.hyper.immortalcultivation.registry;
 
+import net.hyper.immortalcultivation.block.crops.EarthCropBlock;
+import net.hyper.immortalcultivation.item.crops.EarthCropItems;
 import net.hyper.immortalcultivation.item.metals.realm1.*;
 import net.hyper.immortalcultivation.item.spirit_stones.*;
 import net.minecraft.world.item.*;
@@ -37,6 +39,9 @@ public class ICModItems {
     public static final DeferredItem<Item> FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK;
     public static final DeferredItem<Item> METAL_ASPECTED_DEEPSLATE_ORE_BLOCK;
     public static final DeferredItem<Item> WATER_ASPECTED_DEEPSLATE_ORE_BLOCK;
+
+    // Earth Plant Blocks
+    public static final DeferredItem<Item> YELLOW_EARTH_ROOT_BLOCK;
 
     // Spirit Stones
     public static final DeferredItem<Item> LOW_QUALITY_SPIRIT_STONE;
@@ -132,6 +137,9 @@ public class ICModItems {
     public static final DeferredItem<ArmorItem> WOOD_ASPECTED_BOOTS;
     public static final DeferredItem<ArmorItem> SKY_IRON_BOOTS;
 
+    // Earth Plants
+    public static final DeferredItem<Item> YELLOW_EARTH_ROOT;
+
     static {
 
         // Spirit Stone Block Items
@@ -160,6 +168,9 @@ public class ICModItems {
         FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK);
         METAL_ASPECTED_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK);
         WATER_ASPECTED_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
+
+        // Earth Plant Block Items
+        YELLOW_EARTH_ROOT_BLOCK = block(ICModBlocks.YELLOW_EARTH_ROOT_BLOCK);
 
         // Spirit Stones
         LOW_QUALITY_SPIRIT_STONE = REGISTRY.register("low_quality_spirit_stone", R1SpiritStoneItems.LOW_QUALITY_SPIRIT_STONE());
@@ -254,6 +265,9 @@ public class ICModItems {
         WATER_ASPECTED_BOOTS = REGISTRY.register("water_aspected_boots", WaterAspectedItems.WATER_ASPECTED_BOOTS());
         WOOD_ASPECTED_BOOTS = REGISTRY.register("wood_aspected_boots", WoodAspectedItems.WOOD_ASPECTED_BOOTS());
         SKY_IRON_BOOTS = REGISTRY.register("sky_iron_boots", SkyIronItems.SKY_IRON_BOOTS());
+
+        // Earth Plants
+        YELLOW_EARTH_ROOT = REGISTRY.register("yellow_earth_root", EarthCropItems.YELLOW_EARTH_ROOT());
     }
 
     // Helper Methods
