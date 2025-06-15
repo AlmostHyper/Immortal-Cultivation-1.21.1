@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.cultivation.realms;
 
-import net.hyper.immortalcultivation.cultivation.IPlayerQiData;
+import net.hyper.immortalcultivation.cultivation.ICultivationData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public abstract class CultivationRealm implements IPlayerQiData {
+public abstract class CultivationRealm {
 
     // === Core Identification ===
 
@@ -34,7 +34,7 @@ public abstract class CultivationRealm implements IPlayerQiData {
 
     /**
      * Numerical level for comparison and ordering
-     * @return Realm level (higher = more advanced)
+     * @return Realm level
      */
     public abstract int getRealmLevel();
 
@@ -46,7 +46,7 @@ public abstract class CultivationRealm implements IPlayerQiData {
         return "A cultivation realm.";
     }
 
-    // === Base Physical Stats ===
+    // === Base Physical Stats === //
 
     /**
      * Base health points provided by this realm
@@ -86,7 +86,35 @@ public abstract class CultivationRealm implements IPlayerQiData {
      */
     public abstract double getBaseJumpHeight();
 
-    // === Qi-Related Stats ===
+    // == Cultivation-Related Stats === //
+
+    /**
+     * Maximum Cultivation capacity for this realm
+     * @return Max Cultivation value
+     */
+    public abstract long getBaseMaxCultivation();
+
+    /**
+     * Cultivation rate per second
+     * @return Cultivation rate per second
+     */
+    public abstract double getBaseCultivationRate();
+
+    /**
+     *  Meditation Cultivation per second
+     * @return Cultivation per second while meditating
+     */
+    public abstract double getBaseMeditationCultivationRate();
+
+    /**
+     * Minimum Cultivation required to attempt breakthrough from this realm
+     * @return Cultivation threshold for breakthrough
+     */
+    public long getBreakthroughCultivationThreshold() {
+        return (long) (getBaseMaxCultivation() * 0.7);
+    }
+
+    // === Qi-Related Stats === //
 
     /**
      * Maximum Qi capacity for this realm
@@ -101,48 +129,32 @@ public abstract class CultivationRealm implements IPlayerQiData {
     public abstract double getBaseQiRegenerationRate();
 
     /**
-     * Accelerated qi regeneration rate per second
-     * @return Accelerated qi regen per second
+     * Circulating qi regeneration rate per second
+     * @return Circulating qi regen per second
      */
-    public abstract double getBaseAcceleratedQiRegenerationRate();
-
-    /**
-     * Minimum Qi required to attempt breakthrough from this realm
-     * @return Qi threshold for breakthrough
-     */
-    public long getBreakthroughQiThreshold() {
-        return (long) (getBaseMaxQi() * 0.8); // Default: 80% of max Qi
-    }
-
-    /**
-     * Qi cost consumed during breakthrough attempt
-     * @return Qi cost for breakthrough
-     */
-    public long getBreakthroughQiCost() {
-        return getBreakthroughQiThreshold() / 2; // Default: half the threshold
-    }
+    public abstract double getBaseCirculatingQiRegenerationRate();
 
     // === Breakthrough Logic ===
 
     /**
-     * Checks if player meets Qi requirements for breakthrough
-     * @param qiData Player's Qi data
-     * @return true if Qi threshold is met
+     * Checks if player meets Cultivation requirements for breakthrough
+     * @param cultivationData Player's Cultivation data
+     * @return true if Cultivation threshold is met
      */
-    public boolean meetsQiThreshold(IPlayerQiData qiData) {
-        return qiData.getCurrentQi() >= getBreakthroughQiThreshold();
+    public boolean meetsCultivationThreshold(ICultivationData cultivationData) {
+        return cultivationData.getCurrentCultivation() >= getBreakthroughCultivationThreshold();
     }
 
     /**
      * Checks if player can breakthrough (includes all conditions)
      * @param player The player attempting breakthrough
-     * @param qiData Player's Qi data
+     * @param cultivationData Player's Cultivation data
      * @return true if breakthrough is possible
      */
-    public boolean canBreakthrough(Player player, IPlayerQiData qiData) {
-        return meetsQiThreshold(qiData) &&
+    public boolean canBreakthrough(Player player, ICultivationData cultivationData) {
+        return meetsCultivationThreshold(cultivationData) &&
             !getNextCultivationRealms(player).isEmpty() &&
-            meetsAdditionalRequirements(player, qiData);
+            meetsAdditionalRequirements(player, cultivationData);
     }
 
     /**
@@ -151,7 +163,7 @@ public abstract class CultivationRealm implements IPlayerQiData {
      * @param qiData Player's Qi data
      * @return true if additional requirements are met
      */
-    protected boolean meetsAdditionalRequirements(Player player, IPlayerQiData qiData) {
+    public boolean meetsAdditionalRequirements(Player player, ICultivationData qiData) {
         return true; // Default: no additional requirements
     }
 
@@ -193,55 +205,49 @@ public abstract class CultivationRealm implements IPlayerQiData {
     // === Breakthrough Types ===
 
     /**
-     * Standard breakthrough to next realm
+     * Breakthrough to next minor realm (Ex. Early -> Middle Foundation Establishment)
      * @param player The player
-     * @param qiData Player's Qi data
+     * @param cultivationData Player's Qi data
      * @return Next realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getStandardBreakthrough(Player player, IPlayerQiData qiData) {
+    public CultivationRealm getMinorBreakthrough(Player player, ICultivationData cultivationData) {
         List<CultivationRealm> nextRealms = getNextCultivationRealms(player);
         return nextRealms.isEmpty() ? null : nextRealms.get(0);
     }
 
     /**
-     * Special breakthrough with unique conditions
+     * Breakthrough to next major realm (Ex. Qi Condensation -> Foundation Establishment)
      * @param player The player
-     * @param qiData Player's Qi data
+     * @param cultivationData Player's Qi data
+     * @return Next realm, or null if not possible
+     */
+    @Nullable
+    public CultivationRealm getMajorBreakthrough(Player player, ICultivationData cultivationData) {
+        List<CultivationRealm> nextRealms = getNextCultivationRealms(player);
+        return nextRealms.isEmpty() ? null : nextRealms.get(0);
+    }
+
+    /**
+     * Breakthrough with unique conditions (Ex. Qi Condensation L10 -> Perfect Foundation Establishment)
+     * @param player The player
+     * @param cultivationData Player's Qi data
      * @return Special realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getSpecialBreakthrough(Player player, IPlayerQiData qiData) {
+    public CultivationRealm getSpecialBreakthrough(Player player, ICultivationData cultivationData) {
         return null; // Override in specific realms
     }
 
     /**
-     * Boundary breakthrough (crossing major cultivation stages)
+     * Boundary breakthrough (Ex. First Step -> Second Step)
      * @param player The player
-     * @param qiData Player's Qi data
+     * @param cultivationData Player's Qi data
      * @return Boundary realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getBoundaryBreakthrough(Player player, IPlayerQiData qiData) {
-        return null; // Override in specific realms
-    }
-
-    /**
-     * Determine the best breakthrough option for the player
-     * @param player The player
-     * @param qiData Player's Qi data
-     * @return Best breakthrough realm, or null if none available
-     */
-    @Nullable
-    public CultivationRealm getBestBreakthrough(Player player, IPlayerQiData qiData) {
-        // Priority: Special > Boundary > Standard
-        CultivationRealm special = getSpecialBreakthrough(player, qiData);
-        if (special != null) return special;
-
-        CultivationRealm boundary = getBoundaryBreakthrough(player, qiData);
-        if (boundary != null) return boundary;
-
-        return getStandardBreakthrough(player, qiData);
+    public CultivationRealm getBoundaryBreakthrough(Player player, ICultivationData cultivationData) {
+        return null;
     }
 
     // === Abilities and Features ===
@@ -315,7 +321,7 @@ public abstract class CultivationRealm implements IPlayerQiData {
      * @param qiData Player's Qi data
      * @param previousRealm The realm they came from
      */
-    public void onRealmAdvancement(Player player, IPlayerQiData qiData, @Nullable CultivationRealm previousRealm) {
+    public void onRealmAdvancement(Player player, ICultivationData qiData, @Nullable CultivationRealm previousRealm) {
         // Default implementation - override for custom effects
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(
@@ -331,7 +337,7 @@ public abstract class CultivationRealm implements IPlayerQiData {
      * @param qiData Player's Qi data
      * @param nextRealm The realm they're going to
      */
-    public void onRealmExit(Player player, IPlayerQiData qiData, @Nullable CultivationRealm nextRealm) {
+    public void onRealmExit(Player player, ICultivationData qiData, @Nullable CultivationRealm nextRealm) {
         // Override for cleanup or farewell effects
     }
 
@@ -340,7 +346,7 @@ public abstract class CultivationRealm implements IPlayerQiData {
      * @param player The player
      * @param qiData Player's Qi data
      */
-    public void applyRealmModifiers(Player player, IPlayerQiData qiData) {
+    public void applyRealmModifiers(Player player, ICultivationData qiData) {
         // Override for special realm effects
     }
 

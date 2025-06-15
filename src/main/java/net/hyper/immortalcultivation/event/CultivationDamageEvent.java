@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.event;
 
-import net.hyper.immortalcultivation.cultivation.CultivationDamage;
+import net.hyper.immortalcultivation.cultivation.combat.CultivationDamage;
 import net.minecraft.world.entity.LivingEntity;
 import net.neoforged.bus.api.Event;
 

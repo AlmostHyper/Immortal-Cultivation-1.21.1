@@ -3,9 +3,9 @@ package net.hyper.immortalcultivation.attachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.cultivation.PlayerQiData;
+import net.hyper.immortalcultivation.cultivation.IQiData;
 import net.hyper.immortalcultivation.network.QiSyncPacket;
-import net.hyper.immortalcultivation.registry.ICModAttachments;
+import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
@@ -13,7 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-public class PlayerQiAttachment implements PlayerQiData {
+public class PlayerQiAttachment implements IQiData {
     private long currentQi = 0;
     private int tickCounter = 0;
     private double qiFraction = 0;
@@ -21,7 +21,7 @@ public class PlayerQiAttachment implements PlayerQiData {
 
     public PlayerQiAttachment() {}
 
-    // === Player Reference Management ===
+    //  Player Reference
 
     /**
      * Dynamically get the player that owns this attachment
@@ -31,7 +31,7 @@ public class PlayerQiAttachment implements PlayerQiData {
         // Try client-side first
         if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null) {
             Player clientPlayer = Minecraft.getInstance().player;
-            if (clientPlayer.getData(ICModAttachments.PLAYER_QI.get()) == this) {
+            if (clientPlayer.getData(ICModAttachmentTypes.PLAYER_QI.get()) == this) {
                 return clientPlayer;
             }
         }
@@ -39,7 +39,7 @@ public class PlayerQiAttachment implements PlayerQiData {
         // Try server-side
         if (ServerLifecycleHooks.getCurrentServer() != null) {
             for (ServerPlayer serverPlayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
-                if (serverPlayer.getData(ICModAttachments.PLAYER_QI.get()) == this) {
+                if (serverPlayer.getData(ICModAttachmentTypes.PLAYER_QI.get()) == this) {
                     return serverPlayer;
                 }
             }
@@ -59,8 +59,7 @@ public class PlayerQiAttachment implements PlayerQiData {
         return player;
     }
 
-    // === Core Qi Management ===
-
+    // Core
     @Override
     public long getCurrentQi() {
         return currentQi;
@@ -83,24 +82,37 @@ public class PlayerQiAttachment implements PlayerQiData {
 
     @Override
     public long getMaxQi() {
-        return getBaseMaxQi(); // Can be overridden for modifiers later
+        return getBaseMaxQi();
     }
 
     @Override
     public long getBaseMaxQi() {
         Player player = getPlayerSafe();
-        if (player == null) {
-            return 100; // Safe fallback
-        }
+        if (player == null) return 100;
+
+        // Get realm base
+        long realmBase = getRealmBaseMaxQi(); // Get from realm
+
+        // Get cultivation bonus
+        PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        long cultivationBonus = cultivationAttachment != null ?
+            (long) (cultivationAttachment.getCurrentCultivation() * 0.10) : 0;
+
+        return realmBase + cultivationBonus;
+    }
+
+    private long getRealmBaseMaxQi() {
+        Player player = getPlayerSafe();
+        if (player == null) return 100;
 
         try {
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachments.PLAYER_REALM.get());
+            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment == null || realmAttachment.getCurrentRealm() == null) {
-                return 100; // Safe fallback
+                return 100;
             }
             return realmAttachment.getCurrentRealm().getBaseMaxQi();
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting base max qi", e);
+            ImmortalCultivation.LOGGER.error("Error getting realm base max Qi", e);
             return 100;
         }
     }
@@ -109,11 +121,11 @@ public class PlayerQiAttachment implements PlayerQiData {
     public double getBaseQiRegenerationRate() {
         Player player = getPlayerSafe();
         if (player == null) {
-            return 0.0; // Safe fallback
+            return 0.0;
         }
 
         try {
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachments.PLAYER_REALM.get());
+            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment == null || realmAttachment.getCurrentRealm() == null) {
                 return 0.0; // Safe fallback
             }
@@ -125,14 +137,14 @@ public class PlayerQiAttachment implements PlayerQiData {
     }
 
     @Override
-    public double getBaseAcceleratedQiRegenerationRate() {
+    public double getBaseCirculatingQiRegenerationRate() {
         Player player = getPlayerSafe();
         if (player == null) {
             return 0.0; // Safe fallback
         }
 
         try {
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachments.PLAYER_REALM.get());
+            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment == null || realmAttachment.getCurrentRealm() == null) {
                 return 0.0; // Safe fallback
             }
@@ -147,6 +159,21 @@ public class PlayerQiAttachment implements PlayerQiData {
     public double getEffectiveQiRegenerationRate() {
         // Base implementation - can be overridden for modifiers
         return getBaseQiRegenerationRate();
+    }
+
+    @Override
+    public double getRegenFraction() {
+        return qiFraction;
+    }
+
+    @Override
+    public void setRegenFraction(double fraction) {
+        this.qiFraction = fraction;
+    }
+
+    @Override
+    public void addRegenFraction(double amount) {
+        this.qiFraction += amount;
     }
 
     // === Qi Operations ===
@@ -210,7 +237,6 @@ public class PlayerQiAttachment implements PlayerQiData {
         return getCurrentQi() <= 0;
     }
 
-    @Override
     public long getRemainingCapacity() {
         return getMaxQi() - getCurrentQi();
     }
@@ -276,8 +302,7 @@ public class PlayerQiAttachment implements PlayerQiData {
         // Override for custom behavior like particles, sounds, etc.
     }
 
-    // === Syncing Logic ===
-
+    // Syncing
     private boolean shouldSync() {
         long difference = Math.abs(currentQi - lastSyncedQi);
         return difference > 10 || (difference > 0 && tickCounter % 100 == 0);
@@ -315,8 +340,7 @@ public class PlayerQiAttachment implements PlayerQiData {
         this.lastSyncedQi = newQi;
     }
 
-    // === Debug and Utility Methods ===
-
+    // Debug & Utility
     /**
      * Debug method to check Attachment state
      */
@@ -334,7 +358,7 @@ public class PlayerQiAttachment implements PlayerQiData {
                 getEffectiveQiRegenerationRate(), qiFraction);
 
             try {
-                PlayerRealmAttachment realmAttachment = player.getData(ICModAttachments.PLAYER_REALM.get());
+                PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
                 if (realmAttachment != null && realmAttachment.getCurrentRealm() != null) {
                     ImmortalCultivation.LOGGER.info("Current Realm: {}",
                         realmAttachment.getCurrentRealm().getDisplayName());
@@ -363,8 +387,7 @@ public class PlayerQiAttachment implements PlayerQiData {
         return player != null && player.level().isClientSide();
     }
 
-    // === Serialization ===
-
+    // Serialization
     @Override
     public void deserializeNBT(CompoundTag tag) {
         this.currentQi = tag.getLong("qi");
@@ -383,6 +406,7 @@ public class PlayerQiAttachment implements PlayerQiData {
         return tag;
     }
 
+    // Codec
     public static final Codec<PlayerQiAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
         Codec.LONG.optionalFieldOf("qi", 0L).forGetter(PlayerQiAttachment::getCurrentQi),
         Codec.DOUBLE.optionalFieldOf("qiFraction", 0.0).forGetter(comp -> comp.qiFraction),
@@ -397,8 +421,7 @@ public class PlayerQiAttachment implements PlayerQiData {
         return comp;
     }));
 
-    // === Getter Methods for Internal State (for debugging) ===
-
+    // Debugging
     public double getQiFraction() {
         return qiFraction;
     }

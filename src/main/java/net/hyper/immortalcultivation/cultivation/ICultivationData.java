@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.cultivation;
 
 import net.minecraft.nbt.CompoundTag;
 
-public interface IPlayerCultivationData {
+public interface ICultivationData {
 
     // === Core Data Methods ===
 
@@ -44,6 +44,12 @@ public interface IPlayerCultivationData {
         setCurrentCultivation(newAmount);
         return newAmount - current; // Return actual amount added
     }
+
+    /**
+     * Applies spiritual root cultivation bonuses to cultivation gains
+     * @return Spiritual root bonus
+     */
+    double addCultivationWithSpiritualRoots(long baseAmount);
 
     /**
      * Consumes Cultivation from the current amount
@@ -91,38 +97,38 @@ public interface IPlayerCultivationData {
     // === Regeneration Methods ===
 
     /**
-     * Gets the base Cultivation regeneration rate per second
-     * @return Regeneration rate
+     * Gets the base Cultivation rate per second
+     * @return Cultivation rate
      */
-    double getBaseCultivationRegenerationRate();
+    double getBaseCultivationRate();
 
     /**
-     * Gets the accelerated Cultivation regeneration rate per second
-     * @return Accelerated regeneration rate
+     * Gets the base Meditation Cultivation rate per second
+     * @return Meditation cultivation rate
      */
-    double getBaseAcceleratedCultivationRegenerationRate();
+    double getBaseMeditationCultivationRate();
 
     /**
-     * Gets the effective Cultivation regeneration rate (including modifiers)
+     * Gets the effective Cultivation rate (including modifiers)
      * @return Effective regeneration rate
      */
-    default double getEffectiveCultivationRegenerationRate() {
-        return getBaseCultivationRegenerationRate(); // Override for modifiers
+    default double getEffectiveCultivationRate() {
+        return getBaseCultivationRate(); // Override for modifiers
     }
 
     /**
-     * Gets the effective Cultivation regeneration rate (including modifiers)
+     * Gets the effective Meditation Cultivation rate (including modifiers)
      * @return Effective regeneration rate
      */
-    default double getEffectiveAcceleratedCultivationRegenerationRate() {
-        return getBaseAcceleratedCultivationRegenerationRate(); // Override for modifiers
+    default double getEffectiveMeditationCultivationRate() {
+        return getBaseMeditationCultivationRate(); // Override for modifiers
     }
 
     /**
-     * Checks if Cultivation regeneration is currently active
-     * @return true if Cultivation should regenerate
+     * Checks if Cultivation is allowed
+     * @return true if Cultivation should increase
      */
-    default boolean canRegenerateCultivation() {
+    default boolean canCultivate() {
         return getCurrentCultivation() < getMaxCultivation();
     }
 
@@ -176,24 +182,18 @@ public interface IPlayerCultivationData {
      * Override this method for custom regeneration logic
      */
     default void tick() {
-        // Only regenerate if not at max capacity
-        if (canRegenerateCultivation()) {
-            double regenRate = getEffectiveCultivationRegenerationRate();
+        // Only cultivate if not at max capacity
+        if (canCultivate()) {
+            double regenRate = getEffectiveCultivationRate();
 
-            // Handle fractional regeneration properly
-            if (this instanceof CultivationRegenerationState state) {
-                state.addRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
+            if (regenRate > 0) {
+                // Use the built-in regen fraction methods
+                addRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
 
-                if (state.getRegenFraction() >= 1.0) {
-                    long cultivationToAdd = (long) state.getRegenFraction();
-                    state.setRegenFraction(state.getRegenFraction() - cultivationToAdd);
+                if (getRegenFraction() >= 1.0) {
+                    long cultivationToAdd = (long) getRegenFraction();
+                    setRegenFraction(getRegenFraction() - cultivationToAdd);
                     addCultivation(cultivationToAdd);
-                }
-            } else {
-                // Simple regeneration without fractional tracking
-                long regenAmount = Math.round(regenRate / 20.0);
-                if (regenAmount > 0) {
-                    addCultivation(regenAmount);
                 }
             }
         }
@@ -225,12 +225,7 @@ public interface IPlayerCultivationData {
     default void onCultivationAdded(long amount) {
         // Override for custom behavior
     }
-}
 
-/**
- * Helper interface for implementations that need fractional regeneration tracking
- */
-interface CultivationRegenerationState {
     double getRegenFraction();
     void setRegenFraction(double fraction);
 

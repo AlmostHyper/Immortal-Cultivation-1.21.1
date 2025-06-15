@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.cultivation;
+package net.hyper.immortalcultivation.cultivation.combat;
 
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.Tier;

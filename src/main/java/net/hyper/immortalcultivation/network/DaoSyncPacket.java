@@ -1,4 +1,4 @@
 package net.hyper.immortalcultivation.network;
 
-public record SectDataPacket() {
+public record DaoSyncPacket() {
 }

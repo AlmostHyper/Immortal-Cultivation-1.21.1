@@ -2,7 +2,6 @@ package net.hyper.immortalcultivation.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.registry.ICModAttachments;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.cultivation;
+package net.hyper.immortalcultivation.cultivation.combat;
 
 // ============================================================================
 // ADVANCED CULTIVATION DAMAGE SYSTEM

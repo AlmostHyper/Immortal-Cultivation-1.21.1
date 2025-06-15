@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.cultivation;
 
 import net.minecraft.nbt.CompoundTag;
 
-public interface IPlayerHealthData {
+public interface IHealthData {
 
     // === Core Data ===
 

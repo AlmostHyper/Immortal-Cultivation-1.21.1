@@ -1,5 +1,7 @@
 package net.hyper.immortalcultivation.cultivation;
 
+import net.hyper.immortalcultivation.cultivation.combat.CultivationDamage;
+
 public interface ICultivationDamageHandler {
 
     /**

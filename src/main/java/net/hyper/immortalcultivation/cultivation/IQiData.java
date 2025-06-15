@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.cultivation;
 
 import net.minecraft.nbt.CompoundTag;
 
-public interface IPlayerQiData {
+public interface IQiData {
 
     // === Core Data Methods ===
 
@@ -97,10 +97,10 @@ public interface IPlayerQiData {
     double getBaseQiRegenerationRate();
 
     /**
-     * Gets the accelerated Qi regeneration rate per second
-     * @return Accelerated regeneration rate
+     * Gets the base circulating Qi regeneration rate per second
+     * @return Circulating regeneration rate
      */
-    double getBaseAcceleratedQiRegenerationRate();
+    double getBaseCirculatingQiRegenerationRate();
 
     /**
      * Gets the effective Qi regeneration rate (including modifiers)
@@ -111,11 +111,11 @@ public interface IPlayerQiData {
     }
 
     /**
-     * Gets the effective Qi regeneration rate (including modifiers)
-     * @return Effective regeneration rate
+     * Gets the effective circulating Qi regeneration rate (including modifiers)
+     * @return Effective circulating regeneration rate
      */
-    default double getEffectiveAcceleratedQiRegenerationRate() {
-        return getBaseAcceleratedQiRegenerationRate(); // Override for modifiers
+    default double getEffectiveCirculatingQiRegenerationRate() {
+        return getBaseCirculatingQiRegenerationRate(); // Override for modifiers
     }
 
     /**
@@ -176,24 +176,18 @@ public interface IPlayerQiData {
      * Override this method for custom regeneration logic
      */
     default void tick() {
-        // Only regenerate if not at max capacity
+        // Only cultivate if not at max capacity
         if (canRegenerateQi()) {
             double regenRate = getEffectiveQiRegenerationRate();
 
-            // Handle fractional regeneration properly
-            if (this instanceof QiRegenerationState state) {
-                state.addRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
+            if (regenRate > 0) {
+                // Use the built-in regen fraction methods
+                addRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
 
-                if (state.getRegenFraction() >= 1.0) {
-                    long qiToAdd = (long) state.getRegenFraction();
-                    state.setRegenFraction(state.getRegenFraction() - qiToAdd);
-                    addQi(qiToAdd);
-                }
-            } else {
-                // Simple regeneration without fractional tracking
-                long regenAmount = Math.round(regenRate / 20.0);
-                if (regenAmount > 0) {
-                    addQi(regenAmount);
+                if (getRegenFraction() >= 1.0) {
+                    long cultivationToAdd = (long) getRegenFraction();
+                    setRegenFraction(getRegenFraction() - cultivationToAdd);
+                    addQi(cultivationToAdd);
                 }
             }
         }
@@ -225,12 +219,7 @@ public interface IPlayerQiData {
     default void onQiAdded(long amount) {
         // Override for custom behavior
     }
-}
 
-/**
- * Helper interface for implementations that need fractional regeneration tracking
- */
-interface QiRegenerationState {
     double getRegenFraction();
     void setRegenFraction(double fraction);
 
