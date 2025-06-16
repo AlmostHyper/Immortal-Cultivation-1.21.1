@@ -5,7 +5,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.cultivation.ICultivationData;
 import net.hyper.immortalcultivation.network.CultivationSyncPacket;
-import net.hyper.immortalcultivation.network.CultivationSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.client.Minecraft;
@@ -66,7 +65,7 @@ public class PlayerCultivationAttachment implements ICultivationData {
     }
 
     @Override
-    public void setCurrentCultivation(long cultivation) {
+    public long setCurrentCultivation(long cultivation) {
         long oldCultivation = this.currentCultivation;
         this.currentCultivation = Math.max(0, cultivation);
 
@@ -78,6 +77,7 @@ public class PlayerCultivationAttachment implements ICultivationData {
 
         // Call change event
         onCultivationChanged(oldCultivation, this.currentCultivation);
+        return oldCultivation;
     }
 
     @Override
@@ -147,7 +147,7 @@ public class PlayerCultivationAttachment implements ICultivationData {
 
         try {
             // Get spiritual roots multiplier
-            PlayerSpiritualRootsAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
                 float multiplier = roots.getCultivationMultiplier();
                 return baseRate * multiplier;
@@ -189,7 +189,7 @@ public class PlayerCultivationAttachment implements ICultivationData {
 
         try {
             // Get spiritual roots multiplier
-            PlayerSpiritualRootsAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
                 float multiplier = roots.getCultivationMultiplier();
                 // Meditation could have an additional bonus multiplier
@@ -212,7 +212,7 @@ public class PlayerCultivationAttachment implements ICultivationData {
 
         try {
             // Get spiritual roots multiplier
-            PlayerSpiritualRootsAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
                 float multiplier = roots.getCultivationMultiplier();
                 long modifiedAmount = Math.round(baseAmount * multiplier);

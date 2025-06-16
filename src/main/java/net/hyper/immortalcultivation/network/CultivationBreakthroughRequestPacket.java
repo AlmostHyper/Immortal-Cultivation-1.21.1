@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.network;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -53,31 +54,51 @@ public record CultivationBreakthroughRequestPacket(PlayerRealmAttachment.Breakth
         if (context.flow().isServerbound()) {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer serverPlayer) {
+                    ImmortalCultivation.LOGGER.info("Processing breakthrough request from player: {}", serverPlayer.getName().getString());
+
                     PlayerRealmAttachment realmAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_REALM.get());
 
-                    if (realmAttachment != null) {
-                        PlayerRealmAttachment.BreakthroughResult result = realmAttachment.attemptBreakthrough(packet.breakthroughType());
+                    if (realmAttachment == null) {
+                        ImmortalCultivation.LOGGER.error("RealmAttachment is null for player: {}", serverPlayer.getName().getString());
+                        serverPlayer.sendSystemMessage(Component.literal("Error: Could not access realm data").withStyle(ChatFormatting.RED));
+                        return;
+                    }
 
-                        // Send result message to player
-                        if (result.success()) {
-                            serverPlayer.sendSystemMessage(Component.literal("Breakthrough successful! ")
-                                .withStyle(ChatFormatting.GREEN)
-                                .append(Component.literal(result.message()).withStyle(ChatFormatting.GOLD)));
+                    // Debug current state
+                    ImmortalCultivation.LOGGER.info("RealmAttachment found - Current realm: {}, Player set: {}",
+                        realmAttachment.getCurrentRealm() != null ? realmAttachment.getCurrentRealm().getDisplayName() : "NULL",
+                        realmAttachment.getPlayer() != null);
 
-                            // SYNC: Send realm update to client
-                            ICModNetwork.sendToPlayer(new RealmSyncPacket(result.newRealm().getId()), serverPlayer);
+                    // Ensure player is set
+                    realmAttachment.setPlayer(serverPlayer);
 
-                            // Also sync cultivation attachment in case max cultivation changed
-                            PlayerCultivationAttachment cultivation = serverPlayer.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                            if (cultivation != null) {
-                                cultivation.forceSync();
-                            }
+                    // Verify realm is set, if not set to default
+                    if (realmAttachment.getCurrentRealm() == null) {
+                        ImmortalCultivation.LOGGER.warn("Current realm is null, setting to default mortal realm");
+                        realmAttachment.setCurrentRealm(ICModCultivationRealms.MORTAL, false);
+                    }
 
-                        } else {
-                            serverPlayer.sendSystemMessage(Component.literal("Breakthrough failed: ")
-                                .withStyle(ChatFormatting.RED)
-                                .append(Component.literal(result.message()).withStyle(ChatFormatting.GRAY)));
+                    PlayerRealmAttachment.BreakthroughResult result = realmAttachment.attemptBreakthrough(packet.breakthroughType());
+
+                    // Send result message to player
+                    if (result.success() && result.newRealm() != null) {
+                        serverPlayer.sendSystemMessage(Component.literal("Breakthrough successful! ")
+                            .withStyle(ChatFormatting.GREEN)
+                            .append(Component.literal(result.message()).withStyle(ChatFormatting.GOLD)));
+
+                        // SYNC: Send realm update to client
+                        ICModNetwork.sendToPlayer(new CultivationBreakthroughSyncPacket(result.newRealm().getId()), serverPlayer);
+
+                        // Also sync cultivation attachment in case max cultivation changed
+                        PlayerCultivationAttachment cultivation = serverPlayer.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                        if (cultivation != null) {
+                            cultivation.forceSync();
                         }
+
+                    } else {
+                        serverPlayer.sendSystemMessage(Component.literal("Breakthrough failed: ")
+                            .withStyle(ChatFormatting.RED)
+                            .append(Component.literal(result.message()).withStyle(ChatFormatting.GRAY)));
                     }
                 }
             });

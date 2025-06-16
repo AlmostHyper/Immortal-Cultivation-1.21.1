@@ -1,10 +1,7 @@
 package net.hyper.immortalcultivation.registry;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.network.CultivationBreakthroughRequestPacket;
-import net.hyper.immortalcultivation.network.CultivationSyncPacket;
-import net.hyper.immortalcultivation.network.QiRequestPacket;
-import net.hyper.immortalcultivation.network.QiSyncPacket;
+import net.hyper.immortalcultivation.network.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
@@ -33,37 +30,45 @@ public class ICModNetwork {
 
     @SubscribeEvent
     public static void register(final RegisterPayloadHandlersEvent event) {
+        ImmortalCultivation.LOGGER.info("Registering network packets...");
+
         REGISTRY = event.registrar(ImmortalCultivation.MOD_ID);
 
-        // Server to Client
+        // SERVER TO CLIENT packets (playToClient)
         REGISTRY.playToClient(
             QiSyncPacket.ID,
             QiSyncPacket.STREAM_CODEC,
             QiSyncPacket::handleClient
         );
+
         REGISTRY.playToClient(
             CultivationSyncPacket.ID,
             CultivationSyncPacket.STREAM_CODEC,
             CultivationSyncPacket::handleClient
         );
 
+        // Add the breakthrough sync packet (server -> client)
+        REGISTRY.playToClient(
+            CultivationBreakthroughSyncPacket.ID,
+            CultivationBreakthroughSyncPacket.STREAM_CODEC,
+            CultivationBreakthroughSyncPacket::handleClient
+        );
 
-
-
-
-        // Client to Server
+        // CLIENT TO SERVER packets (playToServer)
         REGISTRY.playToServer(
             QiRequestPacket.ID,
             QiRequestPacket.STREAM_CODEC,
             QiRequestPacket::handleServer
         );
-        REGISTRY.playToClient(
+
+        // Fix: Breakthrough request should be playToServer, not playToClient
+        REGISTRY.playToServer(
             CultivationBreakthroughRequestPacket.ID,
             CultivationBreakthroughRequestPacket.STREAM_CODEC,
-            CultivationBreakthroughRequestPacket::handleClient
+            CultivationBreakthroughRequestPacket::handleServer
         );
 
-
+        ImmortalCultivation.LOGGER.info("Network packets registered successfully!");
     }
 
     // Utility methods for sending packets

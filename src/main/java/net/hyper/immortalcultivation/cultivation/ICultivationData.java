@@ -28,9 +28,11 @@ public interface ICultivationData {
 
     /**
      * Sets the current Cultivation amount (clamped between 0 and max)
+     *
      * @param cultivation The new Cultivation amount
+     * @return
      */
-    void setCurrentCultivation(long cultivation);
+    long setCurrentCultivation(long cultivation);
 
     /**
      * Adds Cultivation to the current amount (respects maximum)

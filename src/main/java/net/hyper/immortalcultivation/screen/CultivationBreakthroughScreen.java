@@ -2,8 +2,9 @@ package net.hyper.immortalcultivation.screen;
 
 import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerSpiritualRootsAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerSpiritualRootAttachment;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.network.CultivationBreakthroughRequestPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.ChatFormatting;
@@ -16,12 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class CultivationBreakthroughScreen extends Screen {
-    private static final int WINDOW_WIDTH = 300;
-    private static final int WINDOW_HEIGHT = 400;
+    private static final int WINDOW_WIDTH = 280;
+    private static final int WINDOW_HEIGHT = 380;
 
     private PlayerRealmAttachment realmAttachment;
     private PlayerCultivationAttachment cultivationAttachment;
-    private PlayerSpiritualRootsAttachment spiritualRoots;
+    private PlayerSpiritualRootAttachment spiritualRoots;
 
     private int windowX, windowY;
     private List<BreakthroughButton> breakthroughButtons = new ArrayList<>();
@@ -43,6 +44,11 @@ public class CultivationBreakthroughScreen extends Screen {
             realmAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             cultivationAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             spiritualRoots = minecraft.player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+
+            // Ensure the player is set in the attachment
+            if (realmAttachment != null) {
+                realmAttachment.setPlayer(minecraft.player);
+            }
         }
 
         setupButtons();
@@ -228,7 +234,7 @@ public class CultivationBreakthroughScreen extends Screen {
 
     private void attemptBreakthrough(PlayerRealmAttachment.BreakthroughType type) {
         // Send packet to server
-        ICModNetwork.sendToServer(new BreakthroughAttemptPacket(type));
+        ICModNetwork.sendToServer(new CultivationBreakthroughRequestPacket(type));
         onClose();
     }
 }

@@ -100,9 +100,6 @@ public class MortalL0 extends CultivationRealm {
     @Override
     public double getBaseCultivationRate() {return BASE_CULTIVATION_RATE;}
 
-    @Override
-    public double getBaseMeditationCultivationRate() {return BASE_CULTIVATION_RATE * 9;}
-
     // === Qi Stats ===
 
     @Override
@@ -124,7 +121,6 @@ public class MortalL0 extends CultivationRealm {
     public List<CultivationRealm> getCultivationRealmGroup() {
         // All Qi Condensation levels
         return List.of(
-            this,
             ICModCultivationRealms.QI_CONDENSATION_L1,
             ICModCultivationRealms.QI_CONDENSATION_L2,
             ICModCultivationRealms.QI_CONDENSATION_L3
@@ -139,9 +135,7 @@ public class MortalL0 extends CultivationRealm {
     @Override
     public List<CultivationRealm> getNextCultivationRealms() {
         return List.of(
-            this,
             ICModCultivationRealms.QI_CONDENSATION_L1);
-
     }
 
     // === Breakthrough Requirements ===

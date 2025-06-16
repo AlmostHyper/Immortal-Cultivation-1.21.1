@@ -101,10 +101,7 @@ public class QiCondensationL3 extends CultivationRealm {
     @Override
     public double getBaseCultivationRate() {return BASE_CULTIVATION_RATE;}
 
-    @Override
-    public double getBaseMeditationCultivationRate() {return BASE_CULTIVATION_RATE * 9;}
-
-    // === Qi Stats ===
+    // === Qi Stats === //
 
     @Override
     public long getBaseMaxQi() {

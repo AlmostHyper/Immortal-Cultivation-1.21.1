@@ -104,13 +104,16 @@ public abstract class CultivationRealm {
      *  Meditation Cultivation per second
      * @return Cultivation per second while meditating
      */
-    public abstract double getBaseMeditationCultivationRate();
+    public final double getBaseMeditationCultivationRate() {
+        return getBaseCultivationRate() * 9;
+    }
+
 
     /**
      * Minimum Cultivation required to attempt breakthrough from this realm
      * @return Cultivation threshold for breakthrough
      */
-    public long getBreakthroughCultivationThreshold() {
+    public final long getBreakthroughCultivationThreshold() {
         return (long) (getBaseMaxCultivation() * 0.7);
     }
 

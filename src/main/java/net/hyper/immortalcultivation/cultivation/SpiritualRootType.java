@@ -14,7 +14,7 @@ public enum SpiritualRootType {
     CELESTIAL_STEEL_ROOT(1.2f, "Celestial Steel Root", 0xFFD700),
     ABYSSAL_MOON_ROOT(1.2f, "Abyssal Moon Root", 0xFFD700),
     MYRIAD_BRANCH_ROOT(1.2f, "Myriad Branch Root", 0xFFD700),
-    VOID_ROOT(1.35f, "Void Root", 0xFFD700),
+    VOID_ROOT(1.3f, "Void Root", 0xFFD700),
     HEAVENLY_ROOT(1.5f, "Heavenly Root", 0xFFD700);
 
     private final float cultivationMultiplier;

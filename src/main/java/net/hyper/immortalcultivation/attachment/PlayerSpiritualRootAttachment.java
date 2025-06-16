@@ -5,16 +5,16 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.cultivation.SpiritualRootType;
 import net.minecraft.nbt.CompoundTag;
 
-public class PlayerSpiritualRootsAttachment {
+public class PlayerSpiritualRootAttachment {
     private SpiritualRootType rootType;
     private boolean hasBeenAssigned;
 
-    public PlayerSpiritualRootsAttachment() {
+    public PlayerSpiritualRootAttachment() {
         this.rootType = SpiritualRootType.MORTAL_ROOT;
         this.hasBeenAssigned = false;
     }
 
-    public PlayerSpiritualRootsAttachment(SpiritualRootType rootType) {
+    public PlayerSpiritualRootAttachment(SpiritualRootType rootType) {
         this.rootType = rootType;
         this.hasBeenAssigned = true;
     }
@@ -57,19 +57,19 @@ public class PlayerSpiritualRootsAttachment {
         this.hasBeenAssigned = tag.getBoolean("hasBeenAssigned");
     }
 
-    public static PlayerSpiritualRootsAttachment fromTag(CompoundTag tag) {
-        PlayerSpiritualRootsAttachment attachment = new PlayerSpiritualRootsAttachment();
+    public static PlayerSpiritualRootAttachment fromTag(CompoundTag tag) {
+        PlayerSpiritualRootAttachment attachment = new PlayerSpiritualRootAttachment();
         attachment.load(tag);
         return attachment;
     }
 
     // === Codec === //
 
-    public static final Codec<PlayerSpiritualRootsAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+    public static final Codec<PlayerSpiritualRootAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
         Codec.STRING.optionalFieldOf("rootType", "MORTAL_ROOT").forGetter(comp -> comp.rootType.name()),
-        Codec.BOOL.optionalFieldOf("hasBeenAssigned", false).forGetter(PlayerSpiritualRootsAttachment::hasBeenAssigned)
+        Codec.BOOL.optionalFieldOf("hasBeenAssigned", false).forGetter(PlayerSpiritualRootAttachment::hasBeenAssigned)
     ).apply(instance, (rootTypeString, assigned) -> {
-        PlayerSpiritualRootsAttachment comp = new PlayerSpiritualRootsAttachment();
+        PlayerSpiritualRootAttachment comp = new PlayerSpiritualRootAttachment();
         try {
             comp.rootType = SpiritualRootType.valueOf(rootTypeString);
         } catch (IllegalArgumentException e) {

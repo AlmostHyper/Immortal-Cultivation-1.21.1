@@ -7,7 +7,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.hyper.immortalcultivation.attachment.PlayerSpiritualRootsAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerSpiritualRootAttachment;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
@@ -145,7 +145,7 @@ public class CultivationTickHandler {
 
     private static String getSpiritualRootInfo(ServerPlayer player) {
         try {
-            PlayerSpiritualRootsAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
                 return String.format("%s (%.1fx)",
                     roots.getRootType().getDisplayName(),

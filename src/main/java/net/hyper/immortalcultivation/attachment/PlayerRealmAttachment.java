@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.attachment;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.cultivation.ICultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
@@ -152,15 +153,31 @@ public class PlayerRealmAttachment {
      * @param type Type of breakthrough to attempt
      * @return BreakthroughResult with details
      */
+    // Replace the attemptBreakthrough method in PlayerRealmAttachment.java with this version:
+
     public BreakthroughResult attemptBreakthrough(BreakthroughType type) {
-        if (player == null || currentRealm == null) {
-            return new BreakthroughResult(false, "Invalid player or realm state", null);
+        // Enhanced debugging
+        ImmortalCultivation.LOGGER.info("Attempting breakthrough - Player: {}, CurrentRealm: {}",
+            player != null ? player.getName().getString() : "NULL",
+            currentRealm != null ? currentRealm.getDisplayName() : "NULL");
+
+        if (player == null) {
+            ImmortalCultivation.LOGGER.error("Player is null in attemptBreakthrough!");
+            return new BreakthroughResult(false, "Player reference is null", null);
+        }
+
+        if (currentRealm == null) {
+            ImmortalCultivation.LOGGER.error("Current realm is null in attemptBreakthrough!");
+            return new BreakthroughResult(false, "Current realm is null", null);
         }
 
         ICultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivationData == null) {
+            ImmortalCultivation.LOGGER.error("Cultivation data is null for player: {}", player.getName().getString());
             return new BreakthroughResult(false, "No Cultivation data found", null);
         }
+
+        ImmortalCultivation.LOGGER.info("All checks passed, proceeding with breakthrough attempt");
 
         // Check if attempt is possible
         if (!canAttemptBreakthrough()) {
@@ -187,12 +204,16 @@ public class PlayerRealmAttachment {
         };
 
         if (targetRealm == null) {
+            ImmortalCultivation.LOGGER.warn("No valid breakthrough path found for type: {}", type);
             return new BreakthroughResult(false, "No valid breakthrough path found", null);
         }
 
         // Calculate success chance (could be modified by realm, items, etc.)
         double successChance = calculateBreakthroughSuccessChance(type, targetRealm);
         boolean success = player.level().random.nextDouble() < successChance;
+
+        ImmortalCultivation.LOGGER.info("Breakthrough attempt - Success chance: {}%, Result: {}",
+            String.format("%.1f", successChance * 100), success ? "SUCCESS" : "FAILURE");
 
         if (success) {
             // Advance to new realm
@@ -201,7 +222,6 @@ public class PlayerRealmAttachment {
             return new BreakthroughResult(true,
                 "Successfully advanced to " + targetRealm.getDisplayName(), targetRealm);
         } else {
-
             return new BreakthroughResult(false,
                 "Breakthrough failed.", null);
         }
@@ -224,7 +244,7 @@ public class PlayerRealmAttachment {
         // Modify based on current Cultivation percentage of realm max
         ICultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         double cultivationPercentage = qiData.getCultivationPercentage();
-        double qiBonus = (cultivationPercentage - 0.8) * 0.10;
+        double qiBonus = (cultivationPercentage - 0.8) * 0.20;
 
         // Modify based on previous attempts (diminishing returns)
         double attemptBonus = Math.min(breakthroughAttempts * 0.05, 0.5);
@@ -256,6 +276,8 @@ public class PlayerRealmAttachment {
 
     public boolean isOnBreakthroughCooldown() {
         if (!breakthroughCooldown) return false;
+
+        breakthroughCooldown = true;
 
         long currentTime = player != null ? player.level().getGameTime() : 0;
         return currentTime - lastBreakthroughAttempt < getBreakthroughCooldownTicks();
