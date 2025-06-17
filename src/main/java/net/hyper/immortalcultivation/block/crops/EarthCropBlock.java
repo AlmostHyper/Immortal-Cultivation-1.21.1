@@ -13,11 +13,11 @@ import net.minecraft.world.level.material.PushReaction;
 import java.util.function.Supplier;
 
 public class EarthCropBlock extends ICModCropBlock{
-    public static final int MAX_AGE = 4;
-    public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 3);
+    public static final int MAX_AGE = 2;
+    public static final IntegerProperty AGE = IntegerProperty.create("age", 0, 2);
 
 
-    public static Supplier<EarthCropBlock> YELLOW_EARTH_ROOT () {
+    public static Supplier<EarthCropBlock> YELLOW_EARTH_ROOTS () {
         return () -> new EarthCropBlock(BlockBehaviour.Properties.of()
             .mapColor(MapColor.PLANT)
             .noCollission()

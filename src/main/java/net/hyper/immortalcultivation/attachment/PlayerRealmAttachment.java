@@ -3,8 +3,7 @@ package net.hyper.immortalcultivation.attachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.cultivation.ICultivationData;
-import net.hyper.immortalcultivation.cultivation.IQiData;
+import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
@@ -82,7 +81,7 @@ public class PlayerRealmAttachment {
         this.timeInCurrentRealm = 0; // Reset time in realm
 
         if (triggerEvents && player != null) {
-            ICultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
 
             // Call exit event on old realm
             if (oldRealm != null) {
@@ -111,7 +110,7 @@ public class PlayerRealmAttachment {
     public boolean canAttemptBreakthrough() {
         if (player == null || currentRealm == null) return false;
 
-        ICultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivationData == null) return false;
 
         // Check cooldown
@@ -134,7 +133,7 @@ public class PlayerRealmAttachment {
     public boolean meetsBreakthroughRequirements() {
         if (player == null || currentRealm == null) return false;
 
-        ICultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivationData == null) return false;
 
         return currentRealm.canBreakthrough(player, cultivationData);
@@ -171,7 +170,7 @@ public class PlayerRealmAttachment {
             return new BreakthroughResult(false, "Current realm is null", null);
         }
 
-        ICultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivationData == null) {
             ImmortalCultivation.LOGGER.error("Cultivation data is null for player: {}", player.getName().getString());
             return new BreakthroughResult(false, "No Cultivation data found", null);
@@ -242,7 +241,7 @@ public class PlayerRealmAttachment {
         };
 
         // Modify based on current Cultivation percentage of realm max
-        ICultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         double cultivationPercentage = qiData.getCultivationPercentage();
         double qiBonus = (cultivationPercentage - 0.8) * 0.20;
 
@@ -299,7 +298,7 @@ public class PlayerRealmAttachment {
     public List<BreakthroughOption> getAvailableBreakthroughs() {
         if (player == null || currentRealm == null) return Collections.emptyList();
 
-        ICultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivationData == null) return Collections.emptyList();
 
         List<BreakthroughOption> options = new ArrayList<>();
@@ -349,7 +348,7 @@ public class PlayerRealmAttachment {
 
         // Apply realm modifiers periodically
         if (timeInCurrentRealm % 100 == 0) { // Every 5 seconds
-            ICultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (cultivationData != null) {
                 currentRealm.applyRealmModifiers(player, cultivationData);
             }

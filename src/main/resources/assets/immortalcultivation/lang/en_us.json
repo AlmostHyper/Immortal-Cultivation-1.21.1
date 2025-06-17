@@ -29,6 +29,11 @@
   "block.immortalcultivation.sky_iron_ore_block": "Sky Iron Ore",
   "block.immortalcultivation.water_aspected_ore_block": "Water-Aspected Ore",
   "block.immortalcultivation.water_aspected_deepslate_ore_block": "Water-Aspected Deepslate Ore",
+  "block.immortalcultivation.yellow_earth_roots_block": "Yellow Earth Roots Crop",
+  "block.immortalcultivation.": "",
+  "block.immortalcultivation.": "",
+  "block.immortalcultivation.": "",
+  "block.immortalcultivation.": "",
 
   "item.immortalcultivation.low_quality_spirit_stone": "Low Quality Spirit Stone",
   "item.immortalcultivation.medium_quality_spirit_stone": "Medium Quality Spirit Stone",
@@ -108,5 +113,11 @@
   "item.immortalcultivation.metal_aspected_boots": "Metal-Aspected Boots",
   "item.immortalcultivation.water_aspected_boots": "Water-Aspected Boots",
   "item.immortalcultivation.wood_aspected_boots": "Wood-Aspected Boots",
-  "item.immortalcultivation.sky_iron_boots": "Sky Iron Boots"
+  "item.immortalcultivation.sky_iron_boots": "Sky Iron Boots",
+
+  "item.immortalcultivation.yellow_earth_roots": "Yellow Earth Roots",
+  "item.immortalcultivation.red_fire_roots": "Red Fire Roots",
+  "item.immortalcultivation.white_metal_roots": "White Metal Roots",
+  "item.immortalcultivation.black_water_roots": "Black Water Roots",
+  "item.immortalcultivation.green_wood_roots": "Green Wood Roots"
 }

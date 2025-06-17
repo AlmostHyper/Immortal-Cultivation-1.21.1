@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.datagen;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.block.crops.EarthCropBlock;
+import net.hyper.immortalcultivation.block.crops.*;
 import net.hyper.immortalcultivation.registry.ICModBlocks;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
@@ -50,8 +50,24 @@ public class ICModBlockStateProvider extends BlockStateProvider {
         blockWithItem(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK);
         blockWithItem(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
 
+        // === PLANTS === //
+
         // Earth Plants
-        makeCrop((CropBlock) ICModBlocks.YELLOW_EARTH_ROOT_BLOCK.get(), EarthCropBlock.AGE, "yellow_earth_root_stage", "yellow_earth_root_stage");
+        makeCrop((CropBlock) ICModBlocks.YELLOW_EARTH_ROOTS_CROP_BLOCK.get(), EarthCropBlock.AGE, "yellow_earth_roots_stage", "yellow_earth_roots_stage");
+
+        // Fire Plants
+        makeCrop((CropBlock) ICModBlocks.RED_FIRE_ROOTS_CROP_BLOCK.get(), FireCropBlock.AGE, "red_fire_roots_stage", "red_fire_roots_stage");
+
+        // Earth Plants
+        makeCrop((CropBlock) ICModBlocks.WHITE_METAL_ROOTS_CROP_BLOCK.get(), MetalCropBlock.AGE, "white_metal_roots_stage", "white_metal_roots_stage");
+
+        // Earth Plants
+        makeCrop((CropBlock) ICModBlocks.BLACK_WATER_ROOTS_CROP_BLOCK.get(), WaterCropBlock.AGE, "black_water_roots_stage", "black_water_roots_stage");
+
+        // Earth Plants
+        makeCrop((CropBlock) ICModBlocks.BLUE_WOOD_ROOTS_CROP_BLOCK.get(), WoodCropBlock.AGE, "blue_wood_roots_stage", "blue_wood_roots_stage");
+
+
     }
 
     private void blockWithItem(DeferredBlock<?> deferredBlock) {

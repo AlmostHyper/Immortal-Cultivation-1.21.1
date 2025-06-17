@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.cultivation.realms.realm1;
 
-import net.hyper.immortalcultivation.cultivation.ICultivationData;
+import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.minecraft.ChatFormatting;
@@ -141,7 +141,7 @@ public class QiCondensationL2 extends CultivationRealm {
     // === Breakthrough Requirements ===
 
     @Override
-    public boolean meetsAdditionalRequirements(Player player, ICultivationData cultivationData) {
+    public boolean meetsAdditionalRequirements(Player player, IQiCultivationData cultivationData) {
         // First level has no special requirements beyond Qi
         return true;
     }
@@ -177,7 +177,7 @@ public class QiCondensationL2 extends CultivationRealm {
     // === Events ===
 
     @Override
-    public void onRealmAdvancement(Player player, ICultivationData cultivationData, @Nullable CultivationRealm previousRealm) {
+    public void onRealmAdvancement(Player player, IQiCultivationData cultivationData, @Nullable CultivationRealm previousRealm) {
         super.onRealmAdvancement(player, cultivationData, previousRealm);
 
         if (player instanceof ServerPlayer serverPlayer) {
@@ -221,7 +221,7 @@ public class QiCondensationL2 extends CultivationRealm {
     }
 
     @Override
-    public void applyRealmModifiers(Player player, ICultivationData qiData) {
+    public void applyRealmModifiers(Player player, IQiCultivationData qiData) {
         // This realm doesn't have special modifiers beyond base stats
         // Could add temporary effects, passive abilities, etc.
     }

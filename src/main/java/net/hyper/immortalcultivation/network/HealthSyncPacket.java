@@ -32,7 +32,7 @@ public record HealthSyncPacket(long health) implements CustomPacketPayload {
                 Minecraft mc = Minecraft.getInstance();
                 LocalPlayer player = mc.player;
                 if (player != null) {
-                    var healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+                    var healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY.get());
                     if (healthAttachment != null) {
                         healthAttachment.updateFromServer(packet.health());
                     }

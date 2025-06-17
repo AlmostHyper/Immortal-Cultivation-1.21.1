@@ -1,4 +1,4 @@
 package net.hyper.immortalcultivation.cultivation;
 
-public interface IResistanceData {
+public interface IResistancesData {
 }

@@ -1,7 +1,6 @@
 package net.hyper.immortalcultivation.datagen;
 
-import net.hyper.immortalcultivation.block.crops.EarthCropBlock;
-import net.hyper.immortalcultivation.block.crops.ICModCropBlock;
+import net.hyper.immortalcultivation.block.crops.*;
 import net.hyper.immortalcultivation.registry.ICModBlocks;
 import net.hyper.immortalcultivation.registry.ICModItems;
 import net.minecraft.advancements.critereon.StatePropertiesPredicate;
@@ -62,8 +61,23 @@ public class ICModBlockLootTableProvider extends BlockLootSubProvider {
         add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.METAL_ASPECTED_ORE.get()));
         add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.WATER_ASPECTED_ORE.get()));
 
+        // === PLANTS === //
+
         // Earth Plants
-        add(ICModBlocks.YELLOW_EARTH_ROOT_BLOCK.get(), block -> createCropDrops(ICModBlocks.YELLOW_EARTH_ROOT_BLOCK.get(), ICModItems.YELLOW_EARTH_ROOT.get(), ICModItems.YELLOW_EARTH_ROOT.get(), createMatureCropCondition(ICModBlocks.YELLOW_EARTH_ROOT_BLOCK.get(), EarthCropBlock.AGE)));
+        add(ICModBlocks.YELLOW_EARTH_ROOTS_CROP_BLOCK.get(), block -> createCropDrops(ICModBlocks.YELLOW_EARTH_ROOTS_CROP_BLOCK.get(), ICModItems.YELLOW_EARTH_ROOTS.get(), ICModItems.YELLOW_EARTH_ROOTS.get(), createMatureCropCondition(ICModBlocks.YELLOW_EARTH_ROOTS_CROP_BLOCK.get(), EarthCropBlock.AGE)));
+
+        // Fire Plants
+        add(ICModBlocks.RED_FIRE_ROOTS_CROP_BLOCK.get(), block -> createCropDrops(ICModBlocks.RED_FIRE_ROOTS_CROP_BLOCK.get(), ICModItems.RED_FIRE_ROOTS.get(), ICModItems.RED_FIRE_ROOTS.get(), createMatureCropCondition(ICModBlocks.RED_FIRE_ROOTS_CROP_BLOCK.get(), FireCropBlock.AGE)));
+
+        // Metal Plants
+        add(ICModBlocks.WHITE_METAL_ROOTS_CROP_BLOCK.get(), block -> createCropDrops(ICModBlocks.WHITE_METAL_ROOTS_CROP_BLOCK.get(), ICModItems.WHITE_METAL_ROOTS.get(), ICModItems.WHITE_METAL_ROOTS.get(), createMatureCropCondition(ICModBlocks.WHITE_METAL_ROOTS_CROP_BLOCK.get(), MetalCropBlock.AGE)));
+
+        // Water Plants
+        add(ICModBlocks.BLACK_WATER_ROOTS_CROP_BLOCK.get(), block -> createCropDrops(ICModBlocks.BLACK_WATER_ROOTS_CROP_BLOCK.get(), ICModItems.BLACK_WATER_ROOTS.get(), ICModItems.BLACK_WATER_ROOTS.get(), createMatureCropCondition(ICModBlocks.BLACK_WATER_ROOTS_CROP_BLOCK.get(), WaterCropBlock.AGE)));
+
+        // Wood Plants
+        add(ICModBlocks.BLUE_WOOD_ROOTS_CROP_BLOCK.get(), block -> createCropDrops(ICModBlocks.BLUE_WOOD_ROOTS_CROP_BLOCK.get(), ICModItems.BLUE_WOOD_ROOTS.get(), ICModItems.BLUE_WOOD_ROOTS.get(), createMatureCropCondition(ICModBlocks.BLUE_WOOD_ROOTS_CROP_BLOCK.get(), WoodCropBlock.AGE)));
+
     }
 
     // Helper Methods

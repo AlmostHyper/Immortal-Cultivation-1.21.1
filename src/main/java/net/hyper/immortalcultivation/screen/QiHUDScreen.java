@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.screen;
 
 import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
-import net.hyper.immortalcultivation.cultivation.ICultivationData;
+import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
@@ -67,7 +67,7 @@ public class QiHUDScreen {
         if (player == null || minecraft.options.hideGui) return;
 
         // Get player data for both stats
-        ICultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         IQiData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI); // Adjust this to your Qi attachment type
         PlayerRealmAttachment realmData = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
 

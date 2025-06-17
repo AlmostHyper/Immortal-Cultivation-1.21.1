@@ -62,6 +62,11 @@ public class ICModTabs {
                         output.accept(ICModItems.WATER_ASPECTED_INGOT);
                         output.accept(ICModItems.WOOD_ASPECTED_ORE);
                         output.accept(ICModItems.WOOD_ASPECTED_INGOT);
+                        output.accept(ICModItems.YELLOW_EARTH_ROOTS);
+                        output.accept(ICModItems.RED_FIRE_ROOTS);
+                        output.accept(ICModItems.WHITE_METAL_ROOTS);
+                        output.accept(ICModItems.BLACK_WATER_ROOTS);
+                        output.accept(ICModItems.BLUE_WOOD_ROOTS);
                     }).build());
 
     public static final Supplier<CreativeModeTab> immortalcultivation_TOOLS_TAB = REGISTRY.register("immortalcultivation_tools_tab",

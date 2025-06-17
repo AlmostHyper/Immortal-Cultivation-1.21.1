@@ -37,8 +37,8 @@ public class ICModRecipeProvider extends RecipeProvider implements IConditionBui
             .pattern("LLL")
             .pattern("LLL")
             .pattern("LLL")
-            .define('L', ICModItems.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
-            .unlockedBy("has_low_quality_spirit_stone_block", has(ICModItems.LOW_QUALITY_SPIRIT_STONE_BLOCK)).save(recipeOutput);
+            .define('L', ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .unlockedBy("has_low_quality_spirit_stone_block", has(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK)).save(recipeOutput);
 
         ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
             .pattern("MMM")
@@ -51,8 +51,8 @@ public class ICModRecipeProvider extends RecipeProvider implements IConditionBui
             .pattern("MMM")
             .pattern("MMM")
             .pattern("MMM")
-            .define('M', ICModItems.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
-            .unlockedBy("has_medium_quality_spirit_stone_block", has(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK)).save(recipeOutput);
+            .define('M', ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .unlockedBy("has_medium_quality_spirit_stone_block", has(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK)).save(recipeOutput);
 
         ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
             .pattern("HHH")
@@ -65,8 +65,8 @@ public class ICModRecipeProvider extends RecipeProvider implements IConditionBui
             .pattern("HHH")
             .pattern("HHH")
             .pattern("HHH")
-            .define('H', ICModItems.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
-            .unlockedBy("has_high_quality_spirit_stone_block", has(ICModItems.HIGH_QUALITY_SPIRIT_STONE_BLOCK)).save(recipeOutput);
+            .define('H', ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .unlockedBy("has_high_quality_spirit_stone_block", has(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK)).save(recipeOutput);
 
         ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
             .pattern("TTT")
@@ -79,8 +79,8 @@ public class ICModRecipeProvider extends RecipeProvider implements IConditionBui
             .pattern("TTT")
             .pattern("TTT")
             .pattern("TTT")
-            .define('T', ICModItems.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
-            .unlockedBy("has_top_quality_spirit_stone_block", has(ICModItems.TOP_QUALITY_SPIRIT_STONE_BLOCK)).save(recipeOutput);
+            .define('T', ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .unlockedBy("has_top_quality_spirit_stone_block", has(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK)).save(recipeOutput);
 
         // Metals
 

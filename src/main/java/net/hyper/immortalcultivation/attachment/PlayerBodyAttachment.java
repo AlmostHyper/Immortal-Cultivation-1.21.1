@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.attachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.cultivation.IHealthData;
+import net.hyper.immortalcultivation.cultivation.IBodyData;
 import net.hyper.immortalcultivation.network.HealthSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
@@ -13,13 +13,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-public class PlayerHealthAttachment implements IHealthData {
+public class PlayerBodyAttachment implements IBodyData {
     private long currentHealth = 20; // Start with base Minecraft health
     private int tickCounter = 0;
     private double healthFraction = 0;
     private long lastSyncedHealth = 0;
 
-    public PlayerHealthAttachment() {}
+    public PlayerBodyAttachment() {}
 
     // === Player Reference ===
 
@@ -31,7 +31,7 @@ public class PlayerHealthAttachment implements IHealthData {
         // Try client-side first
         if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null) {
             Player clientPlayer = Minecraft.getInstance().player;
-            if (clientPlayer.getData(ICModAttachmentTypes.PLAYER_HEALTH.get()) == this) {
+            if (clientPlayer.getData(ICModAttachmentTypes.PLAYER_BODY.get()) == this) {
                 return clientPlayer;
             }
         }
@@ -39,7 +39,7 @@ public class PlayerHealthAttachment implements IHealthData {
         // Try server-side
         if (ServerLifecycleHooks.getCurrentServer() != null) {
             for (ServerPlayer serverPlayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
-                if (serverPlayer.getData(ICModAttachmentTypes.PLAYER_HEALTH.get()) == this) {
+                if (serverPlayer.getData(ICModAttachmentTypes.PLAYER_BODY.get()) == this) {
                     return serverPlayer;
                 }
             }
@@ -182,17 +182,14 @@ public class PlayerHealthAttachment implements IHealthData {
 
     // === HealthRegenerationState Implementation ===
 
-    @Override
     public double getRegenFraction() {
         return healthFraction;
     }
 
-    @Override
     public void setRegenFraction(double fraction) {
         this.healthFraction = fraction;
     }
 
-    @Override
     public void addRegenFraction(double amount) {
         this.healthFraction += amount;
     }
@@ -446,13 +443,13 @@ public class PlayerHealthAttachment implements IHealthData {
 
     // === Codec ===
 
-    public static final Codec<PlayerHealthAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        Codec.LONG.optionalFieldOf("health", 20L).forGetter(PlayerHealthAttachment::getCurrentHealth),
+    public static final Codec<PlayerBodyAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        Codec.LONG.optionalFieldOf("health", 20L).forGetter(PlayerBodyAttachment::getCurrentHealth),
         Codec.DOUBLE.optionalFieldOf("healthFraction", 0.0).forGetter(comp -> comp.healthFraction),
         Codec.INT.optionalFieldOf("tickCounter", 0).forGetter(comp -> comp.tickCounter),
         Codec.LONG.optionalFieldOf("lastSyncedHealth", 20L).forGetter(comp -> comp.lastSyncedHealth)
     ).apply(instance, (health, fraction, ticks, lastSync) -> {
-        PlayerHealthAttachment comp = new PlayerHealthAttachment();
+        PlayerBodyAttachment comp = new PlayerBodyAttachment();
         comp.currentHealth = health;
         comp.healthFraction = fraction;
         comp.tickCounter = ticks;

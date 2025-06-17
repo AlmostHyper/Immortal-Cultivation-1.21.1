@@ -1,47 +1,15 @@
 package net.hyper.immortalcultivation.registry;
 
-import net.hyper.immortalcultivation.block.crops.EarthCropBlock;
-import net.hyper.immortalcultivation.item.crops.EarthCropItems;
+import net.hyper.immortalcultivation.item.crops.*;
 import net.hyper.immortalcultivation.item.metals.realm1.*;
 import net.hyper.immortalcultivation.item.spirit_stones.*;
 import net.minecraft.world.item.*;
-import net.minecraft.world.level.block.Block;
-import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 public class ICModItems {
     public static final DeferredRegister.Items REGISTRY = DeferredRegister.createItems("immortalcultivation");
-
-    // Spirit Stone Blocks
-    public static final DeferredItem<Item> LOW_QUALITY_SPIRIT_STONE_BLOCK;
-    public static final DeferredItem<Item> LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK;
-    public static final DeferredItem<Item> MEDIUM_QUALITY_SPIRIT_STONE_BLOCK;
-    public static final DeferredItem<Item> MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK;
-    public static final DeferredItem<Item> HIGH_QUALITY_SPIRIT_STONE_BLOCK;
-    public static final DeferredItem<Item> HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK;
-    public static final DeferredItem<Item> TOP_QUALITY_SPIRIT_STONE_BLOCK;
-    public static final DeferredItem<Item> TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK;
-
-    // Ore Blocks
-    public static final DeferredItem<Item> LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK;
-    public static final DeferredItem<Item> MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK;
-    public static final DeferredItem<Item> EARTH_ASPECTED_ORE_BLOCK;
-    public static final DeferredItem<Item> FIRE_ASPECTED_ORE_BLOCK;
-    public static final DeferredItem<Item> WATER_ASPECTED_ORE_BLOCK;
-    public static final DeferredItem<Item> SKY_IRON_ORE_BLOCK;
-
-    // Deepslate Ore Blocks
-    public static final DeferredItem<Item> LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK;
-    public static final DeferredItem<Item> MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK;
-    public static final DeferredItem<Item> HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK;
-    public static final DeferredItem<Item> TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK;
-    public static final DeferredItem<Item> FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK;
-    public static final DeferredItem<Item> METAL_ASPECTED_DEEPSLATE_ORE_BLOCK;
-    public static final DeferredItem<Item> WATER_ASPECTED_DEEPSLATE_ORE_BLOCK;
-
-    // Earth Plant Blocks
-    public static final DeferredItem<Item> YELLOW_EARTH_ROOT_BLOCK;
 
     // Spirit Stones
     public static final DeferredItem<Item> LOW_QUALITY_SPIRIT_STONE;
@@ -65,13 +33,7 @@ public class ICModItems {
     public static final DeferredItem<Item> WOOD_ASPECTED_INGOT;
     public static final DeferredItem<Item> SKY_IRON_INGOT;
 
-    // Swords
-    public static final DeferredItem<SwordItem> EARTH_ASPECTED_SWORD;
-    public static final DeferredItem<SwordItem> FIRE_ASPECTED_SWORD;
-    public static final DeferredItem<SwordItem> METAL_ASPECTED_SWORD;
-    public static final DeferredItem<SwordItem> SKY_IRON_SWORD;
-    public static final DeferredItem<SwordItem> WATER_ASPECTED_SWORD;
-    public static final DeferredItem<SwordItem> WOOD_ASPECTED_SWORD;
+    // === TOOLS === //
 
     // Pickaxes
     public static final DeferredItem<PickaxeItem> EARTH_ASPECTED_PICKAXE;
@@ -105,6 +67,18 @@ public class ICModItems {
     public static final DeferredItem<HoeItem> WATER_ASPECTED_HOE;
     public static final DeferredItem<HoeItem> WOOD_ASPECTED_HOE;
 
+    // === WEAPONS === //
+
+    // Swords
+    public static final DeferredItem<SwordItem> EARTH_ASPECTED_SWORD;
+    public static final DeferredItem<SwordItem> FIRE_ASPECTED_SWORD;
+    public static final DeferredItem<SwordItem> METAL_ASPECTED_SWORD;
+    public static final DeferredItem<SwordItem> SKY_IRON_SWORD;
+    public static final DeferredItem<SwordItem> WATER_ASPECTED_SWORD;
+    public static final DeferredItem<SwordItem> WOOD_ASPECTED_SWORD;
+
+    // === ARMOR === //
+
     // Helmets
     public static final DeferredItem<ArmorItem> EARTH_ASPECTED_HELMET;
     public static final DeferredItem<ArmorItem> FIRE_ASPECTED_HELMET;
@@ -137,41 +111,32 @@ public class ICModItems {
     public static final DeferredItem<ArmorItem> WOOD_ASPECTED_BOOTS;
     public static final DeferredItem<ArmorItem> SKY_IRON_BOOTS;
 
+    // === PLANTS === //
+
     // Earth Plants
-    public static final DeferredItem<Item> YELLOW_EARTH_ROOT;
+    public static final DeferredItem<Item> YELLOW_EARTH_ROOTS;
+
+    // Fire Plants
+    public static final DeferredItem<Item> RED_FIRE_ROOTS;
+
+    // Metal Plants
+    public static final DeferredItem<Item> WHITE_METAL_ROOTS;
+
+    // Water Plants
+    public static final DeferredItem<Item> BLACK_WATER_ROOTS;
+
+    // Wood Plants
+    public static final DeferredItem<Item> BLUE_WOOD_ROOTS;
+
+    // Lightning Plants
+
+    // Wind Plants
+
+    // Poison Plants
+
+    //
 
     static {
-
-        // Spirit Stone Block Items
-        LOW_QUALITY_SPIRIT_STONE_BLOCK = block(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK);
-        LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = block(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
-        MEDIUM_QUALITY_SPIRIT_STONE_BLOCK = block(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK);
-        MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = block(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
-        HIGH_QUALITY_SPIRIT_STONE_BLOCK = block(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK);
-        HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = block(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
-        TOP_QUALITY_SPIRIT_STONE_BLOCK = block(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK);
-        TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK = block(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
-
-        // Ore Block Items
-        LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK = block(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK);
-        MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK = block(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK);
-        EARTH_ASPECTED_ORE_BLOCK = block(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK);
-        FIRE_ASPECTED_ORE_BLOCK = block(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK);
-        WATER_ASPECTED_ORE_BLOCK = block(ICModBlocks.WATER_ASPECTED_ORE_BLOCK);
-        SKY_IRON_ORE_BLOCK = block(ICModBlocks.SKY_IRON_ORE_BLOCK);
-
-        // Deepslate Ore Block Items
-        LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
-        MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
-        HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
-        TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK);
-        FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK);
-        METAL_ASPECTED_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK);
-        WATER_ASPECTED_DEEPSLATE_ORE_BLOCK = block(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
-
-        // Earth Plant Block Items
-        YELLOW_EARTH_ROOT_BLOCK = block(ICModBlocks.YELLOW_EARTH_ROOT_BLOCK);
-
         // Spirit Stones
         LOW_QUALITY_SPIRIT_STONE = REGISTRY.register("low_quality_spirit_stone", R1SpiritStoneItems.LOW_QUALITY_SPIRIT_STONE());
         MEDIUM_QUALITY_SPIRIT_STONE = REGISTRY.register("medium_quality_spirit_stone", R1SpiritStoneItems.MEDIUM_QUALITY_SPIRIT_STONE());
@@ -193,14 +158,6 @@ public class ICModItems {
         WATER_ASPECTED_INGOT = REGISTRY.register("water_aspected_ingot", WaterAspectedItems.WATER_ASPECTED_INGOT());
         WOOD_ASPECTED_INGOT = REGISTRY.register("wood_aspected_ingot", WoodAspectedItems.WOOD_ASPECTED_INGOT());
         SKY_IRON_INGOT = REGISTRY.register("sky_iron_ingot", SkyIronItems.SKY_IRON_INGOT());
-
-        // Swords
-        EARTH_ASPECTED_SWORD = REGISTRY.register("earth_aspected_sword", EarthAspectedItems.EARTH_ASPECTED_SWORD());
-        FIRE_ASPECTED_SWORD = REGISTRY.register("fire_aspected_sword", FireAspectedItems.FIRE_ASPECTED_SWORD());
-        METAL_ASPECTED_SWORD = REGISTRY.register("metal_aspected_sword", MetalAspectedItems.METAL_ASPECTED_SWORD());
-        WATER_ASPECTED_SWORD = REGISTRY.register("water_aspected_sword", WaterAspectedItems.WATER_ASPECTED_SWORD());
-        WOOD_ASPECTED_SWORD = REGISTRY.register("wood_aspected_sword", WoodAspectedItems.WOOD_ASPECTED_SWORD());
-        SKY_IRON_SWORD = REGISTRY.register("sky_iron_sword", SkyIronItems.SKY_IRON_SWORD());
 
         // Pickaxes
         EARTH_ASPECTED_PICKAXE = REGISTRY.register("earth_aspected_pickaxe", EarthAspectedItems.EARTH_ASPECTED_PICKAXE());
@@ -234,6 +191,14 @@ public class ICModItems {
         WOOD_ASPECTED_HOE = REGISTRY.register("wood_aspected_hoe", WoodAspectedItems.WOOD_ASPECTED_HOE());
         SKY_IRON_HOE = REGISTRY.register("sky_iron_hoe", SkyIronItems.SKY_IRON_HOE());
 
+        // Swords
+        EARTH_ASPECTED_SWORD = REGISTRY.register("earth_aspected_sword", EarthAspectedItems.EARTH_ASPECTED_SWORD());
+        FIRE_ASPECTED_SWORD = REGISTRY.register("fire_aspected_sword", FireAspectedItems.FIRE_ASPECTED_SWORD());
+        METAL_ASPECTED_SWORD = REGISTRY.register("metal_aspected_sword", MetalAspectedItems.METAL_ASPECTED_SWORD());
+        WATER_ASPECTED_SWORD = REGISTRY.register("water_aspected_sword", WaterAspectedItems.WATER_ASPECTED_SWORD());
+        WOOD_ASPECTED_SWORD = REGISTRY.register("wood_aspected_sword", WoodAspectedItems.WOOD_ASPECTED_SWORD());
+        SKY_IRON_SWORD = REGISTRY.register("sky_iron_sword", SkyIronItems.SKY_IRON_SWORD());
+
         // Helmets
         EARTH_ASPECTED_HELMET = REGISTRY.register("earth_aspected_helmet", EarthAspectedItems.EARTH_ASPECTED_HELMET());
         FIRE_ASPECTED_HELMET = REGISTRY.register("fire_aspected_helmet", FireAspectedItems.FIRE_ASPECTED_HELMET());
@@ -266,13 +231,25 @@ public class ICModItems {
         WOOD_ASPECTED_BOOTS = REGISTRY.register("wood_aspected_boots", WoodAspectedItems.WOOD_ASPECTED_BOOTS());
         SKY_IRON_BOOTS = REGISTRY.register("sky_iron_boots", SkyIronItems.SKY_IRON_BOOTS());
 
+        // === PLANTS === //
+
         // Earth Plants
-        YELLOW_EARTH_ROOT = REGISTRY.register("yellow_earth_root", EarthCropItems.YELLOW_EARTH_ROOT());
+        YELLOW_EARTH_ROOTS = REGISTRY.register("yellow_earth_roots", EarthCropItems.YELLOW_EARTH_ROOTS());
+
+        // Fire Plants
+        RED_FIRE_ROOTS = REGISTRY.register("red_fire_roots", FireCropItems.RED_FIRE_ROOTS());
+
+        // Metal Plants
+        WHITE_METAL_ROOTS = REGISTRY.register("white_metal_roots", MetalCropItems.WHITE_METAL_ROOTS());
+
+        // Water Plants
+        BLACK_WATER_ROOTS = REGISTRY.register("black_water_roots", WaterCropItems.BLACK_WATER_ROOTS());
+
+        // Wood Plants
+        BLUE_WOOD_ROOTS = REGISTRY.register("blue_wood_roots", WoodCropItems.BLUE_WOOD_ROOTS());
     }
 
-    // Helper Methods
-    private static DeferredItem<Item> block(DeferredHolder<Block, Block> block) {
-        return REGISTRY.register(block.getId().getPath(), () -> new BlockItem((Block)block.get(), new Item.Properties()));
+    public static void register(IEventBus eventBus) {
+        REGISTRY.register(eventBus);
     }
 }
-

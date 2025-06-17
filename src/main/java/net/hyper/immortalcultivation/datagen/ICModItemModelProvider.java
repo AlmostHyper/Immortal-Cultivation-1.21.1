@@ -107,7 +107,23 @@ public class ICModItemModelProvider extends ItemModelProvider {
         basicItem(ICModItems.WOOD_ASPECTED_BOOTS.get());
         basicItem(ICModItems.SKY_IRON_BOOTS.get());
 
+        // === Plants === //
+
         // Earth Plants
-        basicItem(ICModItems.YELLOW_EARTH_ROOT.get());
+        basicItem(ICModItems.YELLOW_EARTH_ROOTS.get());
+
+        // Fire Plants
+        basicItem(ICModItems.RED_FIRE_ROOTS.get());
+
+        // Metal Plants
+        basicItem(ICModItems.WHITE_METAL_ROOTS.get());
+
+        // Water Plants
+        basicItem(ICModItems.BLACK_WATER_ROOTS.get());
+
+        // Wood Plants
+        basicItem(ICModItems.BLUE_WOOD_ROOTS.get());
+
+
     }
 }

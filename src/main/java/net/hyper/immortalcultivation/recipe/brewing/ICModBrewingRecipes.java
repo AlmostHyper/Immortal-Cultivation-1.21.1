@@ -1,6 +1,7 @@
 package net.hyper.immortalcultivation.recipe.brewing;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.registry.ICModBlocks;
 import net.hyper.immortalcultivation.registry.ICModItems;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -27,6 +28,6 @@ public class ICModBrewingRecipes implements IBrewingRecipe {
     }
 
     public ItemStack getOutput(ItemStack input, ItemStack ingredient) {
-        return this.isInput(input) && this.isIngredient(ingredient) ? new ItemStack((ItemLike) ICModItems.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get()) : ItemStack.EMPTY;
+        return this.isInput(input) && this.isIngredient(ingredient) ? new ItemStack((ItemLike) ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get()) : ItemStack.EMPTY;
     }
 }
