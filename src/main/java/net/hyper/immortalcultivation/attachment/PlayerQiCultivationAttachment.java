@@ -13,7 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
-public class PlayerCultivationAttachment implements IQiCultivationData {
+public class PlayerQiCultivationAttachment implements IQiCultivationData {
     private long currentCultivation = 0;
     private int tickCounter = 0;
     private double cultivationFraction = 0;
@@ -414,13 +414,13 @@ public class PlayerCultivationAttachment implements IQiCultivationData {
     }
 
     // Codec
-    public static final Codec<PlayerCultivationAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        Codec.LONG.optionalFieldOf("cultivation", 0L).forGetter(PlayerCultivationAttachment::getCurrentCultivation),
+    public static final Codec<PlayerQiCultivationAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        Codec.LONG.optionalFieldOf("cultivation", 0L).forGetter(PlayerQiCultivationAttachment::getCurrentCultivation),
         Codec.DOUBLE.optionalFieldOf("cultivationFraction", 0.0).forGetter(comp -> comp.cultivationFraction),
         Codec.INT.optionalFieldOf("tickCounter", 0).forGetter(comp -> comp.tickCounter),
         Codec.LONG.optionalFieldOf("lastSyncedCultivation", 0L).forGetter(comp -> comp.lastSyncedCultivation)
     ).apply(instance, (cultivation, fraction, ticks, lastSync) -> {
-        PlayerCultivationAttachment comp = new PlayerCultivationAttachment();
+        PlayerQiCultivationAttachment comp = new PlayerQiCultivationAttachment();
         comp.currentCultivation = cultivation;
         comp.cultivationFraction = fraction;
         comp.tickCounter = ticks;

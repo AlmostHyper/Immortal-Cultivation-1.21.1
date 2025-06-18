@@ -4,278 +4,226 @@ import net.minecraft.nbt.CompoundTag;
 
 public interface IBodyData {
 
-    // === Core Data ===
+    // === Body === //
 
     /**
-     * Deserializes Health data from NBT
-     * @param tag The NBT compound tag containing the data
+     * Gets the current Body amount
+     * @return Current Body value
      */
-    void deserializeNBT(CompoundTag tag);
+    long getCurrentBody();
 
     /**
-     * Serializes Health data to NBT
-     * @return CompoundTag containing the serialized data
+     * Sets the current Body amount (clamped between 0 and max)
+     * @param body The new Body amount
      */
-    CompoundTag serializeNBT();
-
-    // === Health Amount Methods ===
+    void setCurrentBody(long body);
 
     /**
-     * Gets the current health amount
-     * @return Current health value
-     */
-    long getCurrentHealth();
-
-    /**
-     * Sets the current health amount (clamped between 0 and max)
-     * @param health The new health amount
-     */
-    void setCurrentHealth(long health);
-
-    /**
-     * Adds health to the current amount (respects maximum)
+     * Adds Body to the current amount (respects maximum)
      * @param amount Amount to add
      * @return Actual amount added
      */
-    default long addHealth(double amount) {
-        long current = getCurrentHealth();
-        long max = getMaxHealth();
-        long newAmount = (long) Math.min(current + amount, max);
-        setCurrentHealth(newAmount);
-        return newAmount - current; // Return actual amount added
+    default long addBody(long amount) {
+        long current = getCurrentBody();
+        long max = getMaxBody();
+        long newAmount = Math.min(current + amount, max);
+        setCurrentBody(newAmount);
+        return newAmount - current;
     }
 
     /**
-     * Damages the player by reducing health
-     * @param amount Amount of damage to deal
-     * @return true if damage was applied, false if player is already dead
+     * Consumes Body from the current amount
+     * @param amount Amount to consume
+     * @return True if successful, false if insufficient Body
      */
-    default boolean damage(long amount) {
-        if (getCurrentHealth() > 0) {
-            setCurrentHealth(getCurrentHealth() - amount);
+    default boolean consumeBody(long amount) {
+        if (getCurrentBody() >= amount) {
+            setCurrentBody(getCurrentBody() - amount);
             return true;
         }
         return false;
     }
 
     /**
-     * Tries to heal the player, healing as much as possible
-     * @param amount Desired amount to heal
-     * @return Actual amount healed
+     * Tries to consume Body, consuming as much as possible
+     * @param amount Desired amount to consume
+     * @return Actual amount consumed
      */
-    default long tryHeal(long amount) {
-        long current = getCurrentHealth();
-        long max = getMaxHealth();
-        long toHeal = Math.min(amount, max - current);
-        setCurrentHealth(current + toHeal);
-        return toHeal;
+    default long tryConsumeBody(long amount) {
+        long current = getCurrentBody();
+        long toConsume = Math.min(current, amount);
+        setCurrentBody(current - toConsume);
+        return toConsume;
     }
 
     /**
-     * Checks if the player has enough health
+     * Checks if the player has enough Body
      * @param amount Amount to check
-     * @return true if player has at least this much health
+     * @return True if player has at least this much Body
      */
-    default boolean hasHealth(long amount) {
-        return getCurrentHealth() >= amount;
+    default boolean hasBody(long amount) {
+        return getCurrentBody() >= amount;
     }
 
     /**
-     * Gets the health as a percentage of maximum (0.0 to 1.0)
-     * @return Health percentage
+     * Gets the Body as a percentage of maximum (0.0 to 1.0)
+     * @return Body percentage
      */
-    default double getHealthPercentage() {
-        double max = getMaxHealth();
-        return max > 0 ? (double) getCurrentHealth() / max : 0.0;
+    default double getBodyPercentage() {
+        long max = getMaxBody();
+        return max > 0 ? (double) getCurrentBody() / max : 0.0;
     }
 
-    // === Regeneration Methods ===
+    // === Regeneration === //
 
     /**
-     * Gets the base health regeneration rate per second
+     * Gets the base Body regeneration rate per second
      * @return Regeneration rate
      */
-    double getBaseHealthRegenerationRate();
+    double getBaseBodyRegenerationRate();
 
     /**
-     * Gets the accelerated health regeneration rate per second
-     * @return Accelerated regeneration rate
+     * Gets the base circulating Body regeneration rate per second
+     * @return Circulating regeneration rate
      */
-    double getBaseAcceleratedHealthRegenerationRate();
+    double getBaseCirculatingBodyRegenerationRate();
 
     /**
-     * Gets the effective health regeneration rate (including modifiers)
+     * Gets the effective Body regeneration rate (including modifiers)
      * @return Effective regeneration rate
      */
-    default double getEffectiveHealthRegenerationRate() {
-        return getBaseHealthRegenerationRate(); // Override for modifiers
+    default double getEffectiveBodyRegenerationRate() {
+        return getBaseBodyRegenerationRate(); // Override for modifiers
     }
 
     /**
-     * Gets the effective accelerated health regeneration rate (including modifiers)
-     * @return Effective accelerated regeneration rate
+     * Gets the effective circulating Body regeneration rate (including modifiers)
+     * @return Effective circulating regeneration rate
      */
-    default double getEffectiveAcceleratedHealthRegenerationRate() {
-        return getBaseAcceleratedHealthRegenerationRate(); // Override for modifiers
+    default double getEffectiveCirculatingBodyRegenerationRate() {
+        return getBaseCirculatingBodyRegenerationRate(); // Override for modifiers
     }
 
     /**
-     * Checks if health regeneration is currently active
-     * @return true if health should regenerate
+     * Checks if Body regeneration is currently active
+     * @return True if Body should regenerate
      */
-    default boolean canRegenerateHealth() {
-        return getCurrentHealth() < getMaxHealth() && isAlive();
-    }
-
-    // === Capacity Methods ===
-
-    /**
-     * Gets the base maximum health (without modifiers)
-     * @return Base maximum health
-     */
-    long getBaseMaxHealth();
-
-    /**
-     * Gets the effective maximum health (including modifiers)
-     * Default implementation returns base max health - override for modifiers
-     * @return Effective maximum health
-     */
-    default long getMaxHealth() {
-        return getBaseMaxHealth(); // Override for modifiers
-    }
-
-    // === State Methods ===
-
-    /**
-     * Checks if health is at maximum capacity
-     * @return true if health is full
-     */
-    default boolean isHealthFull() {
-        return getCurrentHealth() >= getMaxHealth();
+    default boolean canRegenerateBody() {
+        return getCurrentBody() < getMaxBody();
     }
 
     /**
-     * Checks if the player is dead (health <= 0)
-     * @return true if dead
+     * Gets the fraction of current regeneration
+     * @return Fractional regeneration rate
      */
-    default boolean isDead() {
-        return getCurrentHealth() <= 0;
+    double getRegenFraction();
+
+    /**
+     * Sets the fraction of current regeneration
+     * @param fraction The new fractional amount
+     */
+    void setRegenFraction(double fraction);
+
+    /**
+     * Adds to fractional rate
+     */
+    default void addRegenFraction(double amount) {
+        setRegenFraction(getRegenFraction() + amount);
+    }
+
+    // === Capacity === //
+
+    /**
+     * Gets the base maximum Body (without modifiers)
+     * @return Base maximum Body
+     */
+    long getBaseMaxBody();
+
+    /**
+     * Gets the effective maximum Body (including modifiers)
+     * Default implementation returns base max Body - override for modifiers
+     * @return Effective maximum Body
+     */
+    default long getMaxBody() {
+        return getBaseMaxBody(); // Override for modifiers
+    }
+
+    // === State  === //
+
+    /**
+     * Checks if Body is at maximum capacity
+     * @return True if Body is full
+     */
+    default boolean isBodyFull() {
+        return getCurrentBody() >= getMaxBody();
     }
 
     /**
-     * Checks if the player is alive (health > 0)
-     * @return true if alive
+     * Checks if Body is completely empty
+     * @return True if Body is empty
      */
-    default boolean isAlive() {
-        return getCurrentHealth() > 0;
+    default boolean isBodyEmpty() {
+        return getCurrentBody() <= 0;
     }
 
     /**
-     * Gets remaining health capacity
-     * @return How much more health can be restored
+     * Gets remaining Body capacity
+     * @return How much more Body can be stored
      */
-    default double getRemainingHealthCapacity() {
-        return getMaxHealth() - getCurrentHealth();
+    default long getRemainingBodyCapacity() {
+        return getMaxBody() - getCurrentBody();
     }
 
-    /**
-     * Checks if player is critically injured (health below threshold)
-     * @param threshold Health threshold (default could be 25% of max)
-     * @return true if critically injured
-     */
-    default boolean isCriticallyInjured(double threshold) {
-        return getHealthPercentage() < threshold;
-    }
+    // === Tick === //
 
     /**
-     * Convenience method for critical injury check with default threshold
-     * @return true if health is below 25% of maximum
-     */
-    default boolean isCriticallyInjured() {
-        return isCriticallyInjured(0.25F);
-    }
-
-    // === Tick Method ===
-
-    /**
-     * Called every tick to update health state
-     * Override this method for custom regeneration logic
+     * Called every tick to update Body state
      */
     default void tick() {
-        // Only regenerate if not at max capacity and alive
-        if (canRegenerateHealth()) {
-            double regenRate = getEffectiveHealthRegenerationRate();
+        // Only cultivate if not at max capacity
+        if (canRegenerateBody()) {
+            double regenRate = getEffectiveBodyRegenerationRate();
 
-            // Handle fractional regeneration properly
-            if (this instanceof HealthRegenerationState state) {
-                state.addRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
+            if (regenRate > 0) {
+                // Use the built-in regen fraction methods
+                addRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
 
-                if (state.getRegenFraction() >= 1.0) {
-                    double healthToAdd = (double) state.getRegenFraction();
-                    state.setRegenFraction(state.getRegenFraction() - healthToAdd);
-                    addHealth(healthToAdd);
-                }
-            } else {
-                // Simple regeneration without fractional tracking
-                double regenAmount = (double) (regenRate / 20.0);
-                if (regenAmount > 0) {
-                    addHealth(regenAmount);
+                if (getRegenFraction() >= 1.0) {
+                    long cultivationToAdd = (long) getRegenFraction();
+                    setRegenFraction(getRegenFraction() - cultivationToAdd);
+                    addBody(cultivationToAdd);
                 }
             }
         }
     }
 
-    // === Events/Callbacks ===
+    // === Events === //
 
     /**
-     * Called when health changes (for syncing, effects, etc.)
-     * @param oldHealth Previous health amount
-     * @param newHealth New health amount
+     * Called when Body changes (for syncing, effects, etc.)
+     * @param oldBody Previous Body amount
+     * @param newBody New Body amount
      */
-    default void onHealthChanged(double oldHealth, double newHealth) {
-        // Override for custom behavior
-    }
-
-    /**
-     * Called when player takes damage
-     * @param amount Amount of damage taken
-     */
-    default void onDamageTaken(double amount) {
-        // Override for custom behavior
+    default void onBodyChanged(long oldBody, long newBody) {
     }
 
     /**
-     * Called when player is healed
-     * @param amount Amount healed
+     * Called when Body is consumed
+     * @param amount Amount consumed
      */
-    default void onHealed(double amount) {
-        // Override for custom behavior
+    default void onBodyConsumed(long amount) {
     }
 
     /**
-     * Called when player dies (health reaches 0)
+     * Called when Body is added/regenerated
+     * @param amount Amount added
      */
-    default void onDeath() {
-        // Override for custom behavior
+    default void onBodyAdded(long amount) {
     }
 
-    /**
-     * Called when player revives (health goes from 0 to positive)
-     */
-    default void onRevive() {
-        // Override for custom behavior
-    }
-}
+    // === Serialization === //
 
-/**
- * Helper interface for implementations that need fractional regeneration tracking
- */
-interface HealthRegenerationState {
-    double getRegenFraction();
-    void setRegenFraction(double fraction);
-
-    default void addRegenFraction(double amount) {
-        setRegenFraction(getRegenFraction() + amount);
-    }
+    void deserializeNBT(CompoundTag tag);
+    CompoundTag serializeNBT();
 }
 

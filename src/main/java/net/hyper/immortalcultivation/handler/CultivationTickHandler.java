@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
@@ -19,7 +19,7 @@ public class CultivationTickHandler {
             return;
         }
 
-        PlayerCultivationAttachment cultivationAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerQiCultivationAttachment cultivationAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivationAttachment != null) {
             // TEMPORARILY COMMENT OUT: This might be interfering
             // cultivationAttachment.tick();
@@ -30,7 +30,7 @@ public class CultivationTickHandler {
     }
 
     private static void processCultivationRegeneration(ServerPlayer player) {
-        PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerQiCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivationAttachment == null) {
             ImmortalCultivation.LOGGER.error("CultivationAttachment is null for player {}", player.getName().getString());
             return;
@@ -91,7 +91,7 @@ public class CultivationTickHandler {
         }
     }
 
-    private static void addFractionalCultivation(PlayerCultivationAttachment attachment, double amount, ServerPlayer player) {
+    private static void addFractionalCultivation(PlayerQiCultivationAttachment attachment, double amount, ServerPlayer player) {
         try {
             // Get current fraction - use the correct method name
             double currentFraction = attachment.getRegenFraction(); // Changed from getCultivationFraction()

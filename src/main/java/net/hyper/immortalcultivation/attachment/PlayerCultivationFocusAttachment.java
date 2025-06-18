@@ -1,4 +1,4 @@
 package net.hyper.immortalcultivation.attachment;
 
-public class PlayerBodyCultivation {
+public class PlayerCultivationFocusAttachment {
 }

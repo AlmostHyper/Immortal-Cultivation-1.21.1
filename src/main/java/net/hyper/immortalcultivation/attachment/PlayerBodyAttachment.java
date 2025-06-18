@@ -97,7 +97,7 @@ public class PlayerBodyAttachment implements IBodyData {
         long realmBase = getRealmBaseMaxHealth();
 
         // Get cultivation bonus
-        PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerQiCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         long cultivationBonus = cultivationAttachment != null ?
             (long) (cultivationAttachment.getCurrentCultivation() * 0.05) : 0; // 5% of cultivation as health bonus
 

@@ -5,7 +5,6 @@ import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
@@ -16,20 +15,8 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.minecraft.network.codec.ByteBufCodecs;
 
 
-import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
-import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.chat.Component;
-import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record CultivationBreakthroughRequestPacket(PlayerRealmAttachment.BreakthroughType breakthroughType) implements CustomPacketPayload {
 
@@ -90,7 +77,7 @@ public record CultivationBreakthroughRequestPacket(PlayerRealmAttachment.Breakth
                         ICModNetwork.sendToPlayer(new CultivationBreakthroughSyncPacket(result.newRealm().getId()), serverPlayer);
 
                         // Also sync cultivation attachment in case max cultivation changed
-                        PlayerCultivationAttachment cultivation = serverPlayer.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                        PlayerQiCultivationAttachment cultivation = serverPlayer.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                         if (cultivation != null) {
                             cultivation.forceSync();
                         }

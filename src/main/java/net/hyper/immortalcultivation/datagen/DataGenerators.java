@@ -36,5 +36,7 @@ public class DataGenerators {
 
         generator.addProvider(event.includeClient(), new ICModItemModelProvider(packOutput, existingFileHelper));
         generator.addProvider(event.includeClient(), new ICModBlockStateProvider(packOutput, existingFileHelper));
+
+        generator.addProvider(event.includeServer(), new ICModWorldGenProvider(packOutput, lookupProvider));
     }
 }

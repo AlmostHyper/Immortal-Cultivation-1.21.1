@@ -94,7 +94,7 @@ public class PlayerQiAttachment implements IQiData {
         long realmBase = getRealmBaseMaxQi(); // Get from realm
 
         // Get cultivation bonus
-        PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerQiCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         long cultivationBonus = cultivationAttachment != null ?
             (long) (cultivationAttachment.getCurrentCultivation() * 0.10) : 0;
 

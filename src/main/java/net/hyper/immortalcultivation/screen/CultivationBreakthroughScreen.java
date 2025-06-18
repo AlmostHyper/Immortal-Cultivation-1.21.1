@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.screen;
 
-import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
 import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
 import net.hyper.immortalcultivation.attachment.PlayerSpiritualRootAttachment;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
@@ -21,7 +21,7 @@ public class CultivationBreakthroughScreen extends Screen {
     private static final int WINDOW_HEIGHT = 380;
 
     private PlayerRealmAttachment realmAttachment;
-    private PlayerCultivationAttachment cultivationAttachment;
+    private PlayerQiCultivationAttachment cultivationAttachment;
     private PlayerSpiritualRootAttachment spiritualRoots;
 
     private int windowX, windowY;

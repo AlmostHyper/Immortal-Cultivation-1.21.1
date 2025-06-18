@@ -3,14 +3,12 @@ package net.hyper.immortalcultivation.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
-
-import java.util.Scanner;
 
 public class SetCultivationCommand {
     public SetCultivationCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -30,7 +28,7 @@ public class SetCultivationCommand {
             // Get the cultivation amount from the command argument
             long newCultivation = LongArgumentType.getLong(context, "amount");
 
-            PlayerCultivationAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            PlayerQiCultivationAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (attachment == null) {
                 context.getSource().sendFailure(Component.literal("Failed to get cultivation data"));
                 return 0;

@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -19,7 +19,7 @@ public class CultivationDeathHandler {
         }
 
         // Get cultivation attachment
-        PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerQiCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivationAttachment == null) {
             return;
         }

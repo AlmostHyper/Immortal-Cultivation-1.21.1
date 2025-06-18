@@ -4,21 +4,7 @@ import net.minecraft.nbt.CompoundTag;
 
 public interface IQiData {
 
-    // === Core Data Methods ===
-
-    /**
-     * Deserializes Qi data from NBT
-     * @param tag The NBT compound tag containing the data
-     */
-    void deserializeNBT(CompoundTag tag);
-
-    /**
-     * Serializes Qi data to NBT
-     * @return CompoundTag containing the serialized data
-     */
-    CompoundTag serializeNBT();
-
-    // === Qi Amount Methods ===
+    // === Qi === //
 
     /**
      * Gets the current Qi amount
@@ -42,13 +28,13 @@ public interface IQiData {
         long max = getMaxQi();
         long newAmount = Math.min(current + amount, max);
         setCurrentQi(newAmount);
-        return newAmount - current; // Return actual amount added
+        return newAmount - current;
     }
 
     /**
      * Consumes Qi from the current amount
      * @param amount Amount to consume
-     * @return true if successful, false if insufficient Qi
+     * @return True if successful, false if insufficient Qi
      */
     default boolean consumeQi(long amount) {
         if (getCurrentQi() >= amount) {
@@ -73,7 +59,7 @@ public interface IQiData {
     /**
      * Checks if the player has enough Qi
      * @param amount Amount to check
-     * @return true if player has at least this much Qi
+     * @return True if player has at least this much Qi
      */
     default boolean hasQi(long amount) {
         return getCurrentQi() >= amount;
@@ -88,7 +74,7 @@ public interface IQiData {
         return max > 0 ? (double) getCurrentQi() / max : 0.0;
     }
 
-    // === Regeneration Methods ===
+    // === Regeneration === //
 
     /**
      * Gets the base Qi regeneration rate per second
@@ -120,13 +106,32 @@ public interface IQiData {
 
     /**
      * Checks if Qi regeneration is currently active
-     * @return true if Qi should regenerate
+     * @return True if Qi should regenerate
      */
     default boolean canRegenerateQi() {
         return getCurrentQi() < getMaxQi();
     }
 
-    // === Capacity Methods ===
+    /**
+     * Gets the fraction of current regeneration
+     * @return Fractional regeneration rate
+     */
+    double getRegenFraction();
+
+    /**
+     * Sets the fraction of current regeneration
+     * @param fraction The new fractional amount
+     */
+    void setRegenFraction(double fraction);
+
+    /**
+     * Adds to fractional rate
+     */
+    default void addRegenFraction(double amount) {
+        setRegenFraction(getRegenFraction() + amount);
+    }
+
+    // === Capacity === //
 
     /**
      * Gets the base maximum Qi (without modifiers)
@@ -140,14 +145,14 @@ public interface IQiData {
      * @return Effective maximum Qi
      */
     default long getMaxQi() {
-        return getBaseMaxQi(); // Override for modifiers
+        return getBaseMaxQi();
     }
 
-    // === State Methods ===
+    // === State  === //
 
     /**
      * Checks if Qi is at maximum capacity
-     * @return true if Qi is full
+     * @return True if Qi is full
      */
     default boolean isQiFull() {
         return getCurrentQi() >= getMaxQi();
@@ -155,7 +160,7 @@ public interface IQiData {
 
     /**
      * Checks if Qi is completely empty
-     * @return true if Qi is empty
+     * @return True if Qi is empty
      */
     default boolean isQiEmpty() {
         return getCurrentQi() <= 0;
@@ -169,11 +174,10 @@ public interface IQiData {
         return getMaxQi() - getCurrentQi();
     }
 
-    // === Tick Method ===
+    // === Tick === //
 
     /**
      * Called every tick to update Qi state
-     * Override this method for custom regeneration logic
      */
     default void tick() {
         // Only cultivate if not at max capacity
@@ -193,7 +197,7 @@ public interface IQiData {
         }
     }
 
-    // === Events/Callbacks ===
+    // === Events === //
 
     /**
      * Called when Qi changes (for syncing, effects, etc.)
@@ -201,7 +205,6 @@ public interface IQiData {
      * @param newQi New Qi amount
      */
     default void onQiChanged(long oldQi, long newQi) {
-        // Override for custom behavior
     }
 
     /**
@@ -209,7 +212,6 @@ public interface IQiData {
      * @param amount Amount consumed
      */
     default void onQiConsumed(long amount) {
-        // Override for custom behavior
     }
 
     /**
@@ -217,13 +219,10 @@ public interface IQiData {
      * @param amount Amount added
      */
     default void onQiAdded(long amount) {
-        // Override for custom behavior
     }
 
-    double getRegenFraction();
-    void setRegenFraction(double fraction);
+    // === Serialization === //
 
-    default void addRegenFraction(double amount) {
-        setRegenFraction(getRegenFraction() + amount);
-    }
+    void deserializeNBT(CompoundTag tag);
+    CompoundTag serializeNBT();
 }

@@ -4,189 +4,185 @@ import net.minecraft.nbt.CompoundTag;
 
 public interface IQiCultivationData {
 
-    // === Core Data Methods ===
+    // === Qi Cultivation === //
 
     /**
-     * Deserializes Cultivation data from NBT
-     * @param tag The NBT compound tag containing the data
+     * Gets the current Qi Cultivation amount
+     * @return Current Qi Cultivation value
      */
-    void deserializeNBT(CompoundTag tag);
+    long getCurrentQiCultivation();
 
     /**
-     * Serializes Cultivation data to NBT
-     * @return CompoundTag containing the serialized data
+     * Sets the current Qi Cultivation amount (clamped between 0 and max)
+     * @param qiCultivation The new Qi Cultivation amount
      */
-    CompoundTag serializeNBT();
-
-    // === Cultivation Amount Methods ===
+    void setCurrentQiCultivation(long qiCultivation);
 
     /**
-     * Gets the current Cultivation amount
-     * @return Current Cultivation value
-     */
-    long getCurrentCultivation();
-
-    /**
-     * Sets the current Cultivation amount (clamped between 0 and max)
-     *
-     * @param cultivation The new Cultivation amount
-     * @return
-     */
-    long setCurrentCultivation(long cultivation);
-
-    /**
-     * Adds Cultivation to the current amount (respects maximum)
+     * Adds Qi Cultivation to the current amount (respects maximum)
      * @param amount Amount to add
      * @return Actual amount added
      */
-    default long addCultivation(long amount) {
-        long current = getCurrentCultivation();
-        long max = getMaxCultivation();
+    default long addQiCultivation(long amount) {
+        long current = getCurrentQiCultivation();
+        long max = getMaxQiCultivation();
         long newAmount = Math.min(current + amount, max);
-        setCurrentCultivation(newAmount);
-        return newAmount - current; // Return actual amount added
+        setCurrentQiCultivation(newAmount);
+        return newAmount - current;
     }
 
     /**
-     * Applies spiritual root cultivation bonuses to cultivation gains
-     * @return Spiritual root bonus
-     */
-    double addCultivationWithSpiritualRoots(long baseAmount);
-
-    /**
-     * Consumes Cultivation from the current amount
+     * Consumes Qi Cultivation from the current amount
      * @param amount Amount to consume
-     * @return true if successful, false if insufficient Cultivation
+     * @return True if successful, false if insufficient Qi Cultivation
      */
-    default boolean consumeCultivation(long amount) {
-        if (getCurrentCultivation() >= amount) {
-            setCurrentCultivation(getCurrentCultivation() - amount);
+    default boolean consumeQiCultivation(long amount) {
+        if (getCurrentQiCultivation() >= amount) {
+            setCurrentQiCultivation(getCurrentQiCultivation() - amount);
             return true;
         }
         return false;
     }
 
     /**
-     * Tries to consume Cultivation, consuming as much as possible
+     * Tries to consume Qi Cultivation, consuming as much as possible
      * @param amount Desired amount to consume
      * @return Actual amount consumed
      */
-    default long tryConsumeCultivation(long amount) {
-        long current = getCurrentCultivation();
+    default long tryConsumeQiCultivation(long amount) {
+        long current = getCurrentQiCultivation();
         long toConsume = Math.min(current, amount);
-        setCurrentCultivation(current - toConsume);
+        setCurrentQiCultivation(current - toConsume);
         return toConsume;
     }
 
     /**
-     * Checks if the player has enough Cultivation
+     * Checks if the player has enough Qi Cultivation
      * @param amount Amount to check
-     * @return true if player has at least this much Cultivation
+     * @return True if player has at least this much Body
      */
-    default boolean hasCultivation(long amount) {
-        return getCurrentCultivation() >= amount;
+    default boolean hasQiCultivation(long amount) {
+        return getCurrentQiCultivation() >= amount;
     }
 
     /**
-     * Gets the Cultivation as a percentage of maximum (0.0 to 1.0)
-     * @return Cultivation percentage
+     * Gets the Qi Cultivation as a percentage of maximum (0.0 to 1.0)
+     * @return Qi Cultivation percentage
      */
-    default double getCultivationPercentage() {
-        long max = getMaxCultivation();
-        return max > 0 ? (double) getCurrentCultivation() / max : 0.0;
+    default double getQiCultivationPercentage() {
+        long max = getMaxQiCultivation();
+        return max > 0 ? (double) getCurrentQiCultivation() / max : 0.0;
     }
 
-    // === Regeneration Methods ===
+    // === Regeneration === //
 
     /**
-     * Gets the base Cultivation rate per second
-     * @return Cultivation rate
+     * Gets the base Qi Cultivation regeneration rate per second
+     * @return Qi Cultivation rate
      */
-    double getBaseCultivationRate();
+    double getBaseQiCultivationRate();
 
     /**
-     * Gets the base Meditation Cultivation rate per second
-     * @return Meditation cultivation rate
+     * Gets the base circulating Qi Cultivation regeneration rate per second
+     * @return Circulating Qi Cultivation rate
      */
-    double getBaseMeditationCultivationRate();
+    double getBaseCirculatingQiCultivationRate();
 
     /**
-     * Gets the effective Cultivation rate (including modifiers)
-     * @return Effective regeneration rate
+     * Gets the effective Qi Cultivation rate (including modifiers)
+     * @return Effective Qi Cultivation rate
      */
-    default double getEffectiveCultivationRate() {
-        return getBaseCultivationRate(); // Override for modifiers
-    }
-
-    /**
-     * Gets the effective Meditation Cultivation rate (including modifiers)
-     * @return Effective regeneration rate
-     */
-    default double getEffectiveMeditationCultivationRate() {
-        return getBaseMeditationCultivationRate(); // Override for modifiers
+    default double getEffectiveQiCultivationRate() {
+        return getBaseQiCultivationRate();
     }
 
     /**
-     * Checks if Cultivation is allowed
-     * @return true if Cultivation should increase
+     * Gets the effective circulating Qi Cultivation regeneration rate (including modifiers)
+     * @return Effective circulating Qi Cultivation rate
      */
-    default boolean canCultivate() {
-        return getCurrentCultivation() < getMaxCultivation();
-    }
-
-    // === Capacity Methods ===
-
-    /**
-     * Gets the base maximum Cultivation (without modifiers)
-     * @return Base maximum Cultivation
-     */
-    long getBaseMaxCultivation();
-
-    /**
-     * Gets the effective maximum Cultivation (including modifiers)
-     * Default implementation returns base max Cultivation - override for modifiers
-     * @return Effective maximum Cultivation
-     */
-    default long getMaxCultivation() {
-        return getBaseMaxCultivation(); // Override for modifiers
-    }
-
-    // === State Methods ===
-
-    /**
-     * Checks if Cultivation is at maximum capacity
-     * @return true if Cultivation is full
-     */
-    default boolean isCultivationFull() {
-        return getCurrentCultivation() >= getMaxCultivation();
+    default double getEffectiveCirculatingQiCultivationRate() {
+        return getBaseCirculatingQiCultivationRate();
     }
 
     /**
-     * Checks if Cultivation is completely empty
-     * @return true if Cultivation is empty
+     * Checks if Qi Cultivation is currently active
+     * @return True if Qi Cultivation should progress
      */
-    default boolean isCultivationEmpty() {
-        return getCurrentCultivation() <= 0;
+    default boolean canCultivateQi() {
+        return getCurrentQiCultivation() < getMaxQiCultivation();
     }
 
     /**
-     * Gets remaining Cultivation capacity
-     * @return How much more Cultivation can be stored
+     * Gets the fraction of current regeneration
+     * @return Fractional regeneration rate
      */
-    default long getRemainingCultivationCapacity() {
-        return getMaxCultivation() - getCurrentCultivation();
-    }
-
-    // === Tick Method ===
+    double getRegenFraction();
 
     /**
-     * Called every tick to update Cultivation state
-     * Override this method for custom regeneration logic
+     * Sets the fraction of current regeneration
+     * @param fraction The new fractional amount
+     */
+    void setRegenFraction(double fraction);
+
+    /**
+     * Adds to fractional rate
+     */
+    default void addRegenFraction(double amount) {
+        setRegenFraction(getRegenFraction() + amount);
+    }
+
+    // === Capacity === //
+
+    /**
+     * Gets the base maximum Qi Cultivation (without modifiers)
+     * @return Base maximum Qi Cultivation
+     */
+    long getBaseQiCultivation();
+
+    /**
+     * Gets the effective maximum Qi Cultivation (including modifiers)
+     * Default implementation returns base max Qi Cultivation - override for modifiers
+     * @return Effective maximum Qi Cultivation
+     */
+    default long getMaxQiCultivation() {
+        return getBaseQiCultivation();
+    }
+
+    // === State  === //
+
+    /**
+     * Checks if Qi Cultivation is at maximum capacity
+     * @return True if Qi Cultivation is full
+     */
+    default boolean isQiCultivationFull() {
+        return getQiCultivationPercentage() >= getMaxQiCultivation();
+    }
+
+    /**
+     * Checks if Qi Cultivation is completely empty
+     * @return True if Qi Cultivation is empty
+     */
+    default boolean isQiCultivationEmpty() {
+        return getCurrentQiCultivation() <= 0;
+    }
+
+    /**
+     * Gets remaining Qi Cultivation capacity
+     * @return How much more Qi Cultivation can be stored
+     */
+    default long getRemainingQiCultivationCapacity() {
+        return getMaxQiCultivation() - getCurrentQiCultivation();
+    }
+
+    // === Tick === //
+
+    /**
+     * Called every tick to update Body state
      */
     default void tick() {
         // Only cultivate if not at max capacity
-        if (canCultivate()) {
-            double regenRate = getEffectiveCultivationRate();
+        if (canCultivateQi()) {
+            double regenRate = getEffectiveQiCultivationRate();
 
             if (regenRate > 0) {
                 // Use the built-in regen fraction methods
@@ -195,43 +191,38 @@ public interface IQiCultivationData {
                 if (getRegenFraction() >= 1.0) {
                     long cultivationToAdd = (long) getRegenFraction();
                     setRegenFraction(getRegenFraction() - cultivationToAdd);
-                    addCultivation(cultivationToAdd);
+                    addQiCultivation(cultivationToAdd);
                 }
             }
         }
     }
 
-    // === Events/Callbacks ===
+    // === Events === //
 
     /**
-     * Called when Cultivation changes (for syncing, effects, etc.)
-     * @param oldCultivation Previous Cultivation amount
-     * @param newCultivation New Cultivation amount
+     * Called when Qi Cultivation changes (for syncing, effects, etc.)
+     * @param oldQiCultivation Previous Qi Cultivation amount
+     * @param newQiCultivation New Qi Cultivation amount
      */
-    default void onCultivationChanged(long oldCultivation, long newCultivation) {
-        // Override for custom behavior
+    default void onQiCultivationChanged(long oldQiCultivation, long newQiCultivation) {
     }
 
     /**
-     * Called when Cultivation is consumed
+     * Called when Qi Cultivation is consumed
      * @param amount Amount consumed
      */
-    default void onCultivationConsumed(long amount) {
-        // Override for custom behavior
+    default void onQiCultivationConsumed(long amount) {
     }
 
     /**
-     * Called when Cultivation is added/regenerated
+     * Called when Qi Cultivation is added/regenerated
      * @param amount Amount added
      */
-    default void onCultivationAdded(long amount) {
-        // Override for custom behavior
+    default void onQiCultivationAdded(long amount) {
     }
 
-    double getRegenFraction();
-    void setRegenFraction(double fraction);
+    // === Serialization === //
 
-    default void addRegenFraction(double amount) {
-        setRegenFraction(getRegenFraction() + amount);
-    }
+    void deserializeNBT(CompoundTag tag);
+    CompoundTag serializeNBT();
 }

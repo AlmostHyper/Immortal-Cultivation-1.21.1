@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
 import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
 import net.hyper.immortalcultivation.attachment.PlayerSpiritualRootAttachment;
 import net.hyper.immortalcultivation.cultivation.SpiritualRootType;
@@ -66,7 +66,7 @@ public class PlayerLoginHandler {
             }
 
             // === CULTIVATION ATTACHMENT INITIALIZATION (new code) ===
-            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            PlayerQiCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (cultivationAttachment != null) {
                 ImmortalCultivation.LOGGER.info("Player {} cultivation initialized: {}/{}",
                     player.getName().getString(),
