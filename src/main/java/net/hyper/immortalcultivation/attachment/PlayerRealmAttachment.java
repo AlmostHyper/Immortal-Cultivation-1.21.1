@@ -1,8 +1,8 @@
 package net.hyper.immortalcultivation.attachment;
-
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
@@ -17,34 +17,70 @@ import java.util.List;
 import java.util.Optional;
 
 public class PlayerRealmAttachment {
+
+    // === Cultivation Type Enum === //
+    public enum CultivationType {
+        QI("Qi"),
+        BODY("Body");
+
+        private final String displayName;
+
+        CultivationType(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    // === Variables === //
+
     @Nullable
     private Player player;
 
-    private CultivationRealm currentRealm;
+    // Separate realms for Qi and Body cultivation
+    private CultivationRealm currentQiRealm;
+    private CultivationRealm currentBodyRealm;
+
     @Nullable
-    private CultivationRealm previousRealm;
+    private CultivationRealm previousQiRealm;
+    @Nullable
+    private CultivationRealm previousBodyRealm;
 
-    // Breakthrough tracking
-    private long breakthroughAttempts = 0;
-    private long lastBreakthroughAttempt = 0; // Game time
-    private boolean breakthroughCooldown = false;
+    // Separate breakthrough tracking for each cultivation type
+    private long qiBreakthroughAttempts = 0;
+    private long bodyBreakthroughAttempts = 0;
 
-    // Realm advancement tracking
-    private long timeInCurrentRealm = 0;
-    private long totalCultivationTime = 0;
+    private long lastQiBreakthroughAttempt = 0;
+    private long lastBodyBreakthroughAttempt = 0;
+
+    private boolean qiBreakthroughCooldown = false;
+    private boolean bodyBreakthroughCooldown = false;
+
+    // Time tracking for each cultivation path
+    private long timeInCurrentQiRealm = 0;
+    private long timeInCurrentBodyRealm = 0;
+
+    private long totalQiCultivationTime = 0;
+    private long totalBodyCultivationTime = 0;
+
+    // === Constructor(s) === //
 
     public PlayerRealmAttachment() {
         this.player = null;
-        // Set default starting realm
-        this.currentRealm = ICModCultivationRealms.MORTAL;
+        // Set default starting realms for both paths
+        this.currentQiRealm = ICModCultivationRealms.MORTAL;
+        this.currentBodyRealm = ICModCultivationRealms.MORTAL;
     }
 
     public PlayerRealmAttachment(Player player) {
         this.player = player;
-        this.currentRealm = ICModCultivationRealms.MORTAL;
+        this.currentQiRealm = ICModCultivationRealms.MORTAL;
+        this.currentBodyRealm = ICModCultivationRealms.MORTAL;
     }
 
-    // === Player Management ===
+    // === Player === //
 
     public void setPlayer(Player player) {
         this.player = player;
@@ -55,184 +91,333 @@ public class PlayerRealmAttachment {
         return player;
     }
 
-    // === Realm Management ===
+    // === Realm Getters === //
 
-    public CultivationRealm getCurrentRealm() {
-        return currentRealm;
+    /**
+     * Get the current realm for a specific cultivation type
+     */
+    public CultivationRealm getCurrentRealm(CultivationType type) {
+        return type == CultivationType.QI ? currentQiRealm : currentBodyRealm;
     }
 
+    /**
+     * Get the previous realm for a specific cultivation type
+     */
     @Nullable
-    public CultivationRealm getPreviousRealm() {
-        return previousRealm;
+    public CultivationRealm getPreviousRealm(CultivationType type) {
+        return type == CultivationType.QI ? previousQiRealm : previousBodyRealm;
     }
 
-    public void setCurrentRealm(CultivationRealm realm) {
-        setCurrentRealm(realm, true);
+    /**
+     * Get current Qi cultivation realm
+     */
+    public CultivationRealm getCurrentQiRealm() {
+        return currentQiRealm;
     }
 
-    public void setCurrentRealm(CultivationRealm realm, boolean triggerEvents) {
+    /**
+     * Get current Body cultivation realm
+     */
+    public CultivationRealm getCurrentBodyRealm() {
+        return currentBodyRealm;
+    }
+
+    /**
+     * Get the highest realm between Qi and Body cultivation
+     * This can be used for determining overall cultivation level
+     */
+    public CultivationRealm getHighestRealm() {
+        return currentQiRealm.getRealmLevel() >= currentBodyRealm.getRealmLevel()
+            ? currentQiRealm : currentBodyRealm;
+    }
+
+    // === Realm Setters === //
+
+    /**
+     * Set the current realm for a specific cultivation type
+     */
+    public void setCurrentRealm(CultivationType type, CultivationRealm realm) {
+        setCurrentRealm(type, realm, true);
+    }
+
+    /**
+     * Set the current realm for a specific cultivation type with event control
+     */
+    public void setCurrentRealm(CultivationType type, CultivationRealm realm, boolean triggerEvents) {
         if (realm == null) {
             throw new IllegalArgumentException("Cultivation realm cannot be null");
         }
 
-        CultivationRealm oldRealm = this.currentRealm;
-        this.previousRealm = oldRealm;
-        this.currentRealm = realm;
-        this.timeInCurrentRealm = 0; // Reset time in realm
+        CultivationRealm oldRealm;
+
+        if (type == CultivationType.QI) {
+            oldRealm = this.currentQiRealm;
+            this.previousQiRealm = oldRealm;
+            this.currentQiRealm = realm;
+            this.timeInCurrentQiRealm = 0;
+        } else {
+            oldRealm = this.currentBodyRealm;
+            this.previousBodyRealm = oldRealm;
+            this.currentBodyRealm = realm;
+            this.timeInCurrentBodyRealm = 0;
+        }
 
         if (triggerEvents && player != null) {
-            IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            // Get the appropriate cultivation data based on type
+            if (type == CultivationType.QI) {
+                IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
 
-            // Call exit event on old realm
-            if (oldRealm != null) {
-                oldRealm.onRealmExit(player, cultivationData, realm);
+                // Call exit event on old realm
+                if (oldRealm != null) {
+                    oldRealm.onRealmExit(player, qiData, realm);
+                }
+
+                // Call advancement event on new realm
+                realm.onRealmAdvancement(player, qiData, oldRealm);
+
+                // Apply new realm modifiers
+                realm.applyRealmModifiers(player, qiData);
+
+                // Sync changes
+                if (qiData instanceof PlayerQiCultivationAttachment qiAttachment) {
+                    qiAttachment.forceSync();
+                }
+            } else {
+                IBodyCultivationData bodyData = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+
+                // Call exit event on old realm
+                if (oldRealm != null) {
+                    oldRealm.onRealmExit(player, bodyData, realm);
+                }
+
+                // Call advancement event on new realm
+                realm.onRealmAdvancement(player, bodyData, oldRealm);
+
+                // Apply new realm modifiers
+                realm.applyRealmModifiers(player, bodyData);
+
+                // Sync changes
+                if (bodyData instanceof PlayerBodyCultivationAttachment bodyAttachment) {
+                    bodyAttachment.forceSync();
+                }
             }
-
-            // Call advancement event on new realm
-            realm.onRealmAdvancement(player, cultivationData, oldRealm);
-
-            // Sync changes to client
-            if (cultivationData instanceof PlayerQiAttachment qiComponent) {
-                qiComponent.forceSync();
-            }
-
-            // Apply new realm modifiers
-            realm.applyRealmModifiers(player, cultivationData);
         }
     }
 
-    // === Breakthrough Logic ===
+    // === Breakthrough Logic === //
 
     /**
-     * Check if player can attempt breakthrough
-     * @return true if breakthrough attempt is possible
+     * Check if player can attempt breakthrough for a specific cultivation type
      */
-    public boolean canAttemptBreakthrough() {
-        if (player == null || currentRealm == null) return false;
-
-        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        if (cultivationData == null) return false;
+    public boolean canAttemptBreakthrough(CultivationType type) {
+        if (player == null) return false;
 
         // Check cooldown
-        if (breakthroughCooldown) {
+        boolean onCooldown = type == CultivationType.QI ? qiBreakthroughCooldown : bodyBreakthroughCooldown;
+        long lastAttempt = type == CultivationType.QI ? lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
+
+        if (onCooldown) {
             long currentTime = player.level().getGameTime();
-            if (currentTime - lastBreakthroughAttempt < getBreakthroughCooldownTicks()) {
+            if (currentTime - lastAttempt < getBreakthroughCooldownTicks()) {
                 return false;
             } else {
-                breakthroughCooldown = false;
+                // Reset cooldown
+                if (type == CultivationType.QI) {
+                    qiBreakthroughCooldown = false;
+                } else {
+                    bodyBreakthroughCooldown = false;
+                }
             }
         }
 
-        return currentRealm.canBreakthrough(player, cultivationData);
+        // Check realm requirements
+        CultivationRealm currentRealm = getCurrentRealm(type);
+        if (currentRealm == null) return false;
+
+        // Get appropriate cultivation data
+        if (type == CultivationType.QI) {
+            IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            return qiData != null && currentRealm.canBreakthrough(player, qiData);
+        } else {
+            IBodyCultivationData bodyData = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            return bodyData != null && currentRealm.canBreakthrough(player, bodyData);
+        }
     }
 
     /**
      * Check breakthrough requirements without cooldown consideration
-     * @return true if player meets breakthrough requirements
      */
-    public boolean meetsBreakthroughRequirements() {
-        if (player == null || currentRealm == null) return false;
+    public boolean meetsBreakthroughRequirements(CultivationType type) {
+        if (player == null) return false;
 
-        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        if (cultivationData == null) return false;
+        CultivationRealm currentRealm = getCurrentRealm(type);
+        if (currentRealm == null) return false;
 
-        return currentRealm.canBreakthrough(player, cultivationData);
+        if (type == CultivationType.QI) {
+            IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            return qiData != null && currentRealm.canBreakthrough(player, qiData);
+        } else {
+            IBodyCultivationData bodyData = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            return bodyData != null && currentRealm.canBreakthrough(player, bodyData);
+        }
     }
 
     /**
-     * Attempt breakthrough to next realm
-     * @return BreakthroughResult indicating success/failure and details
+     * Attempt breakthrough for a specific cultivation type
      */
-    public BreakthroughResult attemptBreakthrough() {
-        return attemptBreakthrough(BreakthroughType.MINOR);
+    public BreakthroughResult attemptBreakthrough(CultivationType cultivationType) {
+        return attemptBreakthrough(cultivationType, BreakthroughType.MINOR);
     }
 
     /**
-     * Attempt specific type of breakthrough
-     * @param type Type of breakthrough to attempt
-     * @return BreakthroughResult with details
+     * Attempt specific type of breakthrough for a cultivation path
      */
-    // Replace the attemptBreakthrough method in PlayerRealmAttachment.java with this version:
-
-    public BreakthroughResult attemptBreakthrough(BreakthroughType type) {
+    public BreakthroughResult attemptBreakthrough(CultivationType cultivationType, BreakthroughType breakthroughType) {
         // Enhanced debugging
-        ImmortalCultivation.LOGGER.info("Attempting breakthrough - Player: {}, CurrentRealm: {}",
+        ImmortalCultivation.LOGGER.info("Attempting {} breakthrough - Player: {}, CurrentRealm: {}",
+            cultivationType.getDisplayName(),
             player != null ? player.getName().getString() : "NULL",
-            currentRealm != null ? currentRealm.getDisplayName() : "NULL");
+            getCurrentRealm(cultivationType) != null ? getCurrentRealm(cultivationType).getDisplayName() : "NULL");
 
         if (player == null) {
             ImmortalCultivation.LOGGER.error("Player is null in attemptBreakthrough!");
             return new BreakthroughResult(false, "Player reference is null", null);
         }
 
+        CultivationRealm currentRealm = getCurrentRealm(cultivationType);
         if (currentRealm == null) {
-            ImmortalCultivation.LOGGER.error("Current realm is null in attemptBreakthrough!");
+            ImmortalCultivation.LOGGER.error("Current {} realm is null!", cultivationType.getDisplayName());
             return new BreakthroughResult(false, "Current realm is null", null);
         }
 
-        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        if (cultivationData == null) {
-            ImmortalCultivation.LOGGER.error("Cultivation data is null for player: {}", player.getName().getString());
-            return new BreakthroughResult(false, "No Cultivation data found", null);
+        // Get appropriate cultivation data
+        if (cultivationType == CultivationType.QI) {
+            IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            if (qiData == null) {
+                ImmortalCultivation.LOGGER.error("Qi cultivation data is null for player: {}", player.getName().getString());
+                return new BreakthroughResult(false, "No Qi cultivation data found", null);
+            }
+            return performQiBreakthrough(currentRealm, qiData, breakthroughType);
+        } else {
+            IBodyCultivationData bodyData = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            if (bodyData == null) {
+                ImmortalCultivation.LOGGER.error("Body cultivation data is null for player: {}", player.getName().getString());
+                return new BreakthroughResult(false, "No Body cultivation data found", null);
+            }
+            return performBodyBreakthrough(currentRealm, bodyData, breakthroughType);
         }
+    }
 
-        ImmortalCultivation.LOGGER.info("All checks passed, proceeding with breakthrough attempt");
-
+    /**
+     * Perform Qi cultivation breakthrough
+     */
+    private BreakthroughResult performQiBreakthrough(CultivationRealm currentRealm, IQiCultivationData qiData, BreakthroughType type) {
         // Check if attempt is possible
-        if (!canAttemptBreakthrough()) {
-            if (breakthroughCooldown) {
+        if (!canAttemptBreakthrough(CultivationType.QI)) {
+            if (qiBreakthroughCooldown) {
                 long remainingTicks = getBreakthroughCooldownTicks() -
-                    (player.level().getGameTime() - lastBreakthroughAttempt);
+                    (player.level().getGameTime() - lastQiBreakthroughAttempt);
                 return new BreakthroughResult(false,
-                    "Breakthrough cooldown: " + (remainingTicks / 20) + " seconds remaining", null);
+                    "Qi breakthrough cooldown: " + (remainingTicks / 20) + " seconds remaining", null);
             } else {
-                return new BreakthroughResult(false, "Breakthrough requirements not met", null);
+                return new BreakthroughResult(false, "Qi breakthrough requirements not met", null);
             }
         }
 
         // Record attempt
-        breakthroughAttempts++;
-        lastBreakthroughAttempt = player.level().getGameTime();
+        qiBreakthroughAttempts++;
+        lastQiBreakthroughAttempt = player.level().getGameTime();
+        qiBreakthroughCooldown = true;
 
         // Determine target realm based on type
         CultivationRealm targetRealm = switch (type) {
-            case MINOR -> currentRealm.getMinorBreakthrough(player, cultivationData);
-            case MAJOR -> currentRealm.getMajorBreakthrough(player, cultivationData);
-            case SPECIAL -> currentRealm.getSpecialBreakthrough(player, cultivationData);
-            case BOUNDARY -> currentRealm.getBoundaryBreakthrough(player, cultivationData);
+            case MINOR -> currentRealm.getMinorBreakthrough(player, qiData);
+            case MAJOR -> currentRealm.getMajorBreakthrough(player, qiData);
+            case SPECIAL -> currentRealm.getSpecialBreakthrough(player, qiData);
+            case BOUNDARY -> currentRealm.getBoundaryBreakthrough(player, qiData);
         };
 
         if (targetRealm == null) {
-            ImmortalCultivation.LOGGER.warn("No valid breakthrough path found for type: {}", type);
-            return new BreakthroughResult(false, "No valid breakthrough path found", null);
+            ImmortalCultivation.LOGGER.warn("No valid Qi breakthrough path found for type: {}", type);
+            return new BreakthroughResult(false, "No valid Qi breakthrough path found", null);
         }
 
-        // Calculate success chance (could be modified by realm, items, etc.)
-        double successChance = calculateBreakthroughSuccessChance(type, targetRealm);
+        // Calculate success chance
+        double successChance = calculateBreakthroughSuccessChance(CultivationType.QI, type, targetRealm);
         boolean success = player.level().random.nextDouble() < successChance;
 
-        ImmortalCultivation.LOGGER.info("Breakthrough attempt - Success chance: {}%, Result: {}",
+        ImmortalCultivation.LOGGER.info("Qi breakthrough attempt - Success chance: {}%, Result: {}",
             String.format("%.1f", successChance * 100), success ? "SUCCESS" : "FAILURE");
 
         if (success) {
             // Advance to new realm
-            setCurrentRealm(targetRealm);
+            setCurrentRealm(CultivationType.QI, targetRealm);
 
             return new BreakthroughResult(true,
-                "Successfully advanced to " + targetRealm.getDisplayName(), targetRealm);
+                "Successfully advanced Qi cultivation to " + targetRealm.getDisplayName(), targetRealm);
         } else {
             return new BreakthroughResult(false,
-                "Breakthrough failed.", null);
+                "Qi breakthrough failed.", null);
+        }
+    }
+
+    /**
+     * Perform Body cultivation breakthrough
+     */
+    private BreakthroughResult performBodyBreakthrough(CultivationRealm currentRealm, IBodyCultivationData bodyData, BreakthroughType type) {
+        // Check if attempt is possible
+        if (!canAttemptBreakthrough(CultivationType.BODY)) {
+            if (bodyBreakthroughCooldown) {
+                long remainingTicks = getBreakthroughCooldownTicks() -
+                    (player.level().getGameTime() - lastBodyBreakthroughAttempt);
+                return new BreakthroughResult(false,
+                    "Body breakthrough cooldown: " + (remainingTicks / 20) + " seconds remaining", null);
+            } else {
+                return new BreakthroughResult(false, "Body breakthrough requirements not met", null);
+            }
+        }
+
+        // Record attempt
+        bodyBreakthroughAttempts++;
+        lastBodyBreakthroughAttempt = player.level().getGameTime();
+        bodyBreakthroughCooldown = true;
+
+        // Determine target realm based on type
+        CultivationRealm targetRealm = switch (type) {
+            case MINOR -> currentRealm.getMinorBreakthrough(player, bodyData);
+            case MAJOR -> currentRealm.getMajorBreakthrough(player, bodyData);
+            case SPECIAL -> currentRealm.getSpecialBreakthrough(player, bodyData);
+            case BOUNDARY -> currentRealm.getBoundaryBreakthrough(player, bodyData);
+        };
+
+        if (targetRealm == null) {
+            ImmortalCultivation.LOGGER.warn("No valid Body breakthrough path found for type: {}", type);
+            return new BreakthroughResult(false, "No valid Body breakthrough path found", null);
+        }
+
+        // Calculate success chance
+        double successChance = calculateBreakthroughSuccessChance(CultivationType.BODY, type, targetRealm);
+        boolean success = player.level().random.nextDouble() < successChance;
+
+        ImmortalCultivation.LOGGER.info("Body breakthrough attempt - Success chance: {}%, Result: {}",
+            String.format("%.1f", successChance * 100), success ? "SUCCESS" : "FAILURE");
+
+        if (success) {
+            // Advance to new realm
+            setCurrentRealm(CultivationType.BODY, targetRealm);
+
+            return new BreakthroughResult(true,
+                "Successfully advanced Body cultivation to " + targetRealm.getDisplayName(), targetRealm);
+        } else {
+            return new BreakthroughResult(false,
+                "Body breakthrough failed.", null);
         }
     }
 
     /**
      * Calculate success chance for breakthrough attempt
-     * @param type Breakthrough type
-     * @param targetRealm Target realm
-     * @return Success chance (0.0 to 1.0)
      */
-    private double calculateBreakthroughSuccessChance(BreakthroughType type, CultivationRealm targetRealm) {
+    private double calculateBreakthroughSuccessChance(CultivationType cultivationType, BreakthroughType type, CultivationRealm targetRealm) {
         double baseChance = switch (type) {
             case MINOR -> 0.5;
             case MAJOR -> 0.3;
@@ -240,20 +425,28 @@ public class PlayerRealmAttachment {
             case BOUNDARY -> 0.1;
         };
 
-        // Modify based on current Cultivation percentage of realm max
-        IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        double cultivationPercentage = qiData.getCultivationPercentage();
-        double qiBonus = (cultivationPercentage - 0.8) * 0.20;
+        // Get cultivation percentage based on type
+        double cultivationPercentage;
+        if (cultivationType == CultivationType.QI) {
+            IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            cultivationPercentage = qiData != null ? qiData.getQiCultivationPercentage() : 0.0;
+        } else {
+            IBodyCultivationData bodyData = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            cultivationPercentage = bodyData != null ? bodyData.getBodyCultivationPercentage() : 0.0;
+        }
 
-        // Modify based on previous attempts (diminishing returns)
-        double attemptBonus = Math.min(breakthroughAttempts * 0.05, 0.5);
+        // Bonus for high cultivation percentage (only if above 80%)
+        double cultivationBonus = Math.max(0, (cultivationPercentage - 0.8) * 0.20);
 
-        return Math.max(0.10, Math.min(1.0, baseChance + qiBonus - attemptBonus));
+        // Penalty based on previous attempts (diminishing returns)
+        long attempts = cultivationType == CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts;
+        double attemptPenalty = Math.min(attempts * 0.05, 0.3);
+
+        return Math.max(0.10, Math.min(1.0, baseChance + cultivationBonus - attemptPenalty));
     }
 
     /**
      * Get breakthrough cooldown in ticks
-     * @return Cooldown duration in ticks
      */
     private long getBreakthroughCooldownTicks() {
         return 20 * 30; // 30 seconds default
@@ -261,81 +454,116 @@ public class PlayerRealmAttachment {
 
     // === Realm Progression Tracking ===
 
-    public long getBreakthroughAttempts() {
-        return breakthroughAttempts;
+    public long getBreakthroughAttempts(CultivationType type) {
+        return type == CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts;
     }
 
-    public long getTimeInCurrentRealm() {
-        return timeInCurrentRealm;
+    public long getTimeInCurrentRealm(CultivationType type) {
+        return type == CultivationType.QI ? timeInCurrentQiRealm : timeInCurrentBodyRealm;
     }
 
-    public long getTotalCultivationTime() {
-        return totalCultivationTime;
+    public long getTotalCultivationTime(CultivationType type) {
+        return type == CultivationType.QI ? totalQiCultivationTime : totalBodyCultivationTime;
     }
 
-    public boolean isOnBreakthroughCooldown() {
-        if (!breakthroughCooldown) return false;
+    public boolean isOnBreakthroughCooldown(CultivationType type) {
+        boolean onCooldown = type == CultivationType.QI ? qiBreakthroughCooldown : bodyBreakthroughCooldown;
+        if (!onCooldown) return false;
 
-        breakthroughCooldown = true;
-
+        long lastAttempt = type == CultivationType.QI ? lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
         long currentTime = player != null ? player.level().getGameTime() : 0;
-        return currentTime - lastBreakthroughAttempt < getBreakthroughCooldownTicks();
+
+        return currentTime - lastAttempt < getBreakthroughCooldownTicks();
     }
 
-    public long getRemainingCooldownTicks() {
-        if (!isOnBreakthroughCooldown()) return 0;
+    public long getRemainingCooldownTicks(CultivationType type) {
+        if (!isOnBreakthroughCooldown(type)) return 0;
 
+        long lastAttempt = type == CultivationType.QI ? lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
         long currentTime = player != null ? player.level().getGameTime() : 0;
-        return getBreakthroughCooldownTicks() - (currentTime - lastBreakthroughAttempt);
+
+        return getBreakthroughCooldownTicks() - (currentTime - lastAttempt);
     }
 
     // === Utility Methods ===
 
     /**
-     * Get all available breakthrough options
-     * @return List of possible breakthrough realms with types
+     * Get all available breakthrough options for both cultivation types
      */
-    public List<BreakthroughOption> getAvailableBreakthroughs() {
-        if (player == null || currentRealm == null) return Collections.emptyList();
+    public BreakthroughOptions getAllAvailableBreakthroughs() {
+        List<BreakthroughOption> qiOptions = getAvailableBreakthroughs(CultivationType.QI);
+        List<BreakthroughOption> bodyOptions = getAvailableBreakthroughs(CultivationType.BODY);
 
-        IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        if (cultivationData == null) return Collections.emptyList();
+        return new BreakthroughOptions(qiOptions, bodyOptions);
+    }
+
+    /**
+     * Get available breakthrough options for a specific cultivation type
+     */
+    public List<BreakthroughOption> getAvailableBreakthroughs(CultivationType type) {
+        if (player == null) return Collections.emptyList();
+
+        CultivationRealm currentRealm = getCurrentRealm(type);
+        if (currentRealm == null) return Collections.emptyList();
 
         List<BreakthroughOption> options = new ArrayList<>();
 
-        CultivationRealm minor = currentRealm.getMinorBreakthrough(player, cultivationData);
-        if (minor != null) {
-            options.add(new BreakthroughOption(BreakthroughType.MINOR, minor,
-                calculateBreakthroughSuccessChance(BreakthroughType.MINOR, minor)));
-        }
+        if (type == CultivationType.QI) {
+            IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            if (qiData == null) return Collections.emptyList();
 
-        CultivationRealm major = currentRealm.getMajorBreakthrough(player, cultivationData);
-        if (major != null) {
-            options.add(new BreakthroughOption(BreakthroughType.SPECIAL, major,
-                calculateBreakthroughSuccessChance(BreakthroughType.SPECIAL, major)));
-        }
+            addBreakthroughOption(options, currentRealm.getMinorBreakthrough(player, qiData),
+                BreakthroughType.MINOR, CultivationType.QI);
+            addBreakthroughOption(options, currentRealm.getMajorBreakthrough(player, qiData),
+                BreakthroughType.MAJOR, CultivationType.QI);
+            addBreakthroughOption(options, currentRealm.getSpecialBreakthrough(player, qiData),
+                BreakthroughType.SPECIAL, CultivationType.QI);
+            addBreakthroughOption(options, currentRealm.getBoundaryBreakthrough(player, qiData),
+                BreakthroughType.BOUNDARY, CultivationType.QI);
+        } else {
+            IBodyCultivationData bodyData = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            if (bodyData == null) return Collections.emptyList();
 
-        CultivationRealm special = currentRealm.getSpecialBreakthrough(player, cultivationData);
-        if (major != null) {
-            options.add(new BreakthroughOption(BreakthroughType.SPECIAL, major,
-                calculateBreakthroughSuccessChance(BreakthroughType.SPECIAL, major)));
-        }
-
-        CultivationRealm boundary = currentRealm.getBoundaryBreakthrough(player, cultivationData);
-        if (boundary != null) {
-            options.add(new BreakthroughOption(BreakthroughType.BOUNDARY, boundary,
-                calculateBreakthroughSuccessChance(BreakthroughType.BOUNDARY, boundary)));
+            addBreakthroughOption(options, currentRealm.getMinorBreakthrough(player, bodyData),
+                BreakthroughType.MINOR, CultivationType.BODY);
+            addBreakthroughOption(options, currentRealm.getMajorBreakthrough(player, bodyData),
+                BreakthroughType.MAJOR, CultivationType.BODY);
+            addBreakthroughOption(options, currentRealm.getSpecialBreakthrough(player, bodyData),
+                BreakthroughType.SPECIAL, CultivationType.BODY);
+            addBreakthroughOption(options, currentRealm.getBoundaryBreakthrough(player, bodyData),
+                BreakthroughType.BOUNDARY, CultivationType.BODY);
         }
 
         return options;
     }
 
+    private void addBreakthroughOption(List<BreakthroughOption> options, CultivationRealm realm,
+                                       BreakthroughType type, CultivationType cultivationType) {
+        if (realm != null) {
+            double successChance = calculateBreakthroughSuccessChance(cultivationType, type, realm);
+            options.add(new BreakthroughOption(type, realm, successChance, cultivationType));
+        }
+    }
+
     /**
-     * Reset breakthrough attempts (for testing or special items)
+     * Reset breakthrough attempts for a specific cultivation type (for testing or special items)
      */
-    public void resetBreakthroughAttempts() {
-        this.breakthroughAttempts = 0;
-        this.breakthroughCooldown = false;
+    public void resetBreakthroughAttempts(CultivationType type) {
+        if (type == CultivationType.QI) {
+            this.qiBreakthroughAttempts = 0;
+            this.qiBreakthroughCooldown = false;
+        } else {
+            this.bodyBreakthroughAttempts = 0;
+            this.bodyBreakthroughCooldown = false;
+        }
+    }
+
+    /**
+     * Reset all breakthrough attempts
+     */
+    public void resetAllBreakthroughAttempts() {
+        resetBreakthroughAttempts(CultivationType.QI);
+        resetBreakthroughAttempts(CultivationType.BODY);
     }
 
     // === Tick Method ===
@@ -343,14 +571,24 @@ public class PlayerRealmAttachment {
     public void tick() {
         if (player == null) return;
 
-        timeInCurrentRealm++;
-        totalCultivationTime++;
+        // Update time tracking for both cultivation paths
+        timeInCurrentQiRealm++;
+        timeInCurrentBodyRealm++;
+        totalQiCultivationTime++;
+        totalBodyCultivationTime++;
 
-        // Apply realm modifiers periodically
-        if (timeInCurrentRealm % 100 == 0) { // Every 5 seconds
-            IQiCultivationData cultivationData = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivationData != null) {
-                currentRealm.applyRealmModifiers(player, cultivationData);
+        // Apply realm modifiers periodically for both types
+        if (timeInCurrentQiRealm % 100 == 0) { // Every 5 seconds
+            IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            if (qiData != null && currentQiRealm != null) {
+                currentQiRealm.applyRealmModifiers(player, qiData);
+            }
+        }
+
+        if (timeInCurrentBodyRealm % 100 == 0) { // Every 5 seconds
+            IBodyCultivationData bodyData = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            if (bodyData != null && currentBodyRealm != null) {
+                currentBodyRealm.applyRealmModifiers(player, bodyData);
             }
         }
     }
@@ -358,58 +596,115 @@ public class PlayerRealmAttachment {
     // === Serialization ===
 
     public void deserializeNBT(CompoundTag tag) {
-        String realmId = tag.getString("realm_id");
-        this.currentRealm = ICModCultivationRealms.get(realmId);
+        // Qi cultivation data
+        String qiRealmId = tag.getString("qi_realm_id");
+        this.currentQiRealm = ICModCultivationRealms.get(qiRealmId);
 
-        if (tag.contains("previous_realm_id")) {
-            String prevRealmId = tag.getString("previous_realm_id");
-            this.previousRealm = ICModCultivationRealms.get(prevRealmId);
+        if (tag.contains("previous_qi_realm_id")) {
+            String prevQiRealmId = tag.getString("previous_qi_realm_id");
+            this.previousQiRealm = ICModCultivationRealms.get(prevQiRealmId);
         }
 
-        this.breakthroughAttempts = tag.getLong("breakthrough_attempts");
-        this.lastBreakthroughAttempt = tag.getLong("last_breakthrough_attempt");
-        this.breakthroughCooldown = tag.getBoolean("breakthrough_cooldown");
-        this.timeInCurrentRealm = tag.getLong("time_in_current_realm");
-        this.totalCultivationTime = tag.getLong("total_cultivation_time");
+        this.qiBreakthroughAttempts = tag.getLong("qi_breakthrough_attempts");
+        this.lastQiBreakthroughAttempt = tag.getLong("last_qi_breakthrough_attempt");
+        this.qiBreakthroughCooldown = tag.getBoolean("qi_breakthrough_cooldown");
+        this.timeInCurrentQiRealm = tag.getLong("time_in_current_qi_realm");
+        this.totalQiCultivationTime = tag.getLong("total_qi_cultivation_time");
+
+        // Body cultivation data
+        String bodyRealmId = tag.getString("body_realm_id");
+        this.currentBodyRealm = ICModCultivationRealms.get(bodyRealmId);
+
+        if (tag.contains("previous_body_realm_id")) {
+            String prevBodyRealmId = tag.getString("previous_body_realm_id");
+            this.previousBodyRealm = ICModCultivationRealms.get(prevBodyRealmId);
+        }
+
+        this.bodyBreakthroughAttempts = tag.getLong("body_breakthrough_attempts");
+        this.lastBodyBreakthroughAttempt = tag.getLong("last_body_breakthrough_attempt");
+        this.bodyBreakthroughCooldown = tag.getBoolean("body_breakthrough_cooldown");
+        this.timeInCurrentBodyRealm = tag.getLong("time_in_current_body_realm");
+        this.totalBodyCultivationTime = tag.getLong("total_body_cultivation_time");
     }
 
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
-        tag.putString("realm_id", currentRealm.getId());
 
-        if (previousRealm != null) {
-            tag.putString("previous_realm_id", previousRealm.getId());
+        // Qi cultivation data
+        tag.putString("qi_realm_id", currentQiRealm.getId());
+        if (previousQiRealm != null) {
+            tag.putString("previous_qi_realm_id", previousQiRealm.getId());
         }
+        tag.putLong("qi_breakthrough_attempts", qiBreakthroughAttempts);
+        tag.putLong("last_qi_breakthrough_attempt", lastQiBreakthroughAttempt);
+        tag.putBoolean("qi_breakthrough_cooldown", qiBreakthroughCooldown);
+        tag.putLong("time_in_current_qi_realm", timeInCurrentQiRealm);
+        tag.putLong("total_qi_cultivation_time", totalQiCultivationTime);
 
-        tag.putLong("breakthrough_attempts", breakthroughAttempts);
-        tag.putLong("last_breakthrough_attempt", lastBreakthroughAttempt);
-        tag.putBoolean("breakthrough_cooldown", breakthroughCooldown);
-        tag.putLong("time_in_current_realm", timeInCurrentRealm);
-        tag.putLong("total_cultivation_time", totalCultivationTime);
+        // Body cultivation data
+        tag.putString("body_realm_id", currentBodyRealm.getId());
+        if (previousBodyRealm != null) {
+            tag.putString("previous_body_realm_id", previousBodyRealm.getId());
+        }
+        tag.putLong("body_breakthrough_attempts", bodyBreakthroughAttempts);
+        tag.putLong("last_body_breakthrough_attempt", lastBodyBreakthroughAttempt);
+        tag.putBoolean("body_breakthrough_cooldown", bodyBreakthroughCooldown);
+        tag.putLong("time_in_current_body_realm", timeInCurrentBodyRealm);
+        tag.putLong("total_body_cultivation_time", totalBodyCultivationTime);
 
         return tag;
+    }
+
+    public void updateFromServer(long newRealm) {
+        long oldRealm = this.getCurrentRealm(b);
+        this.currentQiCultivation = newCultivation;
+        this.lastSyncedCultivation = newCultivation;
+
+        if (oldCultivation != newCultivation) {
+            onQiCultivationChanged(oldCultivation, newCultivation);
+        }
     }
 
     // === Codec ===
 
     public static final Codec<PlayerRealmAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        Codec.STRING.fieldOf("realm_id").forGetter(comp -> comp.currentRealm.getId()),
-        Codec.STRING.optionalFieldOf("previous_realm_id").forGetter(comp ->
-            comp.previousRealm != null ? Optional.of(comp.previousRealm.getId()) : Optional.empty()),
-        Codec.LONG.optionalFieldOf("breakthrough_attempts", 0L).forGetter(comp -> comp.breakthroughAttempts),
-        Codec.LONG.optionalFieldOf("time_in_current_realm", 0L).forGetter(comp -> comp.timeInCurrentRealm),
-        Codec.LONG.optionalFieldOf("total_cultivation_time", 0L).forGetter(comp -> comp.totalCultivationTime)
-    ).apply(instance, (realmId, prevRealmId, attempts, timeInRealm, totalTime) -> {
+        // Qi cultivation fields
+        Codec.STRING.fieldOf("qi_realm_id").forGetter(comp -> comp.currentQiRealm.getId()),
+        Codec.STRING.optionalFieldOf("previous_qi_realm_id").forGetter(comp ->
+            comp.previousQiRealm != null ? Optional.of(comp.previousQiRealm.getId()) : Optional.empty()),
+        Codec.LONG.optionalFieldOf("qi_breakthrough_attempts", 0L).forGetter(comp -> comp.qiBreakthroughAttempts),
+        Codec.LONG.optionalFieldOf("time_in_current_qi_realm", 0L).forGetter(comp -> comp.timeInCurrentQiRealm),
+        Codec.LONG.optionalFieldOf("total_qi_cultivation_time", 0L).forGetter(comp -> comp.totalQiCultivationTime),
+
+        // Body cultivation fields
+        Codec.STRING.fieldOf("body_realm_id").forGetter(comp -> comp.currentBodyRealm.getId()),
+        Codec.STRING.optionalFieldOf("previous_body_realm_id").forGetter(comp ->
+            comp.previousBodyRealm != null ? Optional.of(comp.previousBodyRealm.getId()) : Optional.empty()),
+        Codec.LONG.optionalFieldOf("body_breakthrough_attempts", 0L).forGetter(comp -> comp.bodyBreakthroughAttempts),
+        Codec.LONG.optionalFieldOf("time_in_current_body_realm", 0L).forGetter(comp -> comp.timeInCurrentBodyRealm),
+        Codec.LONG.optionalFieldOf("total_body_cultivation_time", 0L).forGetter(comp -> comp.totalBodyCultivationTime)
+    ).apply(instance, (qiRealmId, prevQiRealmId, qiAttempts, timeInQiRealm, totalQiTime,
+                       bodyRealmId, prevBodyRealmId, bodyAttempts, timeInBodyRealm, totalBodyTime) -> {
         PlayerRealmAttachment comp = new PlayerRealmAttachment();
-        comp.setCurrentRealm(ICModCultivationRealms.get(realmId), false);
-        prevRealmId.ifPresent(id -> comp.previousRealm = ICModCultivationRealms.get(id));
-        comp.breakthroughAttempts = attempts;
-        comp.timeInCurrentRealm = timeInRealm;
-        comp.totalCultivationTime = totalTime;
+
+        // Set Qi cultivation data
+        comp.currentQiRealm = ICModCultivationRealms.get(qiRealmId);
+        prevQiRealmId.ifPresent(id -> comp.previousQiRealm = ICModCultivationRealms.get(id));
+        comp.qiBreakthroughAttempts = qiAttempts;
+        comp.timeInCurrentQiRealm = timeInQiRealm;
+        comp.totalQiCultivationTime = totalQiTime;
+
+        // Set Body cultivation data
+        comp.currentBodyRealm = ICModCultivationRealms.get(bodyRealmId);
+        prevBodyRealmId.ifPresent(id -> comp.previousBodyRealm = ICModCultivationRealms.get(id));
+        comp.bodyBreakthroughAttempts = bodyAttempts;
+        comp.timeInCurrentBodyRealm = timeInBodyRealm;
+        comp.totalBodyCultivationTime = totalBodyTime;
+
         return comp;
     }));
 
-    // === Helper Classes ===
+    // === Helper Classes === //
 
     public enum BreakthroughType {
         MINOR,
@@ -420,5 +715,9 @@ public class PlayerRealmAttachment {
 
     public record BreakthroughResult(boolean success, String message, @Nullable CultivationRealm newRealm) {}
 
-    public record BreakthroughOption(BreakthroughType type, CultivationRealm targetRealm, double successChance) {}
+    public record BreakthroughOption(BreakthroughType type, CultivationRealm targetRealm,
+                                     double successChance, CultivationType cultivationType) {}
+
+    public record BreakthroughOptions(List<BreakthroughOption> qiOptions,
+                                      List<BreakthroughOption> bodyOptions) {}
 }

@@ -1,5 +1,6 @@
 package net.hyper.immortalcultivation.cultivation.realms;
 
+import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
@@ -144,8 +145,8 @@ public abstract class CultivationRealm {
      * @param cultivationData Player's Cultivation data
      * @return true if Cultivation threshold is met
      */
-    public boolean meetsCultivationThreshold(IQiCultivationData cultivationData) {
-        return cultivationData.getCurrentCultivation() >= getBreakthroughCultivationThreshold();
+    public boolean meetsCultivationThreshold(IQiCultivationData qiCultivationData, IBodyCultivationData bodyCultivationData) {
+        return qiCultivationData.getCurrentQiCultivation() >= getBreakthroughCultivationThreshold();
     }
 
     /**

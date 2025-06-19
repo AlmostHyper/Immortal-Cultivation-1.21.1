@@ -13,22 +13,32 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
+/**
+ * Manages the player's current Qi pool - their spiritual energy resource.
+ * This is separate from Qi Cultivation, which represents permanent progress.
+ * Qi is consumed for abilities and regenerates over time based on realm and cultivation.
+ */
 public class PlayerQiAttachment implements IQiData {
+    // Core Qi tracking
     private long currentQi = 0;
+    private double qiRegenFraction = 0.0; // Fractional Qi for smooth regeneration
+
+    // Sync and tick management
     private int tickCounter = 0;
-    private double qiFraction = 0;
     private long lastSyncedQi = 0;
+    private static final int SYNC_THRESHOLD = 10; // Sync when Qi changes by this amount
+    private static final int PERIODIC_SYNC_TICKS = 100; // Force sync every 5 seconds
 
     public PlayerQiAttachment() {}
 
-    //  Player Reference
+    // === Player Reference Management ===
 
     /**
-     * Dynamically get the player that owns this attachment
-     * This works around the issue where player references are lost during serialization
+     * Dynamically finds the player that owns this attachment.
+     * This approach handles the serialization issue where player references are lost.
      */
     private Player findPlayer() {
-        // Try client-side first
+        // Check client-side first
         if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null) {
             Player clientPlayer = Minecraft.getInstance().player;
             if (clientPlayer.getData(ICModAttachmentTypes.PLAYER_QI.get()) == this) {
@@ -36,7 +46,7 @@ public class PlayerQiAttachment implements IQiData {
             }
         }
 
-        // Try server-side
+        // Check server-side
         if (ServerLifecycleHooks.getCurrentServer() != null) {
             for (ServerPlayer serverPlayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
                 if (serverPlayer.getData(ICModAttachmentTypes.PLAYER_QI.get()) == this) {
@@ -49,7 +59,7 @@ public class PlayerQiAttachment implements IQiData {
     }
 
     /**
-     * Get player with null safety and logging
+     * Safe player retrieval with debug logging
      */
     private Player getPlayerSafe() {
         Player player = findPlayer();
@@ -59,7 +69,8 @@ public class PlayerQiAttachment implements IQiData {
         return player;
     }
 
-    // Core
+    // === Core Qi Management ===
+
     @Override
     public long getCurrentQi() {
         return currentQi;
@@ -68,185 +79,128 @@ public class PlayerQiAttachment implements IQiData {
     @Override
     public void setCurrentQi(long qi) {
         long oldQi = this.currentQi;
-        this.currentQi = Math.max(0, qi);
+        long maxQi = getMaxQi();
 
-        // Sync to client if this is server-side and value changed significantly
+        // Clamp between 0 and max
+        this.currentQi = Math.max(0, Math.min(qi, maxQi));
+
+        // Handle sync if value changed significantly
         Player player = getPlayerSafe();
-        if (player != null && !player.level().isClientSide() && shouldSync()) {
+        if (player != null && !player.level().isClientSide() && shouldSync(oldQi)) {
             syncToClient();
         }
 
-        // Call change event
-        onQiChanged(oldQi, this.currentQi);
+        // Trigger change event
+        if (oldQi != this.currentQi) {
+            onQiChanged(oldQi, this.currentQi);
+        }
     }
 
-    @Override
-    public long getMaxQi() {
-        return getBaseMaxQi();
-    }
+    // === Capacity Management ===
 
     @Override
     public long getBaseMaxQi() {
         Player player = getPlayerSafe();
-        if (player == null) return 100;
-
-        // Get realm base
-        long realmBase = getRealmBaseMaxQi(); // Get from realm
-
-        // Get cultivation bonus
-        PlayerQiCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        long cultivationBonus = cultivationAttachment != null ?
-            (long) (cultivationAttachment.getCurrentCultivation() * 0.10) : 0;
-
-        return realmBase + cultivationBonus;
-    }
-
-    private long getRealmBaseMaxQi() {
-        Player player = getPlayerSafe();
-        if (player == null) return 100;
+        if (player == null) return 0; // Mortals have no Qi
 
         try {
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment == null || realmAttachment.getCurrentRealm() == null) {
-                return 100;
-            }
-            return realmAttachment.getCurrentRealm().getBaseMaxQi();
+            if (realmAttachment == null) return 0;
+
+            // Get base from Qi realm only (Body realm doesn't affect Qi capacity)
+            return realmAttachment.getCurrentQiRealm().getBaseMaxQi();
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting realm base max Qi", e);
-            return 100;
+            ImmortalCultivation.LOGGER.error("Error getting base max Qi", e);
+            return 0;
         }
     }
 
     @Override
+    public long getMaxQi() {
+        long baseMax = getBaseMaxQi();
+
+        Player player = getPlayerSafe();
+        if (player == null) return baseMax;
+
+        // Add bonus from Qi cultivation progress
+        try {
+            PlayerQiCultivationAttachment cultivationAttachment =
+                player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            if (cultivationAttachment != null) {
+                // 10% of cultivation as bonus Qi capacity
+                long cultivationBonus = (long)(cultivationAttachment.getCurrentQiCultivation() * 0.10);
+                return baseMax + cultivationBonus;
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error calculating Qi cultivation bonus", e);
+        }
+
+        return baseMax;
+    }
+
+    // === Regeneration System ===
+
+    @Override
     public double getBaseQiRegenerationRate() {
         Player player = getPlayerSafe();
-        if (player == null) {
-            return 0.0;
-        }
+        if (player == null) return 0.0;
 
         try {
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment == null || realmAttachment.getCurrentRealm() == null) {
-                return 0.0; // Safe fallback
-            }
-            return realmAttachment.getCurrentRealm().getBaseQiRegenerationRate();
+            if (realmAttachment == null) return 0.0;
+
+            // Base regen from Qi realm
+            return realmAttachment.getCurrentQiRealm().getBaseQiRegenerationRate();
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting base qi regeneration rate", e);
+            ImmortalCultivation.LOGGER.error("Error getting base Qi regeneration rate", e);
             return 0.0;
         }
     }
 
     @Override
     public double getBaseCirculatingQiRegenerationRate() {
-        Player player = getPlayerSafe();
-        if (player == null) {
-            return 0.0; // Safe fallback
-        }
-
-        try {
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment == null || realmAttachment.getCurrentRealm() == null) {
-                return 0.0; // Safe fallback
-            }
-            return realmAttachment.getCurrentRealm().getBaseQiRegenerationRate();
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting base qi regeneration rate", e);
-            return 0.0;
-        }
+        // Circulating Qi (meditation/special techniques) is typically 9x faster
+        return getBaseQiRegenerationRate() * 9.0;
     }
 
     @Override
     public double getEffectiveQiRegenerationRate() {
-        // Base implementation - can be overridden for modifiers
-        return getBaseQiRegenerationRate();
+        double baseRate = getBaseQiRegenerationRate();
+
+        Player player = getPlayerSafe();
+        if (player == null) return baseRate;
+
+        try {
+            // Apply spiritual roots multiplier
+            PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            if (roots != null) {
+                float multiplier = roots.getCultivationMultiplier();
+                return baseRate * multiplier;
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying spiritual roots to Qi regen", e);
+        }
+
+        return baseRate;
+    }
+
+    @Override
+    public double getEffectiveCirculatingQiRegenerationRate() {
+        // Apply same multipliers to circulating rate
+        return getEffectiveQiRegenerationRate() * 9.0;
     }
 
     @Override
     public double getRegenFraction() {
-        return qiFraction;
+        return qiRegenFraction;
     }
 
     @Override
     public void setRegenFraction(double fraction) {
-        this.qiFraction = fraction;
+        this.qiRegenFraction = fraction;
     }
 
-    @Override
-    public void addRegenFraction(double amount) {
-        this.qiFraction += amount;
-    }
-
-    // === Qi Operations ===
-
-    @Override
-    public long addQi(long amount) {
-        long current = getCurrentQi();
-        long max = getMaxQi();
-        long newAmount = Math.min(current + amount, max);
-        setCurrentQi(newAmount);
-        long actualAdded = newAmount - current;
-
-        if (actualAdded > 0) {
-            onQiAdded(actualAdded);
-        }
-
-        return actualAdded;
-    }
-
-    @Override
-    public boolean consumeQi(long amount) {
-        if (getCurrentQi() >= amount) {
-            setCurrentQi(getCurrentQi() - amount);
-            onQiConsumed(amount);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    public long tryConsumeQi(long amount) {
-        long current = getCurrentQi();
-        long toConsume = Math.min(current, amount);
-        setCurrentQi(current - toConsume);
-
-        if (toConsume > 0) {
-            onQiConsumed(toConsume);
-        }
-
-        return toConsume;
-    }
-
-    @Override
-    public boolean hasQi(long amount) {
-        return getCurrentQi() >= amount;
-    }
-
-    @Override
-    public double getQiPercentage() {
-        long max = getMaxQi();
-        return max > 0 ? (double) getCurrentQi() / max : 0.0;
-    }
-
-    @Override
-    public boolean isQiFull() {
-        return getCurrentQi() >= getMaxQi();
-    }
-
-    @Override
-    public boolean isQiEmpty() {
-        return getCurrentQi() <= 0;
-    }
-
-    public long getRemainingCapacity() {
-        return getMaxQi() - getCurrentQi();
-    }
-
-    @Override
-    public boolean canRegenerateQi() {
-        return getCurrentQi() < getMaxQi();
-    }
-
-    // === Regeneration Logic ===
+    // === Tick Update ===
 
     @Override
     public void tick() {
@@ -255,23 +209,28 @@ public class PlayerQiAttachment implements IQiData {
         Player player = getPlayerSafe();
         if (player == null) return;
 
-        // Only regenerate on server side
-        if (!player.level().isClientSide() && tickCounter >= 20) {
-            tickCounter = 0;
-
+        // Only process on server side
+        if (!player.level().isClientSide()) {
+            // Regenerate Qi
             if (canRegenerateQi()) {
-                try {
-                    double regenRate = getEffectiveQiRegenerationRate();
-                    qiFraction += regenRate;
+                double regenRate = getEffectiveQiRegenerationRate();
 
-                    if (qiFraction >= 1.0) {
-                        long qiToAdd = (long) qiFraction;
-                        qiFraction -= qiToAdd;
+                if (regenRate > 0) {
+                    // Convert per-second rate to per-tick (20 ticks = 1 second)
+                    qiRegenFraction += regenRate / 20.0;
+
+                    // Apply whole points of regeneration
+                    if (qiRegenFraction >= 1.0) {
+                        long qiToAdd = (long)qiRegenFraction;
+                        qiRegenFraction -= qiToAdd;
                         addQi(qiToAdd);
                     }
-                } catch (Exception e) {
-                    ImmortalCultivation.LOGGER.error("Error during qi regeneration tick", e);
                 }
+            }
+
+            // Periodic sync check
+            if (tickCounter % PERIODIC_SYNC_TICKS == 0 && currentQi != lastSyncedQi) {
+                syncToClient();
             }
         }
     }
@@ -280,32 +239,44 @@ public class PlayerQiAttachment implements IQiData {
 
     @Override
     public void onQiChanged(long oldQi, long newQi) {
-        // Trigger HUD update on client side
+        // This is where you'd trigger visual effects, update HUD, etc.
         Player player = getPlayerSafe();
         if (player != null && player.level().isClientSide()) {
-            // Show HUD when Qi changes significantly
             long difference = Math.abs(oldQi - newQi);
-            if (difference > 5) { // Threshold for showing HUD
-                // Force show HUD (you'll need to implement this in your HUD class)
-                // QiHUDScreen.forceShow();
+            if (difference > 5) {
+                // Significant change - could trigger HUD animation
+                // QiHUDOverlay.showChange(oldQi, newQi);
             }
         }
     }
 
     @Override
     public void onQiConsumed(long amount) {
-        // Override for custom behavior like particles, sounds, etc.
+        // Could add consumption effects, sounds, particles
+        Player player = getPlayerSafe();
+        if (player != null) {
+            ImmortalCultivation.LOGGER.debug("Player {} consumed {} Qi",
+                player.getName().getString(), amount);
+        }
     }
 
     @Override
     public void onQiAdded(long amount) {
-        // Override for custom behavior like particles, sounds, etc.
+        // Could add regeneration effects
+        Player player = getPlayerSafe();
+        if (player != null) {
+            ImmortalCultivation.LOGGER.debug("Player {} regenerated {} Qi",
+                player.getName().getString(), amount);
+        }
     }
 
-    // Syncing
-    private boolean shouldSync() {
+    // === Synchronization ===
+
+    private boolean shouldSync(long oldQi) {
         long difference = Math.abs(currentQi - lastSyncedQi);
-        return difference > 10 || (difference > 0 && tickCounter % 100 == 0);
+        // Sync if change exceeds threshold or on periodic updates
+        return difference >= SYNC_THRESHOLD ||
+            (difference > 0 && tickCounter % PERIODIC_SYNC_TICKS == 0);
     }
 
     private void syncToClient() {
@@ -333,65 +304,24 @@ public class PlayerQiAttachment implements IQiData {
     }
 
     /**
-     * Called on client to update from server
+     * Called on client when receiving sync packet from server
      */
     public void updateFromServer(long newQi) {
+        long oldQi = this.currentQi;
         this.currentQi = newQi;
         this.lastSyncedQi = newQi;
-    }
 
-    // Debug & Utility
-    /**
-     * Debug method to check Attachment state
-     */
-    public void debugInfo() {
-        Player player = getPlayerSafe();
-        if (player == null) {
-            ImmortalCultivation.LOGGER.info("Player is null in QiAttachment!");
-        } else {
-            ImmortalCultivation.LOGGER.info("Player found: {} ({})",
-                player.getName().getString(),
-                player.level().isClientSide() ? "Client" : "Server");
-            ImmortalCultivation.LOGGER.info("Current Qi: {}/{} ({}%)",
-                getCurrentQi(), getMaxQi(), String.format("%.1f", getQiPercentage() * 100));
-            ImmortalCultivation.LOGGER.info("Regen Rate: {}/sec, Qi Fraction: {}",
-                getEffectiveQiRegenerationRate(), qiFraction);
-
-            try {
-                PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-                if (realmAttachment != null && realmAttachment.getCurrentRealm() != null) {
-                    ImmortalCultivation.LOGGER.info("Current Realm: {}",
-                        realmAttachment.getCurrentRealm().getDisplayName());
-                } else {
-                    ImmortalCultivation.LOGGER.info("Realm Attachment or realm is null");
-                }
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error getting realm info", e);
-            }
+        if (oldQi != newQi) {
+            onQiChanged(oldQi, newQi);
         }
     }
 
-    /**
-     * Get player name for logging (safe)
-     */
-    public String getPlayerName() {
-        Player player = getPlayerSafe();
-        return player != null ? player.getName().getString() : "Unknown";
-    }
+    // === Serialization ===
 
-    /**
-     * Check if this Attachment is on the client or server side
-     */
-    public boolean isClientSide() {
-        Player player = getPlayerSafe();
-        return player != null && player.level().isClientSide();
-    }
-
-    // Serialization
     @Override
     public void deserializeNBT(CompoundTag tag) {
         this.currentQi = tag.getLong("qi");
-        this.qiFraction = tag.getDouble("qiFraction");
+        this.qiRegenFraction = tag.getDouble("qiRegenFraction");
         this.tickCounter = tag.getInt("tickCounter");
         this.lastSyncedQi = tag.getLong("lastSyncedQi");
     }
@@ -400,37 +330,54 @@ public class PlayerQiAttachment implements IQiData {
     public CompoundTag serializeNBT() {
         CompoundTag tag = new CompoundTag();
         tag.putLong("qi", currentQi);
-        tag.putDouble("qiFraction", qiFraction);
+        tag.putDouble("qiRegenFraction", qiRegenFraction);
         tag.putInt("tickCounter", tickCounter);
         tag.putLong("lastSyncedQi", lastSyncedQi);
         return tag;
     }
 
-    // Codec
+    // === Codec ===
+
     public static final Codec<PlayerQiAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
         Codec.LONG.optionalFieldOf("qi", 0L).forGetter(PlayerQiAttachment::getCurrentQi),
-        Codec.DOUBLE.optionalFieldOf("qiFraction", 0.0).forGetter(comp -> comp.qiFraction),
+        Codec.DOUBLE.optionalFieldOf("qiRegenFraction", 0.0).forGetter(comp -> comp.qiRegenFraction),
         Codec.INT.optionalFieldOf("tickCounter", 0).forGetter(comp -> comp.tickCounter),
         Codec.LONG.optionalFieldOf("lastSyncedQi", 0L).forGetter(comp -> comp.lastSyncedQi)
     ).apply(instance, (qi, fraction, ticks, lastSync) -> {
         PlayerQiAttachment comp = new PlayerQiAttachment();
         comp.currentQi = qi;
-        comp.qiFraction = fraction;
+        comp.qiRegenFraction = fraction;
         comp.tickCounter = ticks;
         comp.lastSyncedQi = lastSync;
         return comp;
     }));
 
-    // Debugging
-    public double getQiFraction() {
-        return qiFraction;
-    }
+    // === Debug Utilities ===
 
-    public int getTickCounter() {
-        return tickCounter;
-    }
+    public void debugInfo() {
+        Player player = getPlayerSafe();
+        String side = player != null ? (player.level().isClientSide() ? "Client" : "Server") : "Unknown";
+        String playerName = player != null ? player.getName().getString() : "Unknown";
 
-    public long getLastSyncedQi() {
-        return lastSyncedQi;
+        ImmortalCultivation.LOGGER.info("=== Qi Attachment Debug Info ===");
+        ImmortalCultivation.LOGGER.info("Player: {} ({})", playerName, side);
+        ImmortalCultivation.LOGGER.info("Current Qi: {}/{} ({}%)",
+            getCurrentQi(), getMaxQi(), String.format("%.1f", getQiPercentage() * 100));
+        ImmortalCultivation.LOGGER.info("Regen Rate: {}/sec (Effective), Fraction: {}",
+            getEffectiveQiRegenerationRate(), String.format("%.3f", qiRegenFraction));
+        ImmortalCultivation.LOGGER.info("Sync Status: Last synced at {}, Current diff: {}",
+            lastSyncedQi, Math.abs(currentQi - lastSyncedQi));
+
+        if (player != null) {
+            try {
+                PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
+                if (realmAttachment != null) {
+                    ImmortalCultivation.LOGGER.info("Qi Realm: {}",
+                        realmAttachment.getCurrentQiRealm().getDisplayName());
+                }
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error getting realm info", e);
+            }
+        }
     }
 }
