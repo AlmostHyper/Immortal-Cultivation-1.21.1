@@ -1,14 +1,20 @@
 package net.hyper.immortalcultivation.attachment;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.network.RealmSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.registry.ICModNetwork;
+import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -65,6 +71,11 @@ public class PlayerRealmAttachment {
     private long totalQiCultivationTime = 0;
     private long totalBodyCultivationTime = 0;
 
+    // Sync management for network communication
+    private long lastSyncedValue = 0;
+    private int tickCounter = 0;
+    private static final int PERIODIC_SYNC_TICKS = 200; // Sync every 10 seconds
+
     // === Constructor(s) === //
 
     public PlayerRealmAttachment() {
@@ -78,6 +89,44 @@ public class PlayerRealmAttachment {
         this.player = player;
         this.currentQiRealm = ICModCultivationRealms.MORTAL;
         this.currentBodyRealm = ICModCultivationRealms.MORTAL;
+    }
+
+    // === Player Reference Management ===
+
+    /**
+     * Dynamically finds the player that owns this attachment.
+     * This approach handles the serialization issue where player references are lost.
+     */
+    private Player findPlayer() {
+        // Check client-side first
+        if (Minecraft.getInstance().level != null && Minecraft.getInstance().player != null) {
+            Player clientPlayer = Minecraft.getInstance().player;
+            if (clientPlayer.getData(ICModAttachmentTypes.PLAYER_REALM.get()) == this) {
+                return clientPlayer;
+            }
+        }
+
+        // Check server-side
+        if (ServerLifecycleHooks.getCurrentServer() != null) {
+            for (ServerPlayer serverPlayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
+                if (serverPlayer.getData(ICModAttachmentTypes.PLAYER_REALM.get()) == this) {
+                    return serverPlayer;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Safe player retrieval with debug logging
+     */
+    private Player getPlayerSafe() {
+        Player player = findPlayer();
+        if (player == null) {
+            ImmortalCultivation.LOGGER.debug("Could not find player for RealmAttachment");
+        }
+        return player;
     }
 
     // === Player === //
@@ -202,9 +251,172 @@ public class PlayerRealmAttachment {
                 }
             }
         }
+
+        // Trigger a sync after realm changes to update client
+        if (!triggerEvents) { // Only sync if we're not already syncing through events
+            triggerSyncIfNeeded();
+        }
     }
 
-    // === Breakthrough Logic === //
+    // === Network Synchronization === //
+
+    public void forceSync() {
+        Player player = getPlayerSafe();
+        if (player instanceof ServerPlayer serverPlayer) {
+            try {
+                // Calculate a composite sync value that represents both realms
+                // We'll encode both realm levels into a single long value
+                long syncValue = calculateCompositeSyncValue();
+
+                lastSyncedValue = syncValue;
+
+                // Send the sync packet to the client
+                ICModNetwork.sendToPlayer(new RealmSyncPacket(syncValue), serverPlayer);
+
+                ImmortalCultivation.LOGGER.debug("Force synced realm data to client for player: {} (composite value: {})",
+                    serverPlayer.getName().getString(), syncValue);
+
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error force syncing realm data to client for player: {}",
+                    player.getName().getString(), e);
+            }
+        }
+    }
+
+    public void updateFromServer(long realmCultivation) {
+        try {
+            // Decode the composite value back into individual realm levels
+            DecodedRealmData decodedData = decodeCompositeSyncValue(realmCultivation);
+
+            // Store the previous realm levels for comparison
+            int oldQiLevel = currentQiRealm.getRealmLevel();
+            int oldBodyLevel = currentBodyRealm.getRealmLevel();
+
+            // Update realms based on the decoded levels (without triggering events on client)
+            updateRealmFromLevel(CultivationType.QI, decodedData.qiLevel);
+            updateRealmFromLevel(CultivationType.BODY, decodedData.bodyLevel);
+
+            // Update our sync tracking
+            lastSyncedValue = realmCultivation;
+
+            // Log the update for debugging
+            if (oldQiLevel != currentQiRealm.getRealmLevel() || oldBodyLevel != currentBodyRealm.getRealmLevel()) {
+                ImmortalCultivation.LOGGER.info("Client updated realm data - Qi: {} -> {}, Body: {} -> {}",
+                    oldQiLevel, currentQiRealm.getRealmLevel(),
+                    oldBodyLevel, currentBodyRealm.getRealmLevel());
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error updating realm data from server sync", e);
+        }
+    }
+
+    /**
+     * Calculate a composite sync value that encodes both Qi and Body realm levels.
+     *
+     * We use bit shifting to pack two realm levels into a single long:
+     * - Lower 32 bits: Qi realm level
+     * - Upper 32 bits: Body realm level
+     *
+     * This approach maintains compatibility with the existing single-value sync packet
+     * while supporting dual cultivation data.
+     */
+    private long calculateCompositeSyncValue() {
+        long qiLevel = currentQiRealm.getRealmLevel();
+        long bodyLevel = currentBodyRealm.getRealmLevel();
+
+        // Pack both levels into a single long value
+        // Body level in upper 32 bits, Qi level in lower 32 bits
+        long compositeValue = (bodyLevel << 32) | (qiLevel & 0xFFFFFFFFL);
+
+        ImmortalCultivation.LOGGER.debug("Encoding realm levels - Qi: {}, Body: {} -> Composite: {}",
+            qiLevel, bodyLevel, compositeValue);
+
+        return compositeValue;
+    }
+
+    /**
+     * Decode a composite sync value back into individual realm levels.
+     */
+    private DecodedRealmData decodeCompositeSyncValue(long compositeValue) {
+        // Extract individual levels from the composite value
+        int qiLevel = (int)(compositeValue & 0xFFFFFFFFL);  // Lower 32 bits
+        int bodyLevel = (int)(compositeValue >>> 32);       // Upper 32 bits
+
+        ImmortalCultivation.LOGGER.debug("Decoding composite value {} -> Qi: {}, Body: {}",
+            compositeValue, qiLevel, bodyLevel);
+
+        return new DecodedRealmData(qiLevel, bodyLevel);
+    }
+
+    /**
+     * Update a specific cultivation realm based on realm level.
+     * This finds the appropriate realm object for the given level.
+     */
+    private void updateRealmFromLevel(CultivationType type, int targetLevel) {
+        try {
+            // Find the realm with the matching level
+            // In a more sophisticated system, you might have a registry method for this
+            CultivationRealm targetRealm = findRealmByLevel(targetLevel);
+
+            if (targetRealm != null) {
+                // Update the realm without triggering events (this is client-side sync)
+                if (type == CultivationType.QI) {
+                    this.currentQiRealm = targetRealm;
+                } else {
+                    this.currentBodyRealm = targetRealm;
+                }
+            } else {
+                ImmortalCultivation.LOGGER.warn("Could not find realm for level {} in {} cultivation",
+                    targetLevel, type.getDisplayName());
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error updating {} realm from level {}",
+                type.getDisplayName(), targetLevel, e);
+        }
+    }
+
+    /**
+     * Find a cultivation realm by its level.
+     *
+     * TODO: This is a simplified implementation. In a full system, you'd want
+     * a proper registry method or cache for efficient realm lookup by level.
+     */
+    private CultivationRealm findRealmByLevel(int level) {
+        // Simple implementation - check known realms
+        // In a full system, you'd iterate through all registered realms
+        if (level == 0) return ICModCultivationRealms.MORTAL;
+        if (level == 1) return ICModCultivationRealms.QI_CONDENSATION_L1;
+        // Add more realm mappings as needed
+
+        // Fallback to current realm if not found
+        ImmortalCultivation.LOGGER.warn("Unknown realm level: {}, using current realm", level);
+        return currentQiRealm; // Or some default realm
+    }
+
+    /**
+     * Check if a sync is needed and trigger it if so.
+     * This is called periodically and after realm changes.
+     */
+    private void triggerSyncIfNeeded() {
+        Player player = getPlayerSafe();
+        if (player instanceof ServerPlayer) {
+            long currentSyncValue = calculateCompositeSyncValue();
+
+            // Only sync if the value has changed
+            if (currentSyncValue != lastSyncedValue) {
+                forceSync();
+            }
+        }
+    }
+
+    /**
+     * Helper record for decoded realm data
+     */
+    private record DecodedRealmData(int qiLevel, int bodyLevel) {}
+
+    // === Breakthrough Logic ===
 
     /**
      * Check if player can attempt breakthrough for a specific cultivation type
@@ -571,6 +783,8 @@ public class PlayerRealmAttachment {
     public void tick() {
         if (player == null) return;
 
+        tickCounter++;
+
         // Update time tracking for both cultivation paths
         timeInCurrentQiRealm++;
         timeInCurrentBodyRealm++;
@@ -590,6 +804,11 @@ public class PlayerRealmAttachment {
             if (bodyData != null && currentBodyRealm != null) {
                 currentBodyRealm.applyRealmModifiers(player, bodyData);
             }
+        }
+
+        // Periodic sync check - only on server side
+        if (!player.level().isClientSide() && tickCounter % PERIODIC_SYNC_TICKS == 0) {
+            triggerSyncIfNeeded();
         }
     }
 
@@ -625,6 +844,10 @@ public class PlayerRealmAttachment {
         this.bodyBreakthroughCooldown = tag.getBoolean("body_breakthrough_cooldown");
         this.timeInCurrentBodyRealm = tag.getLong("time_in_current_body_realm");
         this.totalBodyCultivationTime = tag.getLong("total_body_cultivation_time");
+
+        // Sync management data
+        this.lastSyncedValue = tag.getLong("last_synced_value");
+        this.tickCounter = tag.getInt("tick_counter");
     }
 
     public CompoundTag serializeNBT() {
@@ -652,17 +875,11 @@ public class PlayerRealmAttachment {
         tag.putLong("time_in_current_body_realm", timeInCurrentBodyRealm);
         tag.putLong("total_body_cultivation_time", totalBodyCultivationTime);
 
+        // Sync management data
+        tag.putLong("last_synced_value", lastSyncedValue);
+        tag.putInt("tick_counter", tickCounter);
+
         return tag;
-    }
-
-    public void updateFromServer(long newRealm) {
-        long oldRealm = this.getCurrentRealm(b);
-        this.currentQiCultivation = newCultivation;
-        this.lastSyncedCultivation = newCultivation;
-
-        if (oldCultivation != newCultivation) {
-            onQiCultivationChanged(oldCultivation, newCultivation);
-        }
     }
 
     // === Codec ===
@@ -682,9 +899,14 @@ public class PlayerRealmAttachment {
             comp.previousBodyRealm != null ? Optional.of(comp.previousBodyRealm.getId()) : Optional.empty()),
         Codec.LONG.optionalFieldOf("body_breakthrough_attempts", 0L).forGetter(comp -> comp.bodyBreakthroughAttempts),
         Codec.LONG.optionalFieldOf("time_in_current_body_realm", 0L).forGetter(comp -> comp.timeInCurrentBodyRealm),
-        Codec.LONG.optionalFieldOf("total_body_cultivation_time", 0L).forGetter(comp -> comp.totalBodyCultivationTime)
+        Codec.LONG.optionalFieldOf("total_body_cultivation_time", 0L).forGetter(comp -> comp.totalBodyCultivationTime),
+
+        // Sync management fields
+        Codec.LONG.optionalFieldOf("last_synced_value", 0L).forGetter(comp -> comp.lastSyncedValue),
+        Codec.INT.optionalFieldOf("tick_counter", 0).forGetter(comp -> comp.tickCounter)
     ).apply(instance, (qiRealmId, prevQiRealmId, qiAttempts, timeInQiRealm, totalQiTime,
-                       bodyRealmId, prevBodyRealmId, bodyAttempts, timeInBodyRealm, totalBodyTime) -> {
+                       bodyRealmId, prevBodyRealmId, bodyAttempts, timeInBodyRealm, totalBodyTime,
+                       lastSync, ticks) -> {
         PlayerRealmAttachment comp = new PlayerRealmAttachment();
 
         // Set Qi cultivation data
@@ -701,10 +923,14 @@ public class PlayerRealmAttachment {
         comp.timeInCurrentBodyRealm = timeInBodyRealm;
         comp.totalBodyCultivationTime = totalBodyTime;
 
+        // Set sync management data
+        comp.lastSyncedValue = lastSync;
+        comp.tickCounter = ticks;
+
         return comp;
     }));
 
-    // === Helper Classes === //
+    // === Helper Classes ===
 
     public enum BreakthroughType {
         MINOR,

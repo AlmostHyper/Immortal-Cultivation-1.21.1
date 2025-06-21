@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.screen.CultivationBreakthroughScreen;
+import net.hyper.immortalcultivation.ui.screens.CultivationBreakthroughScreen;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.neoforged.api.distmarker.Dist;

@@ -225,4 +225,5 @@ public interface IHealthData {
 
     void deserializeNBT(CompoundTag tag);
     CompoundTag serializeNBT();
+
 }

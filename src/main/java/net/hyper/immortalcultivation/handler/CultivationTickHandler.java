@@ -2,14 +2,25 @@ package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerBodyCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerQiAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerBodyAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerCultivationFocusAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.hyper.immortalcultivation.attachment.PlayerSpiritualRootAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerPhysiqueAttachment;
 import net.neoforged.fml.common.EventBusSubscriber;
 
+/**
+ * Handles all cultivation-related ticking for players.
+ * This includes both Qi and Body cultivation paths, as well as meditation detection
+ * and resource regeneration for the dual cultivation system.
+ */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class CultivationTickHandler {
 
@@ -19,119 +30,140 @@ public class CultivationTickHandler {
             return;
         }
 
-        PlayerQiCultivationAttachment cultivationAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        if (cultivationAttachment != null) {
-            // TEMPORARILY COMMENT OUT: This might be interfering
-            // cultivationAttachment.tick();
+        // Process all cultivation attachments - they handle their own logic now
+        tickCultivationAttachments(serverPlayer);
 
-            // Only process every tick for now (we'll optimize later)
-            processCultivationRegeneration(serverPlayer);
-        }
+        // Process meditation detection for both cultivation types
+        processMeditationDetection(serverPlayer);
+
+        // Process resource regeneration (Qi and Body energy, not cultivation)
+        processResourceRegeneration(serverPlayer);
+
+        // Tick the realm attachment for time tracking and periodic effects
+        tickRealmAttachment(serverPlayer);
+
+        // Tick the cultivation focus attachment
+        tickCultivationFocus(serverPlayer);
     }
 
-    private static void processCultivationRegeneration(ServerPlayer player) {
-        PlayerQiCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        if (cultivationAttachment == null) {
-            ImmortalCultivation.LOGGER.error("CultivationAttachment is null for player {}", player.getName().getString());
-            return;
-        }
-
-        // Skip if cultivation is already full
-        if (cultivationAttachment.isCultivationFull()) {
-            if (player.tickCount % 100 == 0) {
-                ImmortalCultivation.LOGGER.info("Player {} cultivation is full: {}/{}",
-                    player.getName().getString(),
-                    cultivationAttachment.getCurrentCultivation(),
-                    cultivationAttachment.getMaxCultivation());
-            }
-            return;
-        }
-
-        // Get base cultivation rate and spiritual root info
-        double baseCultivationRate = cultivationAttachment.getBaseCultivationRate();
-        double effectiveCultivationRate = cultivationAttachment.getEffectiveCultivationRate();
-
-        // DEBUG: Log rates every 5 seconds
-        if (player.tickCount % 100 == 0) {
-            String rootInfo = getSpiritualRootInfo(player);
-            ImmortalCultivation.LOGGER.info("Player {}: Base rate={}, Effective rate={}, Roots={}",
-                player.getName().getString(), baseCultivationRate, effectiveCultivationRate, rootInfo);
-        }
-
-        // Check if player is meditating for bonus rate
-        boolean isMeditating = isPlayerMeditating(player);
-        double finalRate = effectiveCultivationRate;
-
-        if (isMeditating) {
-            double baseMeditationRate = cultivationAttachment.getBaseMeditationCultivationRate();
-            double effectiveMeditationRate = cultivationAttachment.getEffectiveMeditationCultivationRate();
-            finalRate = effectiveMeditationRate;
-
-            if (player.tickCount % 100 == 0) {
-                ImmortalCultivation.LOGGER.info("Player {} is meditating: Base meditation={}, Effective meditation={}",
-                    player.getName().getString(), baseMeditationRate, effectiveMeditationRate);
-            }
-        }
-
-        // Convert per-second rate to per-tick (20 ticks = 1 second)
-        double cultivationPerTick = finalRate / 20.0;
-
-        if (player.tickCount % 100 == 0) {
-            ImmortalCultivation.LOGGER.info("Player {}: Final rate={}/sec, Per tick={}, Meditating={}",
-                player.getName().getString(), finalRate, cultivationPerTick, isMeditating);
-        }
-
-        // Add to cultivation
-        if (cultivationPerTick > 0) {
-            addFractionalCultivation(cultivationAttachment, cultivationPerTick, player);
-        } else {
-            if (player.tickCount % 100 == 0) {
-                ImmortalCultivation.LOGGER.warn("Player {} has cultivation rate of 0!", player.getName().getString());
-            }
-        }
-    }
-
-    private static void addFractionalCultivation(PlayerQiCultivationAttachment attachment, double amount, ServerPlayer player) {
+    /**
+     * Tick all cultivation attachments. Each attachment has its own tick method
+     * that handles accumulation, syncing, and other cultivation-specific logic.
+     */
+    private static void tickCultivationAttachments(ServerPlayer player) {
         try {
-            // Get current fraction - use the correct method name
-            double currentFraction = attachment.getRegenFraction(); // Changed from getCultivationFraction()
-            double oldFraction = currentFraction;
-            currentFraction += amount;
-
-            // DEBUG: Log fraction changes every 5 seconds
-            if (player.tickCount % 100 == 0) {
-                ImmortalCultivation.LOGGER.info("Player {}: Old fraction={}, Adding={}, New fraction={}",
-                    player.getName().getString(), oldFraction, amount, currentFraction);
+            // Tick Qi Cultivation attachment - handles Qi cultivation accumulation
+            PlayerQiCultivationAttachment qiCultivation = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            if (qiCultivation != null) {
+                qiCultivation.tick();
             }
 
-            // If we've accumulated at least 1 whole cultivation point
-            if (currentFraction >= 1.0) {
-                long wholePoints = (long) currentFraction;
-                currentFraction -= wholePoints;
-
-                // Add the whole points
-                long oldCultivation = attachment.getCurrentCultivation();
-                long actuallyAdded = attachment.addCultivation(wholePoints);
-                long newCultivation = attachment.getCurrentCultivation();
-
-                // Update the fraction
-                attachment.setRegenFraction(currentFraction);
-
-                // LOG: Always log when cultivation is actually added
-                ImmortalCultivation.LOGGER.info("Player {} gained {} cultivation! ({} -> {}, remaining fraction={})",
-                    player.getName().getString(), actuallyAdded, oldCultivation, newCultivation, currentFraction);
-            } else {
-                // Just update the fraction
-                attachment.setRegenFraction(currentFraction);
+            // Tick Body Cultivation attachment - handles Body cultivation accumulation
+            PlayerBodyCultivationAttachment bodyCultivation = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            if (bodyCultivation != null) {
+                bodyCultivation.tick();
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error adding fractional cultivation to player {}",
+            ImmortalCultivation.LOGGER.error("Error ticking cultivation attachments for player {}",
                 player.getName().getString(), e);
         }
     }
 
+    /**
+     * Process meditation detection for both Qi and Body cultivation.
+     * Meditation enhances cultivation rates significantly, so we need to detect
+     * when players are in the proper meditation posture.
+     */
+    private static void processMeditationDetection(ServerPlayer player) {
+        boolean isMeditating = isPlayerMeditating(player);
+
+        try {
+            // Update Qi cultivation meditation state
+            PlayerQiCultivationAttachment qiCultivation = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            if (qiCultivation != null) {
+                if (isMeditating) {
+                    qiCultivation.startMeditation();
+                } else {
+                    qiCultivation.stopMeditation();
+                }
+            }
+
+            // Update Body cultivation meditation state
+            PlayerBodyCultivationAttachment bodyCultivation = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            if (bodyCultivation != null) {
+                if (isMeditating) {
+                    bodyCultivation.startMeditation();
+                } else {
+                    bodyCultivation.stopMeditation();
+                }
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error processing meditation for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Process Qi and Body resource regeneration.
+     * These are the consumable resources (like mana/stamina), not cultivation progress.
+     */
+    private static void processResourceRegeneration(ServerPlayer player) {
+        try {
+            // Tick Qi resource attachment - handles Qi energy regeneration
+            PlayerQiAttachment qiResource = player.getData(ICModAttachmentTypes.PLAYER_QI.get());
+            if (qiResource != null) {
+                qiResource.tick();
+            }
+
+            // Tick Body resource attachment - handles Body energy regeneration
+            PlayerBodyAttachment bodyResource = player.getData(ICModAttachmentTypes.PLAYER_BODY.get());
+            if (bodyResource != null) {
+                bodyResource.tick();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error processing resource regeneration for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Tick the realm attachment for time tracking and periodic realm effects.
+     * This handles things like realm-based attribute bonuses and breakthrough cooldowns.
+     */
+    private static void tickRealmAttachment(ServerPlayer player) {
+        try {
+            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
+            if (realmAttachment != null) {
+                realmAttachment.tick();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error ticking realm attachment for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Tick the cultivation focus attachment for cooldown management and time tracking.
+     */
+    private static void tickCultivationFocus(ServerPlayer player) {
+        try {
+            PlayerCultivationFocusAttachment focusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
+            if (focusAttachment != null) {
+                focusAttachment.tick();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error ticking cultivation focus for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Determine if a player is in meditation posture.
+     * Meditation requires the player to be crouching and relatively stationary.
+     * This is used by both Qi and Body cultivation for enhanced cultivation rates.
+     */
     private static boolean isPlayerMeditating(ServerPlayer player) {
-        // Check if player is crouching and not moving
+        // Check if player is crouching (shift key held)
         if (!player.isCrouching()) {
             return false;
         }
@@ -140,21 +172,53 @@ public class CultivationTickHandler {
         Vec3 velocity = player.getDeltaMovement();
         double horizontalSpeed = Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z);
 
+        // Allow very small movement (account for server lag/float precision)
         return horizontalSpeed < 0.01;
     }
 
-    private static String getSpiritualRootInfo(ServerPlayer player) {
+    /**
+     * Get debug information about a player's cultivation state.
+     * Useful for troubleshooting cultivation issues.
+     */
+    public static String getCultivationDebugInfo(ServerPlayer player) {
+        StringBuilder debug = new StringBuilder();
+        debug.append("=== Cultivation Debug Info for ").append(player.getName().getString()).append(" ===\n");
+
         try {
+            // Spiritual roots info
             PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
-                return String.format("%s (%.1fx)",
-                    roots.getRootType().getDisplayName(),
-                    roots.getCultivationMultiplier());
-            } else {
-                return "Roots attachment is null";
+                debug.append("Spiritual Roots: ").append(roots.getRootType().getDisplayName())
+                    .append(" (").append(String.format("%.1fx", roots.getCultivationMultiplier())).append(")\n");
             }
+
+            // Physique info
+            PlayerPhysiqueAttachment physique = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
+            if (physique != null) {
+                debug.append("Physique: ").append(physique.getRootType().getDisplayName())
+                    .append(" (").append(String.format("%.1fx", physique.getCultivationMultiplier())).append(")\n");
+            }
+
+            // Realm info
+            PlayerRealmAttachment realm = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
+            if (realm != null) {
+                debug.append("Qi Realm: ").append(realm.getCurrentQiRealm().getDisplayName()).append("\n");
+                debug.append("Body Realm: ").append(realm.getCurrentBodyRealm().getDisplayName()).append("\n");
+            }
+
+            // Cultivation focus
+            PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
+            if (focus != null) {
+                debug.append("Cultivation Focus: ").append(focus.getCurrentFocus().getDisplayName()).append("\n");
+            }
+
+            // Meditation state
+            debug.append("Is Meditating: ").append(isPlayerMeditating(player)).append("\n");
+
         } catch (Exception e) {
-            return "Error getting roots: " + e.getMessage();
+            debug.append("Error gathering debug info: ").append(e.getMessage()).append("\n");
         }
+
+        return debug.toString();
     }
 }

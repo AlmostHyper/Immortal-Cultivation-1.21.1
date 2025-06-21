@@ -1,5 +1,6 @@
 package net.hyper.immortalcultivation.cultivation.realms.realm1;
 
+import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
@@ -21,21 +22,18 @@ public class QiCondensationL1 extends CultivationRealm {
     // === Constants ===
     private static final String REALM_ID = "qi_condensation_l1";
     private static final int REALM_LEVEL = 1;
-    private static final String CULTIVATION_STAGE = "1st Layer of Qi Condensation";
+    private static final String CULTIVATION_STAGE = "Qi Condensation";
 
-    // Base stats
     private static final long BASE_HEALTH = 25;
-    private static final double BASE_HEALTH_REGEN = 0.01;
+    private static final double BASE_HEALTH_REGEN = 0.1;
     private static final double BASE_ATTACK_DAMAGE = 1.1;
-    private static final double BASE_MOVEMENT_SPEED = 0.1;
+    private static final double BASE_MOVEMENT_SPEED = 0.05;
     private static final double BASE_JUMP_HEIGHT = 0.1;
 
-    // Qi stats
-    private static final long BASE_MAX_QI = 100;
-    private static final double BASE_QI_REGEN_RATE = 0.1;
+    private static final long BASE_MAX_QI = 10;
+    private static final double BASE_QI_REGEN_RATE = 1.0;
 
-    // Cultivation stats
-    private static final long BASE_MAX_CULTIVATION = 100;
+    private static final long BASE_MAX_CULTIVATION = 200;
     private static final double BASE_CULTIVATION_RATE = 0.01;
 
     // === Core Identification ===
@@ -62,8 +60,8 @@ public class QiCondensationL1 extends CultivationRealm {
 
     @Override
     public String getDescription() {
-        return "The first step in cultivation. Practitioners begin to sense and gather Qi, " +
-            "slowly condensing it within their dantian. Physical capabilities are slightly enhanced.";
+        return "The first step in true cultivation. Practitioners begin to sense and gather Qi, " +
+            "slowly condensing it within their dantian. The body is tempered and enhanced beyond mortal limits.";
     }
 
     // === Base Physical Stats ===
@@ -93,13 +91,17 @@ public class QiCondensationL1 extends CultivationRealm {
         return BASE_JUMP_HEIGHT;
     }
 
-    // === Cultivation Stats === //
+    // === Cultivation Stats ===
 
     @Override
-    public long getBaseMaxCultivation() {return BASE_MAX_CULTIVATION;}
+    public long getBaseMaxCultivation() {
+        return BASE_MAX_CULTIVATION;
+    }
 
     @Override
-    public double getBaseCultivationRate() {return BASE_CULTIVATION_RATE;}
+    public double getBaseCultivationRate() {
+        return BASE_CULTIVATION_RATE;
+    }
 
     // === Qi Stats ===
 
@@ -114,36 +116,48 @@ public class QiCondensationL1 extends CultivationRealm {
     }
 
     @Override
-    public double getBaseCirculatingQiRegenerationRate() {return BASE_QI_REGEN_RATE * 9;}
+    public double getBaseCirculatingQiRegenerationRate() {
+        return BASE_QI_REGEN_RATE * 9; // 9x rate when circulating
+    }
 
     // === Realm Navigation ===
 
     @Override
     public List<CultivationRealm> getCultivationRealmGroup() {
-        // All Qi Condensation levels
+        // All Qi Condensation layers belong together
         return List.of(
             this,
             ICModCultivationRealms.QI_CONDENSATION_L2,
             ICModCultivationRealms.QI_CONDENSATION_L3
-            // Add more levels as needed
+            // Add more layers as they're implemented
         );
     }
 
     @Override
     public List<CultivationRealm> getPreviousCultivationRealms() {
-        return List.of(); // This is the starting realm
+        // Can only come from mortal realm
+        return List.of(ICModCultivationRealms.MORTAL);
     }
 
     @Override
     public List<CultivationRealm> getNextCultivationRealms() {
+        // Progress to the 2nd layer
         return List.of(ICModCultivationRealms.QI_CONDENSATION_L2);
     }
 
     // === Breakthrough Requirements ===
 
     @Override
-    public boolean meetsAdditionalRequirements(Player player, IQiCultivationData cultivationData) {
-        // First level has no special requirements beyond Qi
+    public boolean meetsAdditionalRequirements(Player player, IQiCultivationData qiData) {
+        // No special requirements for progressing through Qi Condensation layers
+        // Just need to accumulate enough cultivation
+        return true;
+    }
+
+    @Override
+    public boolean meetsAdditionalRequirements(Player player, IBodyCultivationData bodyData) {
+        // Body cultivators can also progress through these realms
+        // Their path is equally valid
         return true;
     }
 
@@ -152,70 +166,69 @@ public class QiCondensationL1 extends CultivationRealm {
     @Override
     public List<String> getUnlockedAbilities() {
         return List.of(
-            "qi_sensing",
-            "basic_meditation"
+            "qi_sensing",        // Can sense Qi in the environment
+            "basic_meditation",  // Can meditate to cultivate faster
+            "qi_circulation",    // Can circulate Qi for enhanced regeneration
+            "minor_body_enhancement" // Slightly enhanced physical capabilities
         );
     }
 
     @Override
     public List<String> getRealmBenefits() {
         return List.of(
-            "Begin cultivation journey",
+            "Access to Qi energy",
             "Enhanced physical capabilities",
-            "Qi sensing ability",
-            "Basic meditation techniques"
+            "Slow health regeneration",
+            "Basic cultivation techniques",
+            "Extended lifespan (120 years)"
         );
     }
 
     @Override
     public List<String> getAvailableTechniques() {
         return List.of(
-            "basic_breathing_technique",
-            "qi_gathering_meditation"
+            "basic_qi_gathering",     // Active Qi cultivation technique
+            "minor_qi_burst",         // Simple offensive technique
+            "body_reinforcement",     // Defensive technique
+            "swift_step"              // Movement technique
         );
     }
 
-    // === Events ===
+    // === Qi Cultivation Events ===
 
     @Override
-    public void onRealmAdvancement(Player player, IQiCultivationData cultivationData, @Nullable CultivationRealm previousRealm) {
-        super.onRealmAdvancement(player, cultivationData, previousRealm);
-
+    public void onRealmAdvancement(Player player, IQiCultivationData qiData, @Nullable CultivationRealm previousRealm) {
         if (player instanceof ServerPlayer serverPlayer) {
-            // Special message for first cultivation realm
-            if (previousRealm == null) {
+            // Special message for first breakthrough from mortal
+            if (previousRealm != null && previousRealm.getRealmLevel() == 0) {
                 serverPlayer.sendSystemMessage(
-                    Component.literal("You have begun your cultivation journey!")
+                    Component.literal("Congratulations! You have stepped into the 1st Layer of Qi Condensation!")
                         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
                 );
                 serverPlayer.sendSystemMessage(
-                    Component.literal("The path of immortality lies before you.")
+                    Component.literal("Spiritual energy flows through your meridians. The path of immortality has begun!")
                         .withStyle(ChatFormatting.YELLOW)
+                );
+            } else {
+                // Message for returning or other transitions
+                serverPlayer.sendSystemMessage(
+                    Component.literal("You have entered the 1st Layer of Qi Condensation through Qi cultivation.")
+                        .withStyle(ChatFormatting.GOLD)
                 );
             }
 
             // Play advancement effects
-            serverPlayer.level().playSound(
-                null,
-                serverPlayer.blockPosition(),
-                SoundEvents.PLAYER_LEVELUP,
-                SoundSource.PLAYERS,
-                1.0f,
-                1.2f
-            );
+            playAdvancementEffects(serverPlayer);
+        }
+    }
 
-            // Particle effects
-            if (serverPlayer.level() instanceof ServerLevel serverLevel) {
-                serverLevel.sendParticles(
-                    ParticleTypes.ENCHANT,
-                    serverPlayer.getX(),
-                    serverPlayer.getY() + 1.0,
-                    serverPlayer.getZ(),
-                    20,
-                    0.5,
-                    0.5,
-                    0.5,
-                    0.1
+    @Override
+    public void onRealmExit(Player player, IQiCultivationData qiData, @Nullable CultivationRealm nextRealm) {
+        if (player instanceof ServerPlayer serverPlayer && nextRealm != null) {
+            if (nextRealm.getRealmLevel() > this.getRealmLevel()) {
+                serverPlayer.sendSystemMessage(
+                    Component.literal("Your Qi condenses further as you prepare to advance...")
+                        .withStyle(ChatFormatting.AQUA)
                 );
             }
         }
@@ -223,15 +236,61 @@ public class QiCondensationL1 extends CultivationRealm {
 
     @Override
     public void applyRealmModifiers(Player player, IQiCultivationData qiData) {
-        // This realm doesn't have special modifiers beyond base stats
-        // Could add temporary effects, passive abilities, etc.
+        // Could apply attribute modifiers or status effects here
+        // For example: slight speed boost, jump boost, etc.
+    }
+
+    // === Body Cultivation Events ===
+
+    @Override
+    public void onRealmAdvancement(Player player, IBodyCultivationData bodyData, @Nullable CultivationRealm previousRealm) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            // Special message for first breakthrough from mortal via body cultivation
+            if (previousRealm != null && previousRealm.getRealmLevel() == 0) {
+                serverPlayer.sendSystemMessage(
+                    Component.literal("Congratulations! You have achieved the 1st Layer of Qi Condensation through Body Tempering!")
+                        .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+                );
+                serverPlayer.sendSystemMessage(
+                    Component.literal("Your tempered body generates its own spiritual energy. A unique path unfolds!")
+                        .withStyle(ChatFormatting.YELLOW)
+                );
+            } else {
+                // Message for returning or other transitions
+                serverPlayer.sendSystemMessage(
+                    Component.literal("You have entered the 1st Layer of Qi Condensation through Body cultivation.")
+                        .withStyle(ChatFormatting.GOLD)
+                );
+            }
+
+            // Play advancement effects with body-themed particles
+            playBodyAdvancementEffects(serverPlayer);
+        }
+    }
+
+    @Override
+    public void onRealmExit(Player player, IBodyCultivationData bodyData, @Nullable CultivationRealm nextRealm) {
+        if (player instanceof ServerPlayer serverPlayer && nextRealm != null) {
+            if (nextRealm.getRealmLevel() > this.getRealmLevel()) {
+                serverPlayer.sendSystemMessage(
+                    Component.literal("Your body grows stronger as you prepare to advance...")
+                        .withStyle(ChatFormatting.RED)
+                );
+            }
+        }
+    }
+
+    @Override
+    public void applyRealmModifiers(Player player, IBodyCultivationData bodyData) {
+        // Body cultivation might provide different bonuses
+        // For example: more health, damage resistance, strength
     }
 
     // === Visual Properties ===
 
     @Override
     public int getRealmColor() {
-        return 0x87CEEB; // Sky blue for first level
+        return 0x87CEEB; // Sky blue for Qi Condensation
     }
 
     @Override
@@ -239,23 +298,103 @@ public class QiCondensationL1 extends CultivationRealm {
         return ParticleTypes.ENCHANT;
     }
 
+    // === Helper Methods ===
+
+    private void playAdvancementEffects(ServerPlayer player) {
+        // Sound effect
+        player.level().playSound(
+            null,
+            player.blockPosition(),
+            SoundEvents.PLAYER_LEVELUP,
+            SoundSource.PLAYERS,
+            1.0f,
+            1.0f
+        );
+
+        // Particle effects for Qi breakthrough
+        if (player.level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                ParticleTypes.ENCHANT,
+                player.getX(),
+                player.getY() + 1.0,
+                player.getZ(),
+                50,
+                0.5,
+                1.0,
+                0.5,
+                0.1
+            );
+
+            // Add some end rod particles for spiritual effect
+            serverLevel.sendParticles(
+                ParticleTypes.END_ROD,
+                player.getX(),
+                player.getY() + 1.0,
+                player.getZ(),
+                20,
+                0.3,
+                0.5,
+                0.3,
+                0.05
+            );
+        }
+    }
+
+    private void playBodyAdvancementEffects(ServerPlayer player) {
+        // Sound effect (deeper tone for body cultivation)
+        player.level().playSound(
+            null,
+            player.blockPosition(),
+            SoundEvents.PLAYER_LEVELUP,
+            SoundSource.PLAYERS,
+            1.0f,
+            0.8f
+        );
+
+        // Particle effects for Body breakthrough
+        if (player.level() instanceof ServerLevel serverLevel) {
+            // Flame particles for body tempering
+            serverLevel.sendParticles(
+                ParticleTypes.FLAME,
+                player.getX(),
+                player.getY() + 0.5,
+                player.getZ(),
+                30,
+                0.3,
+                0.5,
+                0.3,
+                0.05
+            );
+
+            // Some smoke for tempering effect
+            serverLevel.sendParticles(
+                ParticleTypes.SMOKE,
+                player.getX(),
+                player.getY() + 0.5,
+                player.getZ(),
+                20,
+                0.3,
+                0.5,
+                0.3,
+                0.02
+            );
+        }
+    }
+
     // === Special Methods ===
 
     /**
-     * Check if this is a player's first cultivation realm
-     * @param previousRealm The realm they came from
-     * @return true if this is their first cultivation realm
+     * Get a tip for new cultivators at this realm
+     * @param isQiPath Whether the player reached this via Qi cultivation
+     * @return Helpful tip component
      */
-    public boolean isFirstCultivationRealm(@Nullable CultivationRealm previousRealm) {
-        return previousRealm == null;
-    }
-
-    /**
-     * Get welcome message for new cultivators
-     * @return Welcome message component
-     */
-    public Component getWelcomeMessage() {
-        return Component.literal("Welcome to the world of cultivation!")
-            .withStyle(ChatFormatting.GOLD);
+    public Component getCultivationTip(boolean isQiPath) {
+        if (isQiPath) {
+            return Component.literal("Tip: Meditate regularly to accumulate Qi faster. Find quiet places for better results.")
+                .withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY);
+        } else {
+            return Component.literal("Tip: Physical training while meditating can enhance your body cultivation progress.")
+                .withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY);
+        }
     }
 }

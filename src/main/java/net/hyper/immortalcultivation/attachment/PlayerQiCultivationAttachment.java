@@ -97,6 +97,10 @@ public class PlayerQiCultivationAttachment implements IQiCultivationData {
     // === Capacity Management ===
 
     @Override
+    public long getBaseQiCultivation() {
+        return getBaseMaxQiCultivation();
+    }
+
     public long getBaseMaxQiCultivation() {
         Player player = getPlayerSafe();
         if (player == null) return 100; // Default for mortals

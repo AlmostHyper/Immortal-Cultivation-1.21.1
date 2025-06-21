@@ -101,19 +101,28 @@ public class PlayerHealthAttachment implements IHealthData {
     @Override
     public long getBaseMaxHealth() {
         Player player = getPlayerSafe();
-        if (player == null) return 20;
+        if (player == null) return 20; // Default Minecraft health
 
         try {
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment == null) return 20;
 
-            // Health capacity is determined by the highest realm between Qi and Body
-            // This represents overall cultivation affecting life force
+            // Health is now COMBINED from both cultivation paths
+            // This rewards dual cultivation by stacking benefits
             long qiRealmHealth = realmAttachment.getCurrentQiRealm().getBaseHealth();
             long bodyRealmHealth = realmAttachment.getCurrentBodyRealm().getBaseHealth();
 
-            // Add both
-            return qiRealmHealth + bodyRealmHealth;
+            // If both are at mortal level (20 health each), don't double count the base
+            if (qiRealmHealth == 20 && bodyRealmHealth == 20) {
+                return 20; // Still just a mortal
+            }
+
+            // Otherwise, combine the health bonuses
+            // Subtract base mortal health to avoid double-counting
+            long qiBonus = Math.max(0, qiRealmHealth - 20);
+            long bodyBonus = Math.max(0, bodyRealmHealth - 20);
+
+            return 20 + qiBonus + bodyBonus; // Base health + bonuses from both paths
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error getting base max health from realms", e);
             return 20;
@@ -132,11 +141,10 @@ public class PlayerHealthAttachment implements IHealthData {
         long cultivationBonus = 0;
 
         try {
-            // Body cultivation bonus (5% of cultivation as health)
             PlayerBodyCultivationAttachment bodyCultivation =
                 player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
             if (bodyCultivation != null) {
-                cultivationBonus += (long)(bodyCultivation.getCurrentBodyCultivation() * 0.05);
+                cultivationBonus += (long)(bodyCultivation.getCurrentBodyCultivation() * 0.01);
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error calculating cultivation health bonuses", e);
@@ -156,12 +164,12 @@ public class PlayerHealthAttachment implements IHealthData {
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment == null) return 0.0;
 
-            // Health regeneration comes from both realms
+            // Health regeneration is COMBINED from both realms
             // Qi provides spiritual healing, Body provides physical recovery
             double qiRegen = realmAttachment.getCurrentQiRealm().getBaseHealthRegeneration();
             double bodyRegen = realmAttachment.getCurrentBodyRealm().getBaseHealthRegeneration();
 
-            // Combine both regeneration rates (they stack)
+            // Both types of cultivation contribute to overall vitality
             return qiRegen + bodyRegen;
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error getting base health regeneration rate", e);
@@ -189,10 +197,21 @@ public class PlayerHealthAttachment implements IHealthData {
             PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
                 float multiplier = roots.getCultivationMultiplier();
-                return baseRate * multiplier;
+                baseRate *= multiplier;
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying spiritual roots to health regen", e);
+        }
+
+        // Apply cultivation focus bonus
+        // When focused on Body cultivation, health regeneration is enhanced
+        try {
+            PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
+            if (focus != null) {
+                baseRate *= focus.getHealthRegenerationBonus();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying focus bonus to health regen", e);
         }
 
         return baseRate;

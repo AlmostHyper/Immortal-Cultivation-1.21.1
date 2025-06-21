@@ -13,7 +13,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record HealthSyncPacket(long health) implements CustomPacketPayload {
     public static final CustomPacketPayload.Type<HealthSyncPacket> ID =
-        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "health_sync"));
+        new CustomPacketPayload.Type<>(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "health_data"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, HealthSyncPacket> STREAM_CODEC =
         StreamCodec.composite(
@@ -32,7 +32,7 @@ public record HealthSyncPacket(long health) implements CustomPacketPayload {
                 Minecraft mc = Minecraft.getInstance();
                 LocalPlayer player = mc.player;
                 if (player != null) {
-                    var healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY.get());
+                    var healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
                     if (healthAttachment != null) {
                         healthAttachment.updateFromServer(packet.health());
                     }

@@ -1,7 +1,10 @@
 package net.hyper.immortalcultivation.cultivation.realms.realm1;
 
+import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
@@ -23,20 +26,20 @@ public class MortalL0 extends CultivationRealm {
     private static final int REALM_LEVEL = 0;
     private static final String CULTIVATION_STAGE = "Mortal";
 
-    // Base stats
+    // Base stats - mortals have standard human capabilities
     private static final long BASE_HEALTH = 20;
     private static final double BASE_HEALTH_REGEN = 0.0;
     private static final double BASE_ATTACK_DAMAGE = 1.0;
     private static final double BASE_MOVEMENT_SPEED = 0.0;
     private static final double BASE_JUMP_HEIGHT = 0.0;
 
-    // Qi stats
+    // Qi stats - mortals cannot store or regenerate Qi
     private static final long BASE_MAX_QI = 0;
     private static final double BASE_QI_REGEN_RATE = 0.0;
 
-    // Cultivation stats
+    // Cultivation stats - mortals can begin accumulating cultivation
     private static final long BASE_MAX_CULTIVATION = 100;
-    private static final double BASE_CULTIVATION_RATE = 0.0;
+    private static final double BASE_CULTIVATION_RATE = 0.005;
 
     // === Core Identification ===
 
@@ -62,7 +65,8 @@ public class MortalL0 extends CultivationRealm {
 
     @Override
     public String getDescription() {
-        return "Merely a mortal. Continue down the Path to ascend.";
+        return "Merely a mortal, unaware of the vast cultivation world. " +
+            "Through meditation and training, one can step onto the path of immortality.";
     }
 
     // === Base Physical Stats ===
@@ -92,13 +96,17 @@ public class MortalL0 extends CultivationRealm {
         return BASE_JUMP_HEIGHT;
     }
 
-    // === Cultivation Stats === //
+    // === Cultivation Stats ===
 
     @Override
-    public long getBaseMaxCultivation() {return BASE_MAX_CULTIVATION;}
+    public long getBaseMaxCultivation() {
+        return BASE_MAX_CULTIVATION;
+    }
 
     @Override
-    public double getBaseCultivationRate() {return BASE_CULTIVATION_RATE;}
+    public double getBaseCultivationRate() {
+        return BASE_CULTIVATION_RATE;
+    }
 
     // === Qi Stats ===
 
@@ -113,36 +121,43 @@ public class MortalL0 extends CultivationRealm {
     }
 
     @Override
-    public double getBaseCirculatingQiRegenerationRate() {return BASE_QI_REGEN_RATE * 9;}
+    public double getBaseCirculatingQiRegenerationRate() {
+        return BASE_QI_REGEN_RATE; // Still 0 for mortals
+    }
 
     // === Realm Navigation ===
 
     @Override
     public List<CultivationRealm> getCultivationRealmGroup() {
-        // All Qi Condensation levels
-        return List.of(
-            ICModCultivationRealms.QI_CONDENSATION_L1,
-            ICModCultivationRealms.QI_CONDENSATION_L2,
-            ICModCultivationRealms.QI_CONDENSATION_L3
-        );
+        // Mortal realm stands alone
+        return List.of(this);
     }
 
     @Override
     public List<CultivationRealm> getPreviousCultivationRealms() {
-        return List.of(); // This is the starting realm
+        return List.of(); // This is the absolute starting realm
     }
 
     @Override
     public List<CultivationRealm> getNextCultivationRealms() {
-        return List.of(
-            ICModCultivationRealms.QI_CONDENSATION_L1);
+        // From mortal, one can begin either Qi or Body cultivation
+        // Both paths lead to the same first realm in this implementation
+        return List.of(ICModCultivationRealms.QI_CONDENSATION_L1);
     }
 
     // === Breakthrough Requirements ===
 
     @Override
-    public boolean meetsAdditionalRequirements(Player player, IQiCultivationData cultivationData) {
-        // First level has no special requirements beyond Qi
+    public boolean meetsAdditionalRequirements(Player player, IQiCultivationData qiData) {
+        // Mortals can always attempt to begin Qi cultivation
+        // No special requirements beyond accumulating enough cultivation
+        return true;
+    }
+
+    @Override
+    public boolean meetsAdditionalRequirements(Player player, IBodyCultivationData bodyData) {
+        // Mortals can always attempt to begin Body cultivation
+        // No special requirements beyond accumulating enough cultivation
         return true;
     }
 
@@ -150,50 +165,110 @@ public class MortalL0 extends CultivationRealm {
 
     @Override
     public List<String> getUnlockedAbilities() {
-        return List.of(
-            "qi_sensing",
-            "basic_meditation"
-        );
+        // Mortals have no cultivation abilities
+        return List.of();
     }
 
     @Override
     public List<String> getRealmBenefits() {
         return List.of(
-            "Begin cultivation journey",
-            "Enhanced physical capabilities",
-            "Qi sensing ability",
-            "Basic meditation techniques"
+            "Potential for cultivation",
+            "Can begin meditation practice",
+            "Can sense the existence of Qi",
+            "Can train the body beyond mortal limits"
         );
     }
 
     @Override
     public List<String> getAvailableTechniques() {
+        // Basic techniques available to help begin cultivation
         return List.of(
-            "basic_breathing_technique",
-            "qi_gathering_meditation"
+            "mortal_meditation", // Very basic meditation to start accumulating cultivation
+            "physical_training"  // Basic exercises to prepare the body
         );
     }
 
-    // === Events ===
+    // === Qi Cultivation Events ===
 
     @Override
-    public void onRealmAdvancement(Player player, IQiCultivationData cultivationData, @Nullable CultivationRealm previousRealm) {
-        super.onRealmAdvancement(player, cultivationData, previousRealm);
-
+    public void onRealmAdvancement(Player player, IQiCultivationData qiData, @Nullable CultivationRealm previousRealm) {
+        // This should not be called for mortal realm as it's the starting point
+        // But if it is, we'll handle it gracefully
         if (player instanceof ServerPlayer serverPlayer) {
-            // Special message for first cultivation realm
-            if (previousRealm == null) {
-                serverPlayer.sendSystemMessage(
-                    Component.literal("You have begun your cultivation journey!")
-                        .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-                );
-                serverPlayer.sendSystemMessage(
-                    Component.literal("The path of immortality lies before you.")
-                        .withStyle(ChatFormatting.YELLOW)
+            serverPlayer.sendSystemMessage(
+                Component.literal("You are a mortal, standing at the threshold of cultivation.")
+                    .withStyle(ChatFormatting.GRAY)
+            );
+        }
+    }
+
+    @Override
+    public void onRealmExit(Player player, IQiCultivationData qiData, @Nullable CultivationRealm nextRealm) {
+        // Special message when leaving mortal realm through Qi cultivation
+        if (player instanceof ServerPlayer serverPlayer && nextRealm != null) {
+            serverPlayer.sendSystemMessage(
+                Component.literal("You take your first step on the path of Qi cultivation!")
+                    .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+            );
+            serverPlayer.sendSystemMessage(
+                Component.literal("The mortal world fades as spiritual energy flows through your meridians.")
+                    .withStyle(ChatFormatting.YELLOW)
+            );
+
+            // Play effects
+            serverPlayer.level().playSound(
+                null,
+                serverPlayer.blockPosition(),
+                SoundEvents.PLAYER_LEVELUP,
+                SoundSource.PLAYERS,
+                1.0f,
+                0.8f
+            );
+
+            // Particle effects
+            if (serverPlayer.level() instanceof ServerLevel serverLevel) {
+                serverLevel.sendParticles(
+                    ParticleTypes.END_ROD,
+                    serverPlayer.getX(),
+                    serverPlayer.getY() + 1.0,
+                    serverPlayer.getZ(),
+                    30,
+                    0.5,
+                    1.0,
+                    0.5,
+                    0.05
                 );
             }
+        }
+    }
 
-            // Play advancement effects
+    // === Body Cultivation Events ===
+
+    @Override
+    public void onRealmAdvancement(Player player, IBodyCultivationData bodyData, @Nullable CultivationRealm previousRealm) {
+        // This should not be called for mortal realm as it's the starting point
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.sendSystemMessage(
+                Component.literal("You are a mortal, your body untouched by cultivation.")
+                    .withStyle(ChatFormatting.GRAY)
+            );
+        }
+    }
+
+    @Override
+    public void onRealmExit(Player player, IBodyCultivationData bodyData, @Nullable CultivationRealm nextRealm) {
+        // Special message when leaving mortal realm through Body cultivation
+        if (player instanceof ServerPlayer serverPlayer && nextRealm != null) {
+            serverPlayer.sendSystemMessage(
+                Component.literal("You take your first step on the path of Body cultivation!")
+                    .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
+            );
+            serverPlayer.sendSystemMessage(
+                Component.literal("Your mortal flesh begins its transformation into something greater.")
+                    .withStyle(ChatFormatting.YELLOW)
+            );
+
+            // Play effects
             serverPlayer.level().playSound(
                 null,
                 serverPlayer.blockPosition(),
@@ -206,55 +281,67 @@ public class MortalL0 extends CultivationRealm {
             // Particle effects
             if (serverPlayer.level() instanceof ServerLevel serverLevel) {
                 serverLevel.sendParticles(
-                    ParticleTypes.ENCHANT,
+                    ParticleTypes.FLAME,
                     serverPlayer.getX(),
                     serverPlayer.getY() + 1.0,
                     serverPlayer.getZ(),
-                    20,
+                    30,
                     0.5,
+                    1.0,
                     0.5,
-                    0.5,
-                    0.1
+                    0.05
                 );
             }
         }
-    }
-
-    @Override
-    public void applyRealmModifiers(Player player, IQiCultivationData qiData) {
-        // This realm doesn't have special modifiers beyond base stats
-        // Could add temporary effects, passive abilities, etc.
     }
 
     // === Visual Properties ===
 
     @Override
     public int getRealmColor() {
-        return 0x87CEEB; // Sky blue for first level
+        return 0x808080; // Gray for mortals
     }
 
     @Override
     public ParticleOptions getRealmParticle() {
-        return ParticleTypes.ENCHANT;
+        return ParticleTypes.ASH; // Simple ash particles for mortals
     }
 
     // === Special Methods ===
 
     /**
-     * Check if this is a player's first cultivation realm
-     * @param previousRealm The realm they came from
-     * @return true if this is their first cultivation realm
+     * Check if a player is ready to begin cultivation
+     * @param player The player to check
+     * @return true if they have accumulated enough cultivation to breakthrough
      */
-    public boolean isFirstCultivationRealm(@Nullable CultivationRealm previousRealm) {
-        return previousRealm == null;
+    public boolean isReadyToCultivate(Player player) {
+        // Check both Qi and Body cultivation progress
+        try {
+            IQiCultivationData qiData = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            IBodyCultivationData bodyData = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+
+            return (qiData != null && meetsQiCultivationThreshold(qiData)) ||
+                (bodyData != null && meetsBodyCultivationThreshold(bodyData));
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error checking cultivation readiness", e);
+            return false;
+        }
     }
 
     /**
-     * Get welcome message for new cultivators
-     * @return Welcome message component
+     * Get an inspirational message for mortals
+     * @return Component with motivational text
      */
-    public Component getWelcomeMessage() {
-        return Component.literal("Welcome to the world of cultivation!")
-            .withStyle(ChatFormatting.GOLD);
+    public Component getInspirationMessage() {
+        String[] messages = {
+            "The path of cultivation begins with a single step.",
+            "Even the mightiest immortal was once a mere mortal.",
+            "Through meditation, the impossible becomes possible.",
+            "Your journey to immortality awaits."
+        };
+
+        int index = (int)(Math.random() * messages.length);
+        return Component.literal(messages[index])
+            .withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY);
     }
 }

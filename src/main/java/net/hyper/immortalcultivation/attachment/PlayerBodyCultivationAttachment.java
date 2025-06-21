@@ -161,15 +161,26 @@ public class PlayerBodyCultivationAttachment implements IBodyCultivationData {
         Player player = getPlayerSafe();
         if (player == null) return baseRate;
 
-        // Apply spiritual roots multiplier
+        // Apply physique multiplier
         try {
-            PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            PlayerPhysiqueAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
             if (roots != null) {
                 float multiplier = roots.getCultivationMultiplier();
-                return baseRate * multiplier;
+                baseRate *= multiplier;
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying spiritual roots to body cultivation rate", e);
+            ImmortalCultivation.LOGGER.error("Error applying physique to body cultivation rate", e);
+        }
+
+        // Apply cultivation focus multiplier
+        // When focused on Body cultivation, rate is doubled
+        try {
+            PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
+            if (focus != null) {
+                baseRate *= focus.getBodyCultivationMultiplier();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying focus multiplier to Body cultivation rate", e);
         }
 
         return baseRate;
@@ -183,15 +194,26 @@ public class PlayerBodyCultivationAttachment implements IBodyCultivationData {
         Player player = getPlayerSafe();
         if (player == null) return baseCirculatingRate;
 
-        // Apply spiritual roots multiplier
+        // Apply physique multiplier
         try {
-            PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            PlayerPhysiqueAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
             if (roots != null) {
                 float multiplier = roots.getCultivationMultiplier();
-                return baseCirculatingRate * multiplier;
+                baseCirculatingRate *= multiplier;
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying spiritual roots to circulating rate", e);
+            ImmortalCultivation.LOGGER.error("Error applying physique to circulating rate", e);
+        }
+
+        // Apply cultivation focus multiplier
+        // When focused on Body cultivation, rate is doubled
+        try {
+            PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
+            if (focus != null) {
+                baseCirculatingRate *= focus.getBodyCultivationMultiplier();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying focus multiplier to circulating Body rate", e);
         }
 
         return baseCirculatingRate;

@@ -17,15 +17,6 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID, bus = EventBusSubscriber.Bus.MOD)
 public class ICModNetwork {
 
-    public static final ResourceLocation CULTIVATION_SYNC = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "cultivation_sync");
-    public static final ResourceLocation CULTIVATION_REQUEST = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "cultivation_request");
-    public static final ResourceLocation REALM_SYNC = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "realm_sync");
-    public static final ResourceLocation REALM_REQUEST = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "realm_request");
-    public static final ResourceLocation QI_SYNC = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "qi_sync");
-    public static final ResourceLocation QI_REQUEST = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "qi_request");
-    public static final ResourceLocation HEALTH_SYNC = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "health_sync");
-    public static final ResourceLocation HEALTH_REQUEST = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "health_request");
-
     private static PayloadRegistrar REGISTRY;
 
     @SubscribeEvent
@@ -34,7 +25,44 @@ public class ICModNetwork {
 
         REGISTRY = event.registrar(ImmortalCultivation.MOD_ID);
 
-        // SERVER TO CLIENT packets (playToClient)
+        // === SERVER -> CLIENT === //
+
+        REGISTRY.playToClient(
+            RealmSyncPacket.ID,
+            RealmSyncPacket.STREAM_CODEC,
+            RealmSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
+            QiCultivationSyncPacket.ID,
+            QiCultivationSyncPacket.STREAM_CODEC,
+            QiCultivationSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
+            BodyCultivationSyncPacket.ID,
+            BodyCultivationSyncPacket.STREAM_CODEC,
+            BodyCultivationSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
+            CultivationFocusSyncPacket.ID,
+            CultivationFocusSyncPacket.STREAM_CODEC,
+            CultivationFocusSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
+            CultivationBreakthroughSyncPacket.ID,
+            CultivationBreakthroughSyncPacket.STREAM_CODEC,
+            CultivationBreakthroughSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
+            HealthSyncPacket.ID,
+            HealthSyncPacket.STREAM_CODEC,
+            HealthSyncPacket::handleClient
+        );
+
         REGISTRY.playToClient(
             QiSyncPacket.ID,
             QiSyncPacket.STREAM_CODEC,
@@ -42,30 +70,60 @@ public class ICModNetwork {
         );
 
         REGISTRY.playToClient(
-            CultivationSyncPacket.ID,
-            CultivationSyncPacket.STREAM_CODEC,
-            CultivationSyncPacket::handleClient
+            BodySyncPacket.ID,
+            BodySyncPacket.STREAM_CODEC,
+            BodySyncPacket::handleClient
         );
 
-        // Add the breakthrough sync packet (server -> client)
-        REGISTRY.playToClient(
-            CultivationBreakthroughSyncPacket.ID,
-            CultivationBreakthroughSyncPacket.STREAM_CODEC,
-            CultivationBreakthroughSyncPacket::handleClient
+        // === CLIENT -> SERVER === //
+
+        REGISTRY.playToServer(
+            RealmRequestPacket.ID,
+            RealmRequestPacket.STREAM_CODEC,
+            RealmRequestPacket::handleServer
         );
 
-        // CLIENT TO SERVER packets (playToServer)
+        REGISTRY.playToServer(
+            QiCultivationRequestPacket.ID,
+            QiCultivationRequestPacket.STREAM_CODEC,
+            QiCultivationRequestPacket::handleServer
+        );
+
+        REGISTRY.playToServer(
+            BodyCultivationRequestPacket.ID,
+            BodyCultivationRequestPacket.STREAM_CODEC,
+            BodyCultivationRequestPacket::handleServer
+        );
+
+        REGISTRY.playToServer(
+            CultivationFocusRequestPacket.ID,
+            CultivationFocusRequestPacket.STREAM_CODEC,
+            CultivationFocusRequestPacket::handleServer
+        );
+
+        REGISTRY.playToServer(
+            CultivationBreakthroughRequestPacket.ID,
+            CultivationBreakthroughRequestPacket.STREAM_CODEC,
+            CultivationBreakthroughRequestPacket::handleServer
+        );
+
+        REGISTRY.playToServer(
+            HealthRequestPacket.ID,
+            HealthRequestPacket.STREAM_CODEC,
+            HealthRequestPacket::handleServer
+        );
+
         REGISTRY.playToServer(
             QiRequestPacket.ID,
             QiRequestPacket.STREAM_CODEC,
             QiRequestPacket::handleServer
         );
 
-        // Fix: Breakthrough request should be playToServer, not playToClient
+
         REGISTRY.playToServer(
-            CultivationBreakthroughRequestPacket.ID,
-            CultivationBreakthroughRequestPacket.STREAM_CODEC,
-            CultivationBreakthroughRequestPacket::handleServer
+            BodyRequestPacket.ID,
+            BodyRequestPacket.STREAM_CODEC,
+            BodyRequestPacket::handleServer
         );
 
         ImmortalCultivation.LOGGER.info("Network packets registered successfully!");

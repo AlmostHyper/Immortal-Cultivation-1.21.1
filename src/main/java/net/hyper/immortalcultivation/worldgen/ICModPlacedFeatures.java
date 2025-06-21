@@ -24,21 +24,25 @@ public class ICModPlacedFeatures {
     public static void bootstrap(BootstrapContext<PlacedFeature> context) {
         HolderGetter<ConfiguredFeature<?, ?>> configuredFeatures = context.lookup(Registries.CONFIGURED_FEATURE);
 
+        // === Spirit Stones === //
+
         register(context, LOW_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_LOW_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(12,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(80))));
+            ICModOrePlacements.commonOrePlacement(9,
+                HeightRangePlacement.uniform(VerticalAnchor.absolute(-0), VerticalAnchor.absolute(480))));
 
         register(context, MEDIUM_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_MEDIUM_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(6,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(80))));
+            ICModOrePlacements.commonOrePlacement(5,
+                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, HIGH_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_HIGH_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(12,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(80))));
+            ICModOrePlacements.rareOrePlacement(19,
+                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0))));
 
         register(context, TOP_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_TOP_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(12,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(80))));
+            ICModOrePlacements.rareOrePlacement(5,
+                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(-54))));
+
+        // === Elemental === //
 
 
     }

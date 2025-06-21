@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.event;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.screen.QiHUDScreen;
+import net.hyper.immortalcultivation.ui.screens.QiHUDScreen;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;

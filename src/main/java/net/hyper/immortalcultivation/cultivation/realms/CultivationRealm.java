@@ -15,6 +15,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Base class for all cultivation realms in the dual cultivation system.
+ * This abstract class provides the framework for both Qi and Body cultivation realms,
+ * allowing each realm to define its own progression paths and requirements.
+ */
 public abstract class CultivationRealm {
 
     // === Core Identification ===
@@ -47,7 +52,7 @@ public abstract class CultivationRealm {
         return "A cultivation realm.";
     }
 
-    // === Base Physical Stats === //
+    // === Base Physical Stats ===
 
     /**
      * Base health points provided by this realm
@@ -87,7 +92,7 @@ public abstract class CultivationRealm {
      */
     public abstract double getBaseJumpHeight();
 
-    // == Cultivation-Related Stats === //
+    // === Cultivation-Related Stats ===
 
     /**
      * Maximum Cultivation capacity for this realm
@@ -102,13 +107,12 @@ public abstract class CultivationRealm {
     public abstract double getBaseCultivationRate();
 
     /**
-     *  Meditation Cultivation per second
+     * Meditation Cultivation per second
      * @return Cultivation per second while meditating
      */
     public final double getBaseMeditationCultivationRate() {
         return getBaseCultivationRate() * 9;
     }
-
 
     /**
      * Minimum Cultivation required to attempt breakthrough from this realm
@@ -118,7 +122,7 @@ public abstract class CultivationRealm {
         return (long) (getBaseMaxCultivation() * 0.7);
     }
 
-    // === Qi-Related Stats === //
+    // === Qi-Related Stats ===
 
     /**
      * Maximum Qi capacity for this realm
@@ -138,36 +142,69 @@ public abstract class CultivationRealm {
      */
     public abstract double getBaseCirculatingQiRegenerationRate();
 
-    // === Breakthrough Logic ===
+    // === Qi Cultivation Breakthrough Logic ===
 
     /**
-     * Checks if player meets Cultivation requirements for breakthrough
-     * @param cultivationData Player's Cultivation data
+     * Checks if player meets Qi Cultivation requirements for breakthrough
+     * @param qiCultivationData Player's Qi Cultivation data
      * @return true if Cultivation threshold is met
      */
-    public boolean meetsCultivationThreshold(IQiCultivationData qiCultivationData, IBodyCultivationData bodyCultivationData) {
+    public boolean meetsQiCultivationThreshold(IQiCultivationData qiCultivationData) {
         return qiCultivationData.getCurrentQiCultivation() >= getBreakthroughCultivationThreshold();
     }
 
     /**
-     * Checks if player can breakthrough (includes all conditions)
+     * Checks if player can breakthrough in Qi cultivation (includes all conditions)
      * @param player The player attempting breakthrough
-     * @param cultivationData Player's Cultivation data
+     * @param qiCultivationData Player's Qi Cultivation data
      * @return true if breakthrough is possible
      */
-    public boolean canBreakthrough(Player player, IQiCultivationData cultivationData) {
-        return meetsCultivationThreshold(cultivationData) &&
+    public boolean canBreakthrough(Player player, IQiCultivationData qiCultivationData) {
+        return meetsQiCultivationThreshold(qiCultivationData) &&
             !getNextCultivationRealms(player).isEmpty() &&
-            meetsAdditionalRequirements(player, cultivationData);
+            meetsAdditionalRequirements(player, qiCultivationData);
     }
 
     /**
-     * Override for additional breakthrough requirements beyond Qi
+     * Override for additional Qi breakthrough requirements beyond cultivation amount
      * @param player The player
-     * @param qiData Player's Qi data
+     * @param qiData Player's Qi cultivation data
      * @return true if additional requirements are met
      */
     public boolean meetsAdditionalRequirements(Player player, IQiCultivationData qiData) {
+        return true; // Default: no additional requirements
+    }
+
+    // === Body Cultivation Breakthrough Logic ===
+
+    /**
+     * Checks if player meets Body Cultivation requirements for breakthrough
+     * @param bodyCultivationData Player's Body Cultivation data
+     * @return true if Cultivation threshold is met
+     */
+    public boolean meetsBodyCultivationThreshold(IBodyCultivationData bodyCultivationData) {
+        return bodyCultivationData.getCurrentBodyCultivation() >= getBreakthroughCultivationThreshold();
+    }
+
+    /**
+     * Checks if player can breakthrough in Body cultivation (includes all conditions)
+     * @param player The player attempting breakthrough
+     * @param bodyCultivationData Player's Body Cultivation data
+     * @return true if breakthrough is possible
+     */
+    public boolean canBreakthrough(Player player, IBodyCultivationData bodyCultivationData) {
+        return meetsBodyCultivationThreshold(bodyCultivationData) &&
+            !getNextCultivationRealms(player).isEmpty() &&
+            meetsAdditionalRequirements(player, bodyCultivationData);
+    }
+
+    /**
+     * Override for additional Body breakthrough requirements beyond cultivation amount
+     * @param player The player
+     * @param bodyData Player's Body cultivation data
+     * @return true if additional requirements are met
+     */
+    public boolean meetsAdditionalRequirements(Player player, IBodyCultivationData bodyData) {
         return true; // Default: no additional requirements
     }
 
@@ -206,51 +243,99 @@ public abstract class CultivationRealm {
         return new ArrayList<>();
     }
 
-    // === Breakthrough Types ===
+    // === Qi Cultivation Breakthrough Types ===
 
     /**
-     * Breakthrough to next minor realm (Ex. Early -> Middle Foundation Establishment)
+     * Qi breakthrough to next minor realm (Ex. Early -> Middle Foundation Establishment)
      * @param player The player
-     * @param cultivationData Player's Qi data
+     * @param qiCultivationData Player's Qi cultivation data
      * @return Next realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getMinorBreakthrough(Player player, IQiCultivationData cultivationData) {
+    public CultivationRealm getMinorBreakthrough(Player player, IQiCultivationData qiCultivationData) {
         List<CultivationRealm> nextRealms = getNextCultivationRealms(player);
         return nextRealms.isEmpty() ? null : nextRealms.get(0);
     }
 
     /**
-     * Breakthrough to next major realm (Ex. Qi Condensation -> Foundation Establishment)
+     * Qi breakthrough to next major realm (Ex. Qi Condensation -> Foundation Establishment)
      * @param player The player
-     * @param cultivationData Player's Qi data
+     * @param qiCultivationData Player's Qi cultivation data
      * @return Next realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getMajorBreakthrough(Player player, IQiCultivationData cultivationData) {
+    public CultivationRealm getMajorBreakthrough(Player player, IQiCultivationData qiCultivationData) {
         List<CultivationRealm> nextRealms = getNextCultivationRealms(player);
         return nextRealms.isEmpty() ? null : nextRealms.get(0);
     }
 
     /**
-     * Breakthrough with unique conditions (Ex. Qi Condensation L10 -> Perfect Foundation Establishment)
+     * Qi breakthrough with unique conditions
      * @param player The player
-     * @param cultivationData Player's Qi data
+     * @param qiCultivationData Player's Qi cultivation data
      * @return Special realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getSpecialBreakthrough(Player player, IQiCultivationData cultivationData) {
+    public CultivationRealm getSpecialBreakthrough(Player player, IQiCultivationData qiCultivationData) {
         return null; // Override in specific realms
     }
 
     /**
-     * Boundary breakthrough (Ex. First Step -> Second Step)
+     * Qi boundary breakthrough (Ex. First Step -> Second Step)
      * @param player The player
-     * @param cultivationData Player's Qi data
+     * @param qiCultivationData Player's Qi cultivation data
      * @return Boundary realm, or null if not possible
      */
     @Nullable
-    public CultivationRealm getBoundaryBreakthrough(Player player, IQiCultivationData cultivationData) {
+    public CultivationRealm getBoundaryBreakthrough(Player player, IQiCultivationData qiCultivationData) {
+        return null;
+    }
+
+    // === Body Cultivation Breakthrough Types ===
+
+    /**
+     * Body breakthrough to next minor realm
+     * @param player The player
+     * @param bodyCultivationData Player's Body cultivation data
+     * @return Next realm, or null if not possible
+     */
+    @Nullable
+    public CultivationRealm getMinorBreakthrough(Player player, IBodyCultivationData bodyCultivationData) {
+        List<CultivationRealm> nextRealms = getNextCultivationRealms(player);
+        return nextRealms.isEmpty() ? null : nextRealms.get(0);
+    }
+
+    /**
+     * Body breakthrough to next major realm
+     * @param player The player
+     * @param bodyCultivationData Player's Body cultivation data
+     * @return Next realm, or null if not possible
+     */
+    @Nullable
+    public CultivationRealm getMajorBreakthrough(Player player, IBodyCultivationData bodyCultivationData) {
+        List<CultivationRealm> nextRealms = getNextCultivationRealms(player);
+        return nextRealms.isEmpty() ? null : nextRealms.get(0);
+    }
+
+    /**
+     * Body breakthrough with unique conditions
+     * @param player The player
+     * @param bodyCultivationData Player's Body cultivation data
+     * @return Special realm, or null if not possible
+     */
+    @Nullable
+    public CultivationRealm getSpecialBreakthrough(Player player, IBodyCultivationData bodyCultivationData) {
+        return null; // Override in specific realms
+    }
+
+    /**
+     * Body boundary breakthrough
+     * @param player The player
+     * @param bodyCultivationData Player's Body cultivation data
+     * @return Boundary realm, or null if not possible
+     */
+    @Nullable
+    public CultivationRealm getBoundaryBreakthrough(Player player, IBodyCultivationData bodyCultivationData) {
         return null;
     }
 
@@ -317,28 +402,28 @@ public abstract class CultivationRealm {
         return "Unknown Stage";
     }
 
-    // === Events and Effects ===
+    // === Events and Effects for Qi Cultivation ===
 
     /**
-     * Called when player advances to this realm
+     * Called when player advances to this realm via Qi cultivation
      * @param player The player advancing
-     * @param qiData Player's Qi data
+     * @param qiData Player's Qi cultivation data
      * @param previousRealm The realm they came from
      */
     public void onRealmAdvancement(Player player, IQiCultivationData qiData, @Nullable CultivationRealm previousRealm) {
         // Default implementation - override for custom effects
         if (player instanceof ServerPlayer serverPlayer) {
             serverPlayer.sendSystemMessage(
-                Component.literal("Advanced to " + getDisplayName() + "!")
+                Component.literal("Advanced to " + getDisplayName() + " through Qi cultivation!")
                     .withStyle(ChatFormatting.GOLD)
             );
         }
     }
 
     /**
-     * Called when player leaves this realm
+     * Called when player leaves this realm via Qi cultivation
      * @param player The player leaving
-     * @param qiData Player's Qi data
+     * @param qiData Player's Qi cultivation data
      * @param nextRealm The realm they're going to
      */
     public void onRealmExit(Player player, IQiCultivationData qiData, @Nullable CultivationRealm nextRealm) {
@@ -346,11 +431,48 @@ public abstract class CultivationRealm {
     }
 
     /**
-     * Apply realm-specific modifiers to player stats
+     * Apply realm-specific modifiers from Qi cultivation
      * @param player The player
-     * @param qiData Player's Qi data
+     * @param qiData Player's Qi cultivation data
      */
     public void applyRealmModifiers(Player player, IQiCultivationData qiData) {
+        // Override for special realm effects
+    }
+
+    // === Events and Effects for Body Cultivation ===
+
+    /**
+     * Called when player advances to this realm via Body cultivation
+     * @param player The player advancing
+     * @param bodyData Player's Body cultivation data
+     * @param previousRealm The realm they came from
+     */
+    public void onRealmAdvancement(Player player, IBodyCultivationData bodyData, @Nullable CultivationRealm previousRealm) {
+        // Default implementation - override for custom effects
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.sendSystemMessage(
+                Component.literal("Advanced to " + getDisplayName() + " through Body cultivation!")
+                    .withStyle(ChatFormatting.GOLD)
+            );
+        }
+    }
+
+    /**
+     * Called when player leaves this realm via Body cultivation
+     * @param player The player leaving
+     * @param bodyData Player's Body cultivation data
+     * @param nextRealm The realm they're going to
+     */
+    public void onRealmExit(Player player, IBodyCultivationData bodyData, @Nullable CultivationRealm nextRealm) {
+        // Override for cleanup or farewell effects
+    }
+
+    /**
+     * Apply realm-specific modifiers from Body cultivation
+     * @param player The player
+     * @param bodyData Player's Body cultivation data
+     */
+    public void applyRealmModifiers(Player player, IBodyCultivationData bodyData) {
         // Override for special realm effects
     }
 

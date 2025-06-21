@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.PlayerBodyAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerHealthAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
@@ -42,28 +43,28 @@ public record HealthRequestPacket(Type requestType, long amount) implements Cust
         if (context.flow().isServerbound()) {
             context.enqueueWork(() -> {
                 if (context.player() instanceof ServerPlayer serverPlayer) {
-                    PlayerBodyAttachment bodyAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_BODY.get());
+                    PlayerHealthAttachment healthAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
 
-                    if (bodyAttachment != null) {
+                    if (healthAttachment != null) {
                         switch (packet.requestType()) {
                             case SYNC_REQUEST -> {
                                 // Force sync current health to client
-                                bodyAttachment.forceSync();
+                                healthAttachment.forceSync();
                             }
                             case HEAL -> {
                                 // Heal the player by the specified amount
-                                bodyAttachment.tryHeal(packet.amount());
+                                healthAttachment.addHealth(packet.amount());
                             }
                             case DAMAGE -> {
                                 // Damage the player (for testing/admin purposes)
                                 if (serverPlayer.hasPermissions(2)) { // Only ops can damage
-                                    bodyAttachment.damage(packet.amount());
+                                    healthAttachment.tryConsumeHealth(packet.amount());
                                 }
                             }
                             case SET_HEALTH -> {
                                 // Set specific health amount (admin only)
                                 if (serverPlayer.hasPermissions(2)) { // Only ops can set health
-                                    bodyAttachment.setCurrentHealth(packet.amount());
+                                    healthAttachment.setCurrentHealth(packet.amount());
                                 }
                             }
                         }

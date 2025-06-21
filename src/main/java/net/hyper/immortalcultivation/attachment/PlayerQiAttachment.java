@@ -128,7 +128,7 @@ public class PlayerQiAttachment implements IQiData {
                 player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
             if (cultivationAttachment != null) {
                 // 10% of cultivation as bonus Qi capacity
-                long cultivationBonus = (long)(cultivationAttachment.getCurrentQiCultivation() * 0.10);
+                long cultivationBonus = (long)(cultivationAttachment.getCurrentQiCultivation() * 0.01);
                 return baseMax + cultivationBonus;
             }
         } catch (Exception e) {
@@ -175,10 +175,21 @@ public class PlayerQiAttachment implements IQiData {
             PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
                 float multiplier = roots.getCultivationMultiplier();
-                return baseRate * multiplier;
+                baseRate *= multiplier;
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying spiritual roots to Qi regen", e);
+        }
+
+        // Apply cultivation focus bonus
+        // When focused on Qi cultivation, Qi regeneration is enhanced
+        try {
+            PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
+            if (focus != null) {
+                baseRate *= focus.getQiRegenerationBonus();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying focus bonus to Qi regen", e);
         }
 
         return baseRate;

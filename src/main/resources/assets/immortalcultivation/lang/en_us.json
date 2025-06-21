@@ -5,8 +5,9 @@
   "creativetab.immortalcultivation.immortalcultivation_weapons": "Immortal Cultivation Weapons",
   "creativetab.immortalcultivation.immortalcultivation_armors": "Immortal Cultivation Armors",
 
-  "key.categories.immortalcultivation": "Immortal Cultivation",
-  "key.immortalcultivation.breakthrough": "Open Breakthrough Menu",
+  "key.categories.immortalcultivation.cultivation": "Cultivation System",
+  "key.immortalcultivation.cultivation_stats": "Open Cultivation Stats",
+  "key.immortalcultivation.breakthrough_screen": "Open Breakthrough Analysis",
 
   "block.immortalcultivation.low_quality_spirit_stone_block": "Low Quality Spirit Stone Block",
   "block.immortalcultivation.low_quality_spirit_stone_ore_block": "Low Quality Spirit Stone Ore",
