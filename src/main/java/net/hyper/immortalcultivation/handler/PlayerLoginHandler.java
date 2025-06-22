@@ -39,6 +39,9 @@ public class PlayerLoginHandler {
             initializeBodyCultivation(player);
             initializeResources(player);
 
+            // IMPORTANT: Force sync all data to ensure client has latest values
+            forceSyncAllData(player);
+
             ImmortalCultivation.LOGGER.info("Dual cultivation system fully initialized for player: {}",
                 player.getName().getString());
         }
@@ -72,6 +75,15 @@ public class PlayerLoginHandler {
 
                 ImmortalCultivation.LOGGER.info("Player {} assigned spiritual roots: {} ({}x multiplier)",
                     player.getName().getString(), generatedType.getDisplayName(), generatedType.getCultivationMultiplier());
+            }
+
+            // Log current state for debugging
+            if (roots != null) {
+                ImmortalCultivation.LOGGER.info("Player {} spiritual roots state - Type: {}, Assigned: {}, Multiplier: {}",
+                    player.getName().getString(),
+                    roots.getRootType().getDisplayName(),
+                    roots.hasBeenAssigned(),
+                    roots.getCultivationMultiplier());
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error initializing spiritual roots for player {}",
@@ -107,6 +119,15 @@ public class PlayerLoginHandler {
 
                 ImmortalCultivation.LOGGER.info("Player {} assigned physique: {} ({}x multiplier)",
                     player.getName().getString(), generatedType.getDisplayName(), generatedType.getCultivationMultiplier());
+            }
+
+            // Log current state for debugging
+            if (physique != null) {
+                ImmortalCultivation.LOGGER.info("Player {} physique state - Type: {}, Assigned: {}, Multiplier: {}",
+                    player.getName().getString(),
+                    physique.getRootType().getDisplayName(),
+                    physique.hasBeenAssigned(),
+                    physique.getCultivationMultiplier());
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error initializing physique for player {}",
@@ -193,9 +214,6 @@ public class PlayerLoginHandler {
                     player.getName().getString(),
                     qiCultivationAttachment.getCurrentQiCultivation(),
                     qiCultivationAttachment.getMaxQiCultivation());
-
-                // Force sync to client to ensure proper display
-                qiCultivationAttachment.forceSync();
             } else {
                 ImmortalCultivation.LOGGER.error("Player {} has null Qi cultivation attachment!",
                     player.getName().getString());
@@ -219,9 +237,6 @@ public class PlayerLoginHandler {
                     player.getName().getString(),
                     bodyCultivationAttachment.getCurrentBodyCultivation(),
                     bodyCultivationAttachment.getMaxBodyCultivation());
-
-                // Force sync to client to ensure proper display
-                bodyCultivationAttachment.forceSync();
             } else {
                 ImmortalCultivation.LOGGER.error("Player {} has null Body cultivation attachment!",
                     player.getName().getString());
@@ -247,9 +262,6 @@ public class PlayerLoginHandler {
                     qiAttachment.getCurrentQi(),
                     qiAttachment.getMaxQi(),
                     String.format("%.2f", qiAttachment.getEffectiveQiRegenerationRate()));
-
-                // Force sync to client
-                qiAttachment.forceSync();
             } else {
                 ImmortalCultivation.LOGGER.error("Player {} has null Qi resource attachment!",
                     player.getName().getString());
@@ -263,9 +275,6 @@ public class PlayerLoginHandler {
                     bodyAttachment.getCurrentBody(),
                     bodyAttachment.getMaxBody(),
                     String.format("%.2f", bodyAttachment.getEffectiveBodyRegenerationRate()));
-
-                // Force sync to client
-                bodyAttachment.forceSync();
             } else {
                 ImmortalCultivation.LOGGER.error("Player {} has null Body resource attachment!",
                     player.getName().getString());
@@ -277,21 +286,64 @@ public class PlayerLoginHandler {
     }
 
     /**
-     * Send a welcome message to new cultivators explaining the dual system.
-     * This helps players understand they have two cultivation paths available.
+     * Force sync all cultivation data to ensure client has the latest values.
+     * This is critical for proper display in GUIs and HUD elements.
      */
-    private static void sendWelcomeMessage(ServerPlayer player) {
-        player.sendSystemMessage(
-            Component.literal("Welcome to the path of cultivation! You can pursue both Qi and Body cultivation.")
-                .withStyle(Style.EMPTY.withColor(0xFFD700))
-        );
-        player.sendSystemMessage(
-            Component.literal("Use meditation (crouch while still) to enhance your cultivation rate.")
-                .withStyle(Style.EMPTY.withColor(0x87CEEB))
-        );
-        player.sendSystemMessage(
-            Component.literal("Switch between Qi and Body focus to optimize your cultivation progress.")
-                .withStyle(Style.EMPTY.withColor(0x98FB98))
-        );
+    private static void forceSyncAllData(ServerPlayer player) {
+        try {
+            ImmortalCultivation.LOGGER.info("Force syncing all cultivation data for player {}",
+                player.getName().getString());
+
+            // Sync realm data
+            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
+            if (realmAttachment != null) {
+                realmAttachment.forceSync();
+            }
+
+            // Sync cultivation focus
+            PlayerCultivationFocusAttachment focusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
+            if (focusAttachment != null) {
+                focusAttachment.forceSync();
+            }
+
+            // Sync Qi cultivation
+            PlayerQiCultivationAttachment qiCultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
+            if (qiCultivationAttachment != null) {
+                qiCultivationAttachment.forceSync();
+            }
+
+            // Sync Body cultivation
+            PlayerBodyCultivationAttachment bodyCultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            if (bodyCultivationAttachment != null) {
+                bodyCultivationAttachment.forceSync();
+            }
+
+            // Sync resources
+            PlayerQiAttachment qiAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI.get());
+            if (qiAttachment != null) {
+                qiAttachment.forceSync();
+            }
+
+            PlayerBodyAttachment bodyAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY.get());
+            if (bodyAttachment != null) {
+                bodyAttachment.forceSync();
+            }
+
+            PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+            if (healthAttachment != null) {
+                healthAttachment.forceSync();
+            }
+
+            // NOTE: Spiritual roots and physique don't have forceSync methods
+            // This is likely why they show as unassigned on the client
+            // You'll need to create sync packets for these attachments similar to the others
+
+            ImmortalCultivation.LOGGER.warn("WARNING: Spiritual roots and physique attachments do not have sync methods!");
+            ImmortalCultivation.LOGGER.warn("Client will not receive these values properly without sync implementation.");
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error force syncing data for player {}",
+                player.getName().getString(), e);
+        }
     }
 }

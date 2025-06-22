@@ -2,6 +2,8 @@ package net.hyper.immortalcultivation;
 
 import net.hyper.immortalcultivation.handler.CultivationTickHandler;
 import net.hyper.immortalcultivation.registry.*;
+import net.minecraft.world.entity.EntityAttachments;
+import net.minecraft.world.entity.player.Player;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;

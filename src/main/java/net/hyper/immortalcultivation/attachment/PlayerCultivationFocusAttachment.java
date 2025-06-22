@@ -40,7 +40,7 @@ public class PlayerCultivationFocusAttachment {
     private static final double HEALTH_REGEN_BONUS_MULTIPLIER = 1.5; // 50% extra Health regen when Body-focused
 
     // Focus change cooldown
-    private static final long FOCUS_SWITCH_COOLDOWN_TICKS = 6000; // 300 seconds cooldown
+    private static final long FOCUS_SWITCH_COOLDOWN_TICKS = 6000;
     private long lastFocusSwitchTime = 0;
     private boolean onFocusSwitchCooldown = false;
 

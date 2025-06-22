@@ -76,10 +76,6 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
 
         tag(BlockTags.INCORRECT_FOR_STONE_TOOL)
             // Spirit Stones
-            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
-            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
             .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
             .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
             .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
@@ -104,10 +100,6 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
 
         tag(BlockTags.INCORRECT_FOR_GOLD_TOOL)
             // Spirit Stones
-            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
-            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
             .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
             .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
             .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
@@ -132,10 +124,6 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
 
         tag(BlockTags.INCORRECT_FOR_IRON_TOOL)
             // Spirit Stones
-            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_BLOCK.get())
-            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get())
-            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
             .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_BLOCK.get())
             .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())

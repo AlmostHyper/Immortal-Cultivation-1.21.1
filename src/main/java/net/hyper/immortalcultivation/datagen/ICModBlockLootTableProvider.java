@@ -45,23 +45,23 @@ public class ICModBlockLootTableProvider extends BlockLootSubProvider {
         dropSelf(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
 
         // Ores
-        add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), ICModItems.LOW_QUALITY_SPIRIT_STONE.get()));
-        add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()));
+        add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), block -> createMultipleOreDrops(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), ICModItems.LOW_QUALITY_SPIRIT_STONE.get(), 1, 3));
+        add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), block -> createMultipleOreDrops(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get(), ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get(), 1, 3));
         add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get(), ICModItems.EARTH_ASPECTED_ORE.get()));
         add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get(), ICModItems.FIRE_ASPECTED_ORE.get()));
         add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get(), ICModItems.WATER_ASPECTED_ORE.get()));
         add(ICModBlocks.SKY_IRON_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.SKY_IRON_ORE_BLOCK.get(), ICModItems.SKY_IRON_ORE.get()));
 
         // Deepslate Ores
-        add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.LOW_QUALITY_SPIRIT_STONE.get()));
-        add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()));
-        add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()));
-        add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.TOP_QUALITY_SPIRIT_STONE.get()));
+        add(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createMultipleOreDrops(ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.LOW_QUALITY_SPIRIT_STONE.get(), 1, 3));
+        add(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createMultipleOreDrops(ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get(), 1, 3));
+        add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createMultipleOreDrops(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.HIGH_QUALITY_SPIRIT_STONE.get(), 1, 3));
+        add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), block -> createMultipleOreDrops(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get(), ICModItems.TOP_QUALITY_SPIRIT_STONE.get(), 1, 3));
         add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.FIRE_ASPECTED_ORE.get()));
         add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.METAL_ASPECTED_ORE.get()));
         add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), block -> createOreDrop(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get(), ICModItems.WATER_ASPECTED_ORE.get()));
 
-        // === PLANTS === //
+        // === Plants === //
 
         // Earth Plants
         add(ICModBlocks.YELLOW_EARTH_ROOTS_CROP_BLOCK.get(), block -> createCropDrops(ICModBlocks.YELLOW_EARTH_ROOTS_CROP_BLOCK.get(), ICModItems.YELLOW_EARTH_ROOTS.get(), ICModItems.YELLOW_EARTH_ROOTS.get(), createMatureCropCondition(ICModBlocks.YELLOW_EARTH_ROOTS_CROP_BLOCK.get(), EarthCropBlock.AGE)));
@@ -80,11 +80,19 @@ public class ICModBlockLootTableProvider extends BlockLootSubProvider {
 
     }
 
-    // Helper Methods
+    // == Helper Methods == //
 
     @Override
     protected Iterable<Block> getKnownBlocks() {
         return ICModBlocks.REGISTRY.getEntries().stream().map(Holder::value)::iterator;
+    }
+
+    protected LootTable.Builder createMultipleOreDrops(Block pBlock, Item item, float minDrops, float maxDrops) {
+        HolderLookup.RegistryLookup<Enchantment> registrylookup = this.registries.lookupOrThrow(Registries.ENCHANTMENT);
+        return this.createSilkTouchDispatchTable(pBlock,
+            this.applyExplosionDecay(pBlock, LootItem.lootTableItem(item)
+                .apply(SetItemCountFunction.setCount(UniformGenerator.between(minDrops, maxDrops)))
+                .apply(ApplyBonusCount.addOreBonusCount(registrylookup.getOrThrow(Enchantments.FORTUNE)))));
     }
 
     public static <T extends Block> LootItemCondition.Builder createMatureCropCondition(

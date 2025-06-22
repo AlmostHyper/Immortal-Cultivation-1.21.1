@@ -65,9 +65,7 @@ public class CultivationStatsScreen extends Screen {
     private static final int QI_COLOR = 0xFF87CEEB;
     private static final int BODY_COLOR = 0xFFFF6347;
     private static final int HEALTH_COLOR = 0xFFFF69B4;
-    private static final int RESOURCE_COLOR = 0xFF98FB98;
     private static final int FOCUS_ACTIVE_COLOR = 0xFFFFD700;
-    private static final int FOCUS_INACTIVE_COLOR = 0xFF808080;
     private static final int READY_COLOR = 0xFF90EE90;
     private static final int NOT_READY_COLOR = 0xFFFFB6C1;
     private static final int SECTION_HEADER_COLOR = 0xFFDDA0DD;
@@ -131,20 +129,6 @@ public class CultivationStatsScreen extends Screen {
 
     /**
      * CORE SOLUTION: Enable sharp texture rendering mode
-     *
-     * This method addresses the root cause we discovered through debugging - OpenGL's
-     * default texture filtering creates blurriness when GUI elements are scaled.
-     *
-     * Think of this like switching a photocopier from "smooth enlargement" mode to
-     * "sharp pixel-perfect enlargement" mode. Instead of trying to blend pixels
-     * smoothly (which creates blur), we tell the graphics system to preserve
-     * sharp pixel boundaries.
-     *
-     * Technical explanation: When GUI scale is greater than 1.0, Minecraft scales
-     * textures (including font textures) using OpenGL. By default, OpenGL uses
-     * GL_LINEAR filtering, which interpolates between pixels to create smooth
-     * scaling. For GUI elements, we want GL_NEAREST filtering, which preserves
-     * sharp edges by duplicating pixels rather than blending them.
      */
     private void enableSharpRendering() {
         // Ensure blending is properly configured for GUI rendering
@@ -152,29 +136,15 @@ public class CultivationStatsScreen extends Screen {
         RenderSystem.defaultBlendFunc();
 
         // This is the key fix: Configure OpenGL to use nearest-neighbor filtering
-        // instead of linear interpolation when scaling textures
-
-        // GL_TEXTURE_MAG_FILTER controls how textures look when scaled UP (magnified)
-        // GL_TEXTURE_MIN_FILTER controls how textures look when scaled DOWN (minified)
-        // Setting both to GL_NEAREST ensures sharp pixel boundaries at any scale
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
     }
 
     /**
      * ESSENTIAL CLEANUP: Restore normal texture rendering mode
-     *
-     * This method is crucial because we don't want our changes to affect other
-     * parts of Minecraft's rendering system. The game world, for example, should
-     * continue using smooth texture filtering for realistic graphics.
-     *
-     * Think of this like cleaning up after yourself in a shared workshop - you
-     * use specialized tools for your project, but you return everything to its
-     * default state when you're done so the next person can work normally.
      */
     private void restoreNormalRendering() {
         // Restore OpenGL's default texture filtering settings
-        // GL_LINEAR provides smooth scaling, which is appropriate for most game graphics
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
     }
@@ -191,17 +161,7 @@ public class CultivationStatsScreen extends Screen {
     }
 
     /**
-     * UPDATED: Main render method with sharp rendering integration
-     *
-     * This is where we apply our complete solution. Notice how we wrap all
-     * rendering operations in the sharp rendering mode, then carefully restore
-     * normal rendering afterward. The try-finally block ensures that even if
-     * an exception occurs during rendering, we'll still restore the graphics
-     * state properly.
-     *
-     * This pattern - modify system state, do work, restore state - is common
-     * in graphics programming and ensures your changes don't interfere with
-     * other parts of the system.
+     * UPDATED: Main render method with sharp rendering integration and blur fix
      */
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
@@ -213,27 +173,24 @@ public class CultivationStatsScreen extends Screen {
             renderWindowFramePixelPerfect(guiGraphics);
             renderCultivationOverview(guiGraphics);
             super.render(guiGraphics, mouseX, mouseY, partialTicks);
-
-            // TEMPORARY: Keep debug info for now so you can verify the fix works
-            // You can remove these lines once you confirm everything looks sharp
-
         } finally {
             // CRITICAL: Always restore normal rendering, even if an exception occurs
-            // This ensures we don't accidentally affect other parts of Minecraft's graphics
             restoreNormalRendering();
         }
     }
 
-    // === ALL YOUR EXISTING METHODS REMAIN UNCHANGED ===
-    // The beauty of this solution is that we don't need to modify any of your
-    // existing rendering logic. The sharp texture filtering works automatically
-    // with all your carefully crafted pixel-aligned coordinates.
-
     /**
-     * [All your existing dimension calculation methods remain unchanged]
-     * The responsive design logic you built is excellent and continues to work
-     * perfectly with our sharp rendering enhancement.
+     * FIX for blurry background - Override renderBackground to prevent blur shader
      */
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        // This prevents the default blur shader from being applied
+        // Just render a dark overlay instead
+        guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
+    }
+
+    // === ALL YOUR EXISTING METHODS REMAIN UNCHANGED ===
+
     private void calculateResponsiveDimensionsPixelPerfect() {
         int availableWidth = width - 40;
         int availableHeight = height - 40;
@@ -372,12 +329,6 @@ public class CultivationStatsScreen extends Screen {
         }
     }
 
-    /**
-     * [All your existing rendering methods remain unchanged]
-     * The sharp texture filtering works automatically with your existing
-     * pixel-aligned rendering code. No modifications needed!
-     */
-
     private void renderWindowFramePixelPerfect(GuiGraphics guiGraphics) {
         guiGraphics.fill(0, 0, width, height, 0x80000000);
         guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF2C2C2C);
@@ -407,6 +358,10 @@ public class CultivationStatsScreen extends Screen {
 
         int currentY = alignToPixel(windowY + margin * 2 + lineHeight);
 
+        // New section: Player traits (spiritual roots and physique)
+        currentY = renderPlayerTraits(guiGraphics, currentY);
+        currentY = alignToPixel(currentY + sectionSpacing);
+
         currentY = renderStrategicOverview(guiGraphics, currentY);
         currentY = alignToPixel(currentY + sectionSpacing);
 
@@ -414,9 +369,60 @@ public class CultivationStatsScreen extends Screen {
         currentY = alignToPixel(currentY + sectionSpacing);
 
         currentY = renderResourceStatus(guiGraphics, currentY);
-        currentY = alignToPixel(currentY + sectionSpacing);
+    }
 
-        renderEnhancementFactors(guiGraphics, currentY);
+    /**
+     * NEW: Render player traits section at the top
+     */
+    private int renderPlayerTraits(GuiGraphics guiGraphics, int startY) {
+        int currentY = alignToPixel(startY);
+
+        renderSectionHeaderPixelPerfect(guiGraphics, "Innate Cultivation Traits", currentY);
+        currentY = alignToPixel(currentY + lineHeight + 5);
+
+        // Display spiritual roots
+        if (spiritualRoots != null) {
+            Component rootsLabel = Component.literal("Spiritual Roots: ")
+                .withStyle(ChatFormatting.WHITE);
+            Component rootsValue = Component.literal(spiritualRoots.getRootType().getDisplayName())
+                .withStyle(ChatFormatting.BOLD);
+
+            drawStringAligned(guiGraphics, rootsLabel, windowX + margin, currentY, 0xFFFFFFFF);
+            int labelWidth = font.width(rootsLabel);
+            drawStringAligned(guiGraphics, rootsValue, windowX + margin + labelWidth, currentY,
+                spiritualRoots.getRootType().getColor());
+
+            // Show multiplier
+            String multiplierText = String.format(" (×%.1f Qi rates)",
+                spiritualRoots.getCultivationMultiplier());
+            drawStringAligned(guiGraphics, multiplierText,
+                windowX + margin + labelWidth + font.width(rootsValue), currentY, QI_COLOR);
+
+            currentY = alignToPixel(currentY + lineHeight);
+        }
+
+        // Display physique
+        if (physique != null) {
+            Component physiqueLabel = Component.literal("Physique: ")
+                .withStyle(ChatFormatting.WHITE);
+            Component physiqueValue = Component.literal(physique.getRootType().getDisplayName())
+                .withStyle(ChatFormatting.BOLD);
+
+            drawStringAligned(guiGraphics, physiqueLabel, windowX + margin, currentY, 0xFFFFFFFF);
+            int labelWidth = font.width(physiqueLabel);
+            drawStringAligned(guiGraphics, physiqueValue, windowX + margin + labelWidth, currentY,
+                physique.getRootType().getColor());
+
+            // Show multiplier
+            String multiplierText = String.format(" (×%.1f Body rates)",
+                physique.getCultivationMultiplier());
+            drawStringAligned(guiGraphics, multiplierText,
+                windowX + margin + labelWidth + font.width(physiqueValue), currentY, BODY_COLOR);
+
+            currentY = alignToPixel(currentY + lineHeight);
+        }
+
+        return currentY;
     }
 
     private int renderStrategicOverview(GuiGraphics guiGraphics, int startY) {
@@ -427,7 +433,7 @@ public class CultivationStatsScreen extends Screen {
 
         if (focusAttachment != null) {
             String focusText = "Cultivation Focus: " + focusAttachment.getCurrentFocus().getDisplayName() +
-                " (2x advancement rate)";
+                " (2× advancement rate)";
             int focusColor = focusAttachment.isFocusedOnQi() ? QI_COLOR : BODY_COLOR;
             drawStringAligned(guiGraphics, focusText, windowX + margin, currentY, focusColor);
             currentY = alignToPixel(currentY + lineHeight);
@@ -458,9 +464,12 @@ public class CultivationStatsScreen extends Screen {
         renderCultivationColumnPixelPerfect(guiGraphics, leftColumnX, currentY, PlayerRealmAttachment.CultivationType.QI);
         renderCultivationColumnPixelPerfect(guiGraphics, rightColumnX, currentY, PlayerRealmAttachment.CultivationType.BODY);
 
-        return alignToPixel(currentY + Math.max(120, windowHeight / 4));
+        return alignToPixel(currentY + Math.max(140, windowHeight / 4));
     }
 
+    /**
+     * ENHANCED: Show effective rates with breakdown
+     */
     private void renderCultivationColumnPixelPerfect(GuiGraphics guiGraphics, int x, int y, PlayerRealmAttachment.CultivationType type) {
         int alignedX = alignToPixel(x);
         int currentY = alignToPixel(y);
@@ -476,17 +485,19 @@ public class CultivationStatsScreen extends Screen {
         currentY = alignToPixel(currentY + lineHeight);
 
         long current, max;
-        double cultivationRate, meditationRate;
+        double baseRate, effectiveRate, meditationRate;
 
         if (type == PlayerRealmAttachment.CultivationType.QI && qiCultivationAttachment != null) {
             current = qiCultivationAttachment.getCurrentQiCultivation();
             max = qiCultivationAttachment.getMaxQiCultivation();
-            cultivationRate = qiCultivationAttachment.getEffectiveQiCultivationRate();
+            baseRate = qiCultivationAttachment.getBaseQiCultivationRate();
+            effectiveRate = qiCultivationAttachment.getEffectiveQiCultivationRate();
             meditationRate = qiCultivationAttachment.getEffectiveCirculatingQiCultivationRate();
         } else if (type == PlayerRealmAttachment.CultivationType.BODY && bodyCultivationAttachment != null) {
             current = bodyCultivationAttachment.getCurrentBodyCultivation();
             max = bodyCultivationAttachment.getMaxBodyCultivation();
-            cultivationRate = bodyCultivationAttachment.getEffectiveBodyCultivationRate();
+            baseRate = bodyCultivationAttachment.getBaseBodyCultivationRate();
+            effectiveRate = bodyCultivationAttachment.getEffectiveBodyCultivationRate();
             meditationRate = bodyCultivationAttachment.getEffectiveCirculatingBodyCultivationRate();
         } else {
             return;
@@ -503,15 +514,32 @@ public class CultivationStatsScreen extends Screen {
         renderProgressBarPixelPerfect(guiGraphics, barX, barY, barWidth, PROGRESS_BAR_HEIGHT, percentage, typeColor);
         currentY = alignToPixel(currentY + PROGRESS_BAR_HEIGHT + 5);
 
-        boolean isFocused = focusAttachment != null && focusAttachment.getCurrentFocus() == type;
-        String rateText = String.format("Rate: %.2f/s", cultivationRate);
-        if (isFocused) rateText += " (FOCUSED)";
-
-        int rateColor = isFocused ? FOCUS_ACTIVE_COLOR : 0xFFCCCCCC;
-        drawStringAligned(guiGraphics, rateText, alignedX, currentY, rateColor);
+        // Show base rate
+        String baseRateText = String.format("Base: %.3f/s", baseRate);
+        drawStringAligned(guiGraphics, baseRateText, alignedX, currentY, 0xFF999999);
         currentY = alignToPixel(currentY + lineHeight);
 
-        String meditationText = String.format("Meditation: %.2f/s", meditationRate);
+        // Show effective rate with indicator of multipliers applied
+        boolean isFocused = focusAttachment != null && focusAttachment.getCurrentFocus() == type;
+
+        // Calculate total multiplier
+        double totalMultiplier = effectiveRate / baseRate;
+        String effectiveRateText;
+        if (Math.abs(totalMultiplier - 1.0) > 0.01) {
+            effectiveRateText = String.format("Effective: %.3f/s (×%.2f)", effectiveRate, totalMultiplier);
+        } else {
+            effectiveRateText = String.format("Effective: %.3f/s", effectiveRate);
+        }
+
+        if (isFocused) effectiveRateText += " [FOCUSED]";
+
+        int rateColor = isFocused ? FOCUS_ACTIVE_COLOR : 0xFFFFFFFF;
+        drawStringAligned(guiGraphics, effectiveRateText, alignedX, currentY, rateColor);
+        currentY = alignToPixel(currentY + lineHeight);
+
+        // Show meditation rate
+        double meditationMultiplier = meditationRate / baseRate;
+        String meditationText = String.format("Meditation: %.3f/s (×%.1f)", meditationRate, meditationMultiplier);
         drawStringAligned(guiGraphics, meditationText, alignedX, currentY, 0xFFCCCCCC);
         currentY = alignToPixel(currentY + lineHeight);
 
@@ -569,36 +597,6 @@ public class CultivationStatsScreen extends Screen {
         renderProgressBarPixelPerfect(guiGraphics, barX, barY, progressBarWidth, PROGRESS_BAR_HEIGHT, percentage, color);
 
         return alignToPixel(alignedY + lineHeight + 3);
-    }
-
-    private int renderEnhancementFactors(GuiGraphics guiGraphics, int startY) {
-        int currentY = alignToPixel(startY);
-
-        renderSectionHeaderPixelPerfect(guiGraphics, "Enhancement Factors", currentY);
-        currentY = alignToPixel(currentY + lineHeight + 8);
-
-        if (spiritualRoots != null) {
-            String rootsText = "Spiritual Roots: " + spiritualRoots.getRootType().getDisplayName() +
-                String.format(" (%.1fx Qi rates)", spiritualRoots.getCultivationMultiplier());
-            drawStringAligned(guiGraphics, rootsText, windowX + margin, currentY, QI_COLOR);
-            currentY = alignToPixel(currentY + lineHeight);
-        }
-
-        if (physique != null) {
-            String physiqueText = "Physique: " + physique.getRootType().getDisplayName() +
-                String.format(" (%.1fx Body rates)", physique.getCultivationMultiplier());
-            drawStringAligned(guiGraphics, physiqueText, windowX + margin, currentY, BODY_COLOR);
-            currentY = alignToPixel(currentY + lineHeight);
-        }
-
-        if (focusAttachment != null) {
-            String focusEffect = "Focus Bonus: " + focusAttachment.getCurrentFocus().getDisplayName() +
-                " cultivation receives 2x advancement rate";
-            drawStringAligned(guiGraphics, focusEffect, windowX + margin, currentY, FOCUS_ACTIVE_COLOR);
-            currentY = alignToPixel(currentY + lineHeight);
-        }
-
-        return currentY;
     }
 
     private void renderProgressBarPixelPerfect(GuiGraphics guiGraphics, int x, int y, int width, int height,

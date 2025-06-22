@@ -75,6 +75,18 @@ public class ICModNetwork {
             BodySyncPacket::handleClient
         );
 
+        REGISTRY.playToClient(
+            SpiritualRootSyncPacket.ID,
+            SpiritualRootSyncPacket.STREAM_CODEC,
+            SpiritualRootSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
+            PhysiqueSyncPacket.ID,
+            PhysiqueSyncPacket.STREAM_CODEC,
+            PhysiqueSyncPacket::handleClient
+        );
+
         // === CLIENT -> SERVER === //
 
         REGISTRY.playToServer(
@@ -119,11 +131,22 @@ public class ICModNetwork {
             QiRequestPacket::handleServer
         );
 
-
         REGISTRY.playToServer(
             BodyRequestPacket.ID,
             BodyRequestPacket.STREAM_CODEC,
             BodyRequestPacket::handleServer
+        );
+
+        REGISTRY.playToServer(
+            SpiritualRootRequestPacket.ID,
+            SpiritualRootRequestPacket.STREAM_CODEC,
+            SpiritualRootRequestPacket::handleServer
+        );
+
+        REGISTRY.playToServer(
+            PhysiqueRequestPacket.ID,
+            PhysiqueRequestPacket.STREAM_CODEC,
+            PhysiqueRequestPacket::handleServer
         );
 
         ImmortalCultivation.LOGGER.info("Network packets registered successfully!");
