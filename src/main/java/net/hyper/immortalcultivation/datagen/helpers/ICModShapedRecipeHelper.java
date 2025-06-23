@@ -85,9 +85,6 @@ public class ICModShapedRecipeHelper {
     }
 
     private static void buildToolRecipes(RecipeOutput recipeOutput, ICModRecipeProvider.RecipeHelper helper) {
-        // === TOOLS === //
-
-        // Swords
         buildSwordRecipes(recipeOutput, helper);
         buildPickaxeRecipes(recipeOutput, helper);
         buildAxeRecipes(recipeOutput, helper);

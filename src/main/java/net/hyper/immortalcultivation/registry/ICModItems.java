@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.registry;
 
 import net.hyper.immortalcultivation.item.crops.*;
 import net.hyper.immortalcultivation.item.metals.realm1.*;
+import net.hyper.immortalcultivation.item.pills.CultivationPillItems;
 import net.hyper.immortalcultivation.item.spirit_stones.*;
 import net.minecraft.world.item.*;
 import net.neoforged.bus.api.IEventBus;
@@ -134,7 +135,19 @@ public class ICModItems {
 
     // Poison Plants
 
-    //
+    // === PILLS === //
+
+    // Qi Cultivation Pills
+    public static final DeferredItem<Item> LOW_QUALITY_QI_CULTIVATION_PILL;
+    public static final DeferredItem<Item> MEDIUM_QUALITY_QI_CULTIVATION_PILL;
+    public static final DeferredItem<Item> HIGH_QUALITY_QI_CULTIVATION_PILL;
+    public static final DeferredItem<Item> TOP_QUALITY_QI_CULTIVATION_PILL;
+
+    // Body Cultivation Pills
+    public static final DeferredItem<Item> LOW_QUALITY_BODY_CULTIVATION_PILL;
+    public static final DeferredItem<Item> MEDIUM_QUALITY_BODY_CULTIVATION_PILL;
+    public static final DeferredItem<Item> HIGH_QUALITY_BODY_CULTIVATION_PILL;
+    public static final DeferredItem<Item> TOP_QUALITY_BODY_CULTIVATION_PILL;
 
     static {
         // Spirit Stones
@@ -247,6 +260,21 @@ public class ICModItems {
 
         // Wood Plants
         BLUE_WOOD_ROOTS = REGISTRY.register("blue_wood_roots", WoodCropItems.BLUE_WOOD_ROOTS());
+
+        // === PILLS === //
+
+        // Qi Cultivation Pills
+        LOW_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("low_quality_qi_cultivation_pill", CultivationPillItems.LOW_QUALITY_QI_CULTIVATION_PILL());
+        MEDIUM_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("medium_quality_qi_cultivation_pill", CultivationPillItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL());
+        HIGH_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("high_quality_qi_cultivation_pill", CultivationPillItems.HIGH_QUALITY_QI_CULTIVATION_PILL());
+        TOP_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("top_quality_qi_cultivation_pill", CultivationPillItems.TOP_QUALITY_QI_CULTIVATION_PILL());
+
+        // Body Cultivation Pills
+        LOW_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("low_quality_body_cultivation_pill", CultivationPillItems.LOW_QUALITY_BODY_CULTIVATION_PILL());
+        MEDIUM_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("medium_quality_body_cultivation_pill", CultivationPillItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL());
+        HIGH_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("high_quality_body_cultivation_pill", CultivationPillItems.HIGH_QUALITY_BODY_CULTIVATION_PILL());
+        TOP_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("top_quality_body_cultivation_pill", CultivationPillItems.TOP_QUALITY_BODY_CULTIVATION_PILL());
+
     }
 
     public static void register(IEventBus eventBus) {

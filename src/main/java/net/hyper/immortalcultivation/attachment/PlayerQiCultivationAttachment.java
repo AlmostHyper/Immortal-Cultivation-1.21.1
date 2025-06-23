@@ -186,22 +186,31 @@ public class PlayerQiCultivationAttachment implements IQiCultivationData {
 
         Player player = getPlayerSafe();
         if (player == null) {
-            // IMPROVED: Return base rate instead of broken calculation
             return baseRate;
         }
 
-        // Apply spiritual roots multiplier - FIXED: multiply in place instead of returning
+        // Apply spiritual roots multiplier
         try {
             PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
                 float multiplier = roots.getCultivationMultiplier();
-                baseRate *= multiplier; // Multiply in place, don't return here!
+                baseRate *= multiplier;
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying spiritual roots to cultivation rate", e);
         }
 
-        // Apply cultivation focus multiplier - this will now execute properly
+        // UPDATED: Apply permanent pill bonuses using the new additive + multiplicative system
+        try {
+            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonusAttachment != null) {
+                baseRate = bonusAttachment.applyQiCultivationBonuses(baseRate);
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying cultivation pill bonuses to Qi rate", e);
+        }
+
+        // Apply cultivation focus multiplier
         try {
             PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
             if (focus != null) {
@@ -234,6 +243,16 @@ public class PlayerQiCultivationAttachment implements IQiCultivationData {
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying spiritual roots to circulating rate", e);
+        }
+
+        // UPDATED: Apply permanent pill bonuses using the new additive + multiplicative system
+        try {
+            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonusAttachment != null) {
+                baseCirculatingRate = bonusAttachment.applyQiCultivationBonuses(baseCirculatingRate);
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying cultivation pill bonuses to circulating Qi rate", e);
         }
 
         // Apply cultivation focus multiplier - this will now execute properly

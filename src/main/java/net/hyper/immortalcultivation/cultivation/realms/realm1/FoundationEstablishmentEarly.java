@@ -34,7 +34,7 @@ public class FoundationEstablishmentEarly extends CultivationRealm {
     private static final double BASE_QI_REGEN_RATE = 5.0;
 
     private static final long BASE_MAX_CULTIVATION = 50_000;
-    private static final double BASE_CULTIVATION_RATE = 1.0;
+    private static final double BASE_CULTIVATION_RATE = 0.1;
 
     // === Core Identification ===
 

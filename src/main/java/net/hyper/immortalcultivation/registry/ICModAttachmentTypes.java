@@ -15,6 +15,7 @@ public class ICModAttachmentTypes {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerQiCultivationAttachment>> PLAYER_QI_CULTIVATION;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerBodyCultivationAttachment>> PLAYER_BODY_CULTIVATION;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerCultivationFocusAttachment>> PLAYER_CULTIVATION_FOCUS;
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerCultivationBonusAttachment>> PLAYER_CULTIVATION_BONUS;
 
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerHealthAttachment>> PLAYER_HEALTH;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerQiAttachment>> PLAYER_QI;
@@ -27,6 +28,8 @@ public class ICModAttachmentTypes {
         PLAYER_QI_CULTIVATION = REGISTRY.register("player_qi_cultivation", () -> AttachmentType.builder(() -> new PlayerQiCultivationAttachment()).serialize(PlayerQiCultivationAttachment.CODEC).copyOnDeath().build());
         PLAYER_BODY_CULTIVATION = REGISTRY.register("player_body_cultivation", () -> AttachmentType.builder(() -> new PlayerBodyCultivationAttachment()).serialize(PlayerBodyCultivationAttachment.CODEC).copyOnDeath().build());
         PLAYER_CULTIVATION_FOCUS = REGISTRY.register("player_cultivation_focus", () -> AttachmentType.builder(() -> new PlayerCultivationFocusAttachment()).serialize(PlayerCultivationFocusAttachment.CODEC).copyOnDeath().build());
+        PLAYER_CULTIVATION_BONUS = REGISTRY.register("player_cultivation_bonus", () -> AttachmentType.builder(() -> new PlayerCultivationBonusAttachment()).serialize(PlayerCultivationBonusAttachment.CODEC).copyOnDeath().build());
+
         PLAYER_HEALTH = REGISTRY.register("player_health", () -> AttachmentType.builder(() -> new PlayerHealthAttachment()).serialize(PlayerHealthAttachment.CODEC).copyOnDeath().build());
         PLAYER_QI = REGISTRY.register("player_qi", () -> AttachmentType.builder(() -> new PlayerQiAttachment()).serialize(PlayerQiAttachment.CODEC).copyOnDeath().build());
         PLAYER_BODY = REGISTRY.register("player_body", () -> AttachmentType.builder(() -> new PlayerBodyAttachment()).serialize(PlayerBodyAttachment.CODEC).copyOnDeath().build());

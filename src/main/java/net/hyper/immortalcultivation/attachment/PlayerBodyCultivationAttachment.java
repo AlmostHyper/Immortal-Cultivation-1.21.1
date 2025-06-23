@@ -200,6 +200,16 @@ public class PlayerBodyCultivationAttachment implements IBodyCultivationData {
             ImmortalCultivation.LOGGER.error("Error applying physique to body cultivation rate", e);
         }
 
+        // UPDATED: Apply permanent pill bonuses using the new additive + multiplicative system
+        try {
+            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonusAttachment != null) {
+                baseRate = bonusAttachment.applyBodyCultivationBonuses(baseRate);
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying cultivation pill bonuses to Body rate", e);
+        }
+
         // Apply cultivation focus multiplier - this will now execute properly
         // When focused on Body cultivation, rate is doubled
         try {
@@ -234,6 +244,16 @@ public class PlayerBodyCultivationAttachment implements IBodyCultivationData {
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying physique to circulating rate", e);
+        }
+
+        // UPDATED: Apply permanent pill bonuses using the new additive + multiplicative system
+        try {
+            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonusAttachment != null) {
+                baseCirculatingRate = bonusAttachment.applyBodyCultivationBonuses(baseCirculatingRate);
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying cultivation pill bonuses to circulating Body rate", e);
         }
 
         // Apply cultivation focus multiplier - this will now execute properly

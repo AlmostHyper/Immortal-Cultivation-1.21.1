@@ -39,7 +39,6 @@ public class ImmortalCultivation
         ICModTabs.register(modEventBus);
         ICModArmorMaterials.register(modEventBus);
 
-        ICModAttributes.register(modEventBus);
         ICModAttachmentTypes.register(modEventBus);
         ICModMenuTypes.register(modEventBus);
         ICModRecipes.register(modEventBus);

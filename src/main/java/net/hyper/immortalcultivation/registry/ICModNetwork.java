@@ -52,6 +52,12 @@ public class ICModNetwork {
         );
 
         REGISTRY.playToClient(
+            CultivationBonusSyncPacket.ID,
+            CultivationBonusSyncPacket.STREAM_CODEC,
+            CultivationBonusSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
             CultivationBreakthroughSyncPacket.ID,
             CultivationBreakthroughSyncPacket.STREAM_CODEC,
             CultivationBreakthroughSyncPacket::handleClient
@@ -117,6 +123,12 @@ public class ICModNetwork {
             CultivationFocusTogglePacket.ID,
             CultivationFocusTogglePacket.STREAM_CODEC,
             CultivationFocusTogglePacket::handleServer
+        );
+
+        REGISTRY.playToServer(
+            CultivationBonusRequestPacket.ID,
+            CultivationBonusRequestPacket.STREAM_CODEC,
+            CultivationBonusRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(

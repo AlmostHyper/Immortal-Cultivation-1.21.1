@@ -27,14 +27,14 @@
   "block.immortalcultivation.fire_aspected_ore_block": "Fire-Aspected Ore",
   "block.immortalcultivation.fire_aspected_deepslate_ore_block": "Fire-Aspected Deepslate Ore",
   "block.immortalcultivation.metal_aspected_deepslate_ore_block": "Metal-Aspected Deepslate Ore",
-  "block.immortalcultivation.sky_iron_ore_block": "Sky Iron Ore",
   "block.immortalcultivation.water_aspected_ore_block": "Water-Aspected Ore",
   "block.immortalcultivation.water_aspected_deepslate_ore_block": "Water-Aspected Deepslate Ore",
+  "block.immortalcultivation.sky_iron_ore_block": "Sky Iron Ore",
+
   "block.immortalcultivation.yellow_earth_roots_block": "Yellow Earth Roots Crop",
-  "block.immortalcultivation.": "",
-  "block.immortalcultivation.": "",
-  "block.immortalcultivation.": "",
-  "block.immortalcultivation.": "",
+
+  "block.immortalcultivation.pill_furnace_block": "Pill Furnace",
+
 
   "item.immortalcultivation.low_quality_spirit_stone": "Low Quality Spirit Stone",
   "item.immortalcultivation.medium_quality_spirit_stone": "Medium Quality Spirit Stone",
@@ -120,5 +120,11 @@
   "item.immortalcultivation.red_fire_roots": "Red Fire Roots",
   "item.immortalcultivation.white_metal_roots": "White Metal Roots",
   "item.immortalcultivation.black_water_roots": "Black Water Roots",
-  "item.immortalcultivation.green_wood_roots": "Green Wood Roots"
+  "item.immortalcultivation.green_wood_roots": "Green Wood Roots",
+
+  "item.immortalcultivation.low_quality_qi_absorption_pill": "Low Quality Qi Absorption Pill",
+  "item.immortalcultivation.medium_quality_qi_absorption_pill": "Medium Quality Qi Absorption Pill",
+  "item.immortalcultivation.low_quality_body_absorption_pill": "Low Quality Body Absorption Pill",
+  "item.immortalcultivation.medium_quality_body_absorption_pill": "Medium Quality Body Absorption Pill"
+
 }

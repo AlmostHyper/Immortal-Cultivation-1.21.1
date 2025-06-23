@@ -33,7 +33,7 @@ public class QiCondensationL5 extends CultivationRealm {
     private static final long BASE_MAX_QI = 70;
     private static final double BASE_QI_REGEN_RATE = 1.25;
 
-    private static final long BASE_MAX_CULTIVATION = 1_500;
+    private static final long BASE_MAX_CULTIVATION = 1_800;
     private static final double BASE_CULTIVATION_RATE = 0.03;
 
     // === Core Identification ===

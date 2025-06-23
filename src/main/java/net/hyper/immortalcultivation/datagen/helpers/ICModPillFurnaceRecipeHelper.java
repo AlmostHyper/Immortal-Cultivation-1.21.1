@@ -12,20 +12,46 @@ public class ICModPillFurnaceRecipeHelper {
     public static void buildPillFurnaceRecipes(RecipeOutput recipeOutput, ICModRecipeProvider.RecipeHelper helper) {
         // === MORTAL REALM PILLS === //
 
-        // Note: These recipes are currently commented out in the original file
-        // Uncomment and modify as needed when you're ready to implement them
+        // Qi Absorption Pills
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.LOW_QUALITY_QI_CULTIVATION_PILL.get())
+            .input1(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.5)
+            .unlockedBy("has_low_quality_spirit_stone", helper.has(ICModItems.LOW_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "low_quality_qi_absorption_pill");
+
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.LOW_QUALITY_BODY_CULTIVATION_PILL.get())
+            .input1(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.5)
+            .unlockedBy("has_low_quality_spirit_stone", helper.has(ICModItems.LOW_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "low_quality_body_absorption_pill");
+
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL.get())
+            .input1(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.4)
+            .unlockedBy("has_medium_quality_spirit_stone", helper.has(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "medium_quality_qi_absorption_pill");
+
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL.get())
+            .input1(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.4)
+            .unlockedBy("has_medium_quality_spirit_stone", helper.has(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "medium_quality_body_absorption_pill");
+
+
 
         /*
-        // Qi Absorption Pills
-        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.QI_GATHERING_PILL.get())
-            .input1(ICModItems.SPIRIT_HERB.get(), 2)
-            .input2(ICModItems.MOON_LOTUS_PETAL.get())
-            .input3(Items.GLOWSTONE_DUST)
-            .requiresSpiritStone(true)
-            .successChance(0.7)
-            .unlockedBy("has_spirit_herb", helper.has(ICModItems.SPIRIT_HERB.get()))
-            .save(recipeOutput, "qi_gathering_pill");
-
         // Healing Pill - simpler recipe with only one input
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.HEALING_PILL.get(), 2)
             .input1(ICModItems.BLOOD_GINSENG.get(), 3)

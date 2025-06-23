@@ -40,7 +40,7 @@ public record QiCultivationSyncPacket(long qiCultivation) implements CustomPacke
                 }
 
                 Minecraft.getInstance().player.sendSystemMessage(
-                    Component.literal("§6[DEBUG] Client received: " + msg.qiCultivation));
+                    Component.literal("§6[DEBUG] [QiCultivation] Client received: " + msg.qiCultivation));
 
             });
         }
