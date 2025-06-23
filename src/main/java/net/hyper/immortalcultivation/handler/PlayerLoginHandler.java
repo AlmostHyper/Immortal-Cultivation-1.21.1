@@ -294,6 +294,20 @@ public class PlayerLoginHandler {
             ImmortalCultivation.LOGGER.info("Force syncing all cultivation data for player {}",
                 player.getName().getString());
 
+            // FIXED: Sync spiritual roots (this was missing!)
+            PlayerSpiritualRootAttachment rootAttachment = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            if (rootAttachment != null) {
+                rootAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Synced spiritual roots for player {}", player.getName().getString());
+            }
+
+            // FIXED: Sync physique (this was missing!)
+            PlayerPhysiqueAttachment physiqueAttachment = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
+            if (physiqueAttachment != null) {
+                physiqueAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Synced physique for player {}", player.getName().getString());
+            }
+
             // Sync realm data
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment != null) {
@@ -334,16 +348,14 @@ public class PlayerLoginHandler {
                 healthAttachment.forceSync();
             }
 
-            // NOTE: Spiritual roots and physique don't have forceSync methods
-            // This is likely why they show as unassigned on the client
-            // You'll need to create sync packets for these attachments similar to the others
-
-            ImmortalCultivation.LOGGER.warn("WARNING: Spiritual roots and physique attachments do not have sync methods!");
-            ImmortalCultivation.LOGGER.warn("Client will not receive these values properly without sync implementation.");
+            ImmortalCultivation.LOGGER.info("Successfully synced all cultivation data for player {}",
+                player.getName().getString());
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error force syncing data for player {}",
                 player.getName().getString(), e);
         }
     }
+
+
 }

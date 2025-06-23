@@ -149,10 +149,9 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
             .add(ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
             .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get())
             .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
+            .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get());
 
             // Ores
-            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_NETHERITE_TOOL)
             // Spirit Stones

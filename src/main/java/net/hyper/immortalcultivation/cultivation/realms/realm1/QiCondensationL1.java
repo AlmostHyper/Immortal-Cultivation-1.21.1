@@ -25,7 +25,7 @@ public class QiCondensationL1 extends CultivationRealm {
     private static final String CULTIVATION_STAGE = "Qi Condensation";
 
     private static final long BASE_HEALTH = 25;
-    private static final double BASE_HEALTH_REGEN = 0.1;
+    private static final double BASE_HEALTH_REGEN = 0.01;
     private static final double BASE_ATTACK_DAMAGE = 1.1;
     private static final double BASE_MOVEMENT_SPEED = 0.05;
     private static final double BASE_JUMP_HEIGHT = 0.1;
@@ -33,7 +33,7 @@ public class QiCondensationL1 extends CultivationRealm {
     private static final long BASE_MAX_QI = 10;
     private static final double BASE_QI_REGEN_RATE = 1.0;
 
-    private static final long BASE_MAX_CULTIVATION = 200;
+    private static final long BASE_MAX_CULTIVATION = 300;
     private static final double BASE_CULTIVATION_RATE = 0.01;
 
     // === Core Identification ===
@@ -128,8 +128,14 @@ public class QiCondensationL1 extends CultivationRealm {
         return List.of(
             this,
             ICModCultivationRealms.QI_CONDENSATION_L2,
-            ICModCultivationRealms.QI_CONDENSATION_L3
-            // Add more layers as they're implemented
+            ICModCultivationRealms.QI_CONDENSATION_L3,
+            ICModCultivationRealms.QI_CONDENSATION_L4,
+            ICModCultivationRealms.QI_CONDENSATION_L5,
+            ICModCultivationRealms.QI_CONDENSATION_L6,
+            ICModCultivationRealms.QI_CONDENSATION_L7,
+            ICModCultivationRealms.QI_CONDENSATION_L8,
+            ICModCultivationRealms.QI_CONDENSATION_L9,
+            ICModCultivationRealms.QI_CONDENSATION_L10
         );
     }
 

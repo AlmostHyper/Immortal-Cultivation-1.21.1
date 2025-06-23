@@ -93,6 +93,22 @@ public class PlayerRespawnHandler {
         try {
             // Force sync all attachments with proper player context
 
+            // FIXED: Sync spiritual roots (this was missing!)
+            PlayerSpiritualRootAttachment rootAttachment = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            if (rootAttachment != null) {
+                rootAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Resynced spiritual roots after respawn for player {}",
+                    player.getName().getString());
+            }
+
+            // FIXED: Sync physique (this was missing!)
+            PlayerPhysiqueAttachment physiqueAttachment = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
+            if (physiqueAttachment != null) {
+                physiqueAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Resynced physique after respawn for player {}",
+                    player.getName().getString());
+            }
+
             PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
             if (healthAttachment != null) {
                 healthAttachment.forceSync();
@@ -113,16 +129,6 @@ public class PlayerRespawnHandler {
                 realmAttachment.forceSync();
             }
 
-            PlayerSpiritualRootAttachment rootAttachment = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
-            if (rootAttachment != null) {
-                rootAttachment.forceSync();
-            }
-
-            PlayerPhysiqueAttachment physiqueAttachment = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
-            if (physiqueAttachment != null) {
-                physiqueAttachment.forceSync();
-            }
-
             PlayerQiCultivationAttachment qiCultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
             if (qiCultivationAttachment != null) {
                 qiCultivationAttachment.forceSync();
@@ -137,6 +143,9 @@ public class PlayerRespawnHandler {
             if (focusAttachment != null) {
                 focusAttachment.forceSync();
             }
+
+            ImmortalCultivation.LOGGER.info("Successfully resynced all attachments after respawn for player {}",
+                player.getName().getString());
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error syncing attachments for player {}",

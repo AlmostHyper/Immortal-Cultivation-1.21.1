@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.ui.screens.CultivationStatsScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -35,13 +36,23 @@ public record CultivationFocusSyncPacket(long cultivationFocus) implements Custo
                 if (player != null) {
                     var cultivationFocus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
                     if (cultivationFocus != null) {
+                        boolean oldFocus = cultivationFocus.isFocusedOnQi();
+
+                        // Update focus from server
                         cultivationFocus.updateFromServer(msg.cultivationFocus);
+
+                        boolean newFocus = cultivationFocus.isFocusedOnQi();
+
+                        ImmortalCultivation.LOGGER.info("Client received focus update: {} cultivation",
+                            newFocus ? "Qi" : "Body");
+
+                        // CRITICAL: Refresh GUI if focus changed and CultivationStatsScreen is open
+                        if (oldFocus != newFocus && mc.screen instanceof CultivationStatsScreen statsScreen) {
+                            ImmortalCultivation.LOGGER.info("Refreshing CultivationStatsScreen after focus change");
+                            statsScreen.init(); // This will rebuild the GUI with new focus state
+                        }
                     }
                 }
-
-                Minecraft.getInstance().player.sendSystemMessage(
-                    Component.literal("§6[DEBUG] [CultivationFocus] Client received: " + msg.cultivationFocus));
-
             });
         }
     }

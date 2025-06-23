@@ -25,15 +25,15 @@ public class QiCondensationL2 extends CultivationRealm {
     private static final String CULTIVATION_STAGE = "Qi Condensation";
 
     private static final long BASE_HEALTH = 30;
-    private static final double BASE_HEALTH_REGEN = 0.15;
+    private static final double BASE_HEALTH_REGEN = 0.015;
     private static final double BASE_ATTACK_DAMAGE = 1.15;
     private static final double BASE_MOVEMENT_SPEED = 0.1;
     private static final double BASE_JUMP_HEIGHT = 0.15;
 
     private static final long BASE_MAX_QI = 20;
-    private static final double BASE_QI_REGEN_RATE = 1.5;
+    private static final double BASE_QI_REGEN_RATE = 1.1;
 
-    private static final long BASE_MAX_CULTIVATION = 400;
+    private static final long BASE_MAX_CULTIVATION = 500;
     private static final double BASE_CULTIVATION_RATE = 0.015;
 
     // === Core Identification ===
@@ -126,8 +126,16 @@ public class QiCondensationL2 extends CultivationRealm {
     public List<CultivationRealm> getCultivationRealmGroup() {
         // All Qi Condensation layers belong together
         return List.of(
+            ICModCultivationRealms.QI_CONDENSATION_L1,
             this,
-            ICModCultivationRealms.QI_CONDENSATION_L3
+            ICModCultivationRealms.QI_CONDENSATION_L3,
+            ICModCultivationRealms.QI_CONDENSATION_L4,
+            ICModCultivationRealms.QI_CONDENSATION_L5,
+            ICModCultivationRealms.QI_CONDENSATION_L6,
+            ICModCultivationRealms.QI_CONDENSATION_L7,
+            ICModCultivationRealms.QI_CONDENSATION_L8,
+            ICModCultivationRealms.QI_CONDENSATION_L9,
+            ICModCultivationRealms.QI_CONDENSATION_L10
         );
     }
 
@@ -203,12 +211,7 @@ public class QiCondensationL2 extends CultivationRealm {
                     Component.literal("Congratulations! You have stepped into the 2nd Layer of Qi Condensation!")
                         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
                 );
-                serverPlayer.sendSystemMessage(
-                    Component.literal("Spiritual energy flows through your meridians. The path of immortality has begun!")
-                        .withStyle(ChatFormatting.YELLOW)
-                );
             } else {
-                // Message for returning or other transitions
                 serverPlayer.sendSystemMessage(
                     Component.literal("You have entered the 2nd Layer of Qi Condensation through Qi cultivation.")
                         .withStyle(ChatFormatting.GOLD)
@@ -248,10 +251,6 @@ public class QiCondensationL2 extends CultivationRealm {
                 serverPlayer.sendSystemMessage(
                     Component.literal("Congratulations! You have achieved the 2nd Layer of Qi Condensation through Body Tempering!")
                         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-                );
-                serverPlayer.sendSystemMessage(
-                    Component.literal("Your tempered body generates its own spiritual energy. A unique path unfolds!")
-                        .withStyle(ChatFormatting.YELLOW)
                 );
             } else {
                 // Message for returning or other transitions
@@ -376,23 +375,6 @@ public class QiCondensationL2 extends CultivationRealm {
                 0.3,
                 0.02
             );
-        }
-    }
-
-    // === Special Methods ===
-
-    /**
-     * Get a tip for new cultivators at this realm
-     * @param isQiPath Whether the player reached this via Qi cultivation
-     * @return Helpful tip component
-     */
-    public Component getCultivationTip(boolean isQiPath) {
-        if (isQiPath) {
-            return Component.literal("Tip: Meditate regularly to accumulate Qi faster. Find quiet places for better results.")
-                .withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY);
-        } else {
-            return Component.literal("Tip: Physical training while meditating can enhance your body cultivation progress.")
-                .withStyle(ChatFormatting.ITALIC, ChatFormatting.GRAY);
         }
     }
 }

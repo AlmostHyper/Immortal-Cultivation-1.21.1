@@ -407,6 +407,15 @@ public class PlayerRealmAttachment {
         // In a full system, you'd iterate through all registered realms
         if (level == 0) return ICModCultivationRealms.MORTAL;
         if (level == 1) return ICModCultivationRealms.QI_CONDENSATION_L1;
+        if (level == 2) return ICModCultivationRealms.QI_CONDENSATION_L2;
+        if (level == 3) return ICModCultivationRealms.QI_CONDENSATION_L3;
+        if (level == 4) return ICModCultivationRealms.QI_CONDENSATION_L4;
+        if (level == 5) return ICModCultivationRealms.QI_CONDENSATION_L5;
+        if (level == 6) return ICModCultivationRealms.QI_CONDENSATION_L6;
+        if (level == 7) return ICModCultivationRealms.QI_CONDENSATION_L7;
+        if (level == 8) return ICModCultivationRealms.QI_CONDENSATION_L8;
+        if (level == 9) return ICModCultivationRealms.QI_CONDENSATION_L9;
+
         // Add more realm mappings as needed
 
         // Fallback to current realm if not found
@@ -672,20 +681,12 @@ public class PlayerRealmAttachment {
         double cultivationPercentage;
         if (cultivationType == CultivationType.QI) {
             IQiCultivationData qiData = foundPlayer.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
-            cultivationPercentage = qiData != null ? qiData.getQiCultivationPercentage() : 0.0;
         } else {
             IBodyCultivationData bodyData = foundPlayer.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
-            cultivationPercentage = bodyData != null ? bodyData.getBodyCultivationPercentage() : 0.0;
         }
 
-        // Bonus for high cultivation percentage (only if above 80%)
-        double cultivationBonus = Math.max(0, (cultivationPercentage - 0.8) * 0.20);
 
-        // Penalty based on previous attempts (diminishing returns)
-        long attempts = cultivationType == CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts;
-        double attemptPenalty = Math.min(attempts * 0.05, 0.3);
-
-        return Math.max(0.10, Math.min(1.0, baseChance + cultivationBonus - attemptPenalty));
+        return Math.max(0.10, Math.min(1.0, baseChance));
     }
 
     /**

@@ -16,10 +16,12 @@ public record PhysiqueSyncPacket(int physique, boolean hasBeenAssigned) implemen
     public static final Type<PhysiqueSyncPacket> ID =
         new Type<>(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "physique_data"));
 
+    // FIXED: Now properly encodes/decodes both parameters
     public static final StreamCodec<RegistryFriendlyByteBuf, PhysiqueSyncPacket> STREAM_CODEC =
         StreamCodec.composite(
             ByteBufCodecs.VAR_INT, PhysiqueSyncPacket::physique,
-            physique1 -> new PhysiqueSyncPacket(physique1, false)
+            ByteBufCodecs.BOOL, PhysiqueSyncPacket::hasBeenAssigned,
+            PhysiqueSyncPacket::new
         );
 
     @Override
@@ -35,13 +37,13 @@ public record PhysiqueSyncPacket(int physique, boolean hasBeenAssigned) implemen
                 if (player != null) {
                     var physique = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
                     if (physique != null) {
-                        physique.updateFromServer(msg.physique, physique.hasBeenAssigned());
+                        // FIXED: Now uses the hasBeenAssigned from the packet, not the current client state
+                        physique.updateFromServer(msg.physique, msg.hasBeenAssigned);
+
+                        ImmortalCultivation.LOGGER.debug("Client updated physique: ordinal={}, assigned={}",
+                            msg.physique, msg.hasBeenAssigned);
                     }
                 }
-
-                Minecraft.getInstance().player.sendSystemMessage(
-                    Component.literal("§6[DEBUG] Client received: " + msg.physique));
-
             });
         }
     }

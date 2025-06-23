@@ -31,14 +31,18 @@ public class ImmortalCultivation
 
         NeoForge.EVENT_BUS.register(this);
 
-        ICModBlocks.REGISTRY.register(modEventBus);
-        ICModItems.REGISTRY.register(modEventBus);
+        ICModBlocks.register(modEventBus);
+        ICModItems.register(modEventBus);
 
-        ICModTabs.REGISTRY.register(modEventBus);
-        ICModArmorMaterials.REGISTRY.register(modEventBus);
+        ICModBlockEntities.register(modEventBus);
 
-        ICModAttributes.REGISTRY.register(modEventBus);
-        ICModAttachmentTypes.REGISTRY.register(modEventBus);
+        ICModTabs.register(modEventBus);
+        ICModArmorMaterials.register(modEventBus);
+
+        ICModAttributes.register(modEventBus);
+        ICModAttachmentTypes.register(modEventBus);
+        ICModMenuTypes.register(modEventBus);
+        ICModRecipes.register(modEventBus);
 
         NeoForge.EVENT_BUS.register(CultivationTickHandler.class);
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us

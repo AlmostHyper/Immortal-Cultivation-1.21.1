@@ -78,6 +78,10 @@ public class ICModBlockLootTableProvider extends BlockLootSubProvider {
         // Wood Plants
         add(ICModBlocks.BLUE_WOOD_ROOTS_CROP_BLOCK.get(), block -> createCropDrops(ICModBlocks.BLUE_WOOD_ROOTS_CROP_BLOCK.get(), ICModItems.BLUE_WOOD_ROOTS.get(), ICModItems.BLUE_WOOD_ROOTS.get(), createMatureCropCondition(ICModBlocks.BLUE_WOOD_ROOTS_CROP_BLOCK.get(), WoodCropBlock.AGE)));
 
+        // === CRAFTING === //
+
+        // Pill Furnaces
+        dropSelf(ICModBlocks.PILL_FURNACE_BLOCK.get());
     }
 
     // == Helper Methods == //

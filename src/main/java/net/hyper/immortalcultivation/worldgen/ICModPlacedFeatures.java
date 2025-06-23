@@ -41,12 +41,12 @@ public class ICModPlacedFeatures {
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, HIGH_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_HIGH_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.rareOrePlacement(50,
+            ICModOrePlacements.commonOrePlacement(1,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0))));
 
         register(context, TOP_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_TOP_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.rareOrePlacement(19,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(-54))));
+            ICModOrePlacements.rareOrePlacement(50,
+                HeightRangePlacement.triangle(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(-54))));
 
         // === Elemental === //
 
@@ -67,8 +67,8 @@ public class ICModPlacedFeatures {
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, SKY_IRON_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_SKY_IRON_ORE_KEY),
-            ICModOrePlacements.rareOrePlacement(20,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(384), VerticalAnchor.absolute(150))));
+            ICModOrePlacements.commonOrePlacement(9,
+                HeightRangePlacement.uniform(VerticalAnchor.absolute(150), VerticalAnchor.absolute(384))));
 
     }
 

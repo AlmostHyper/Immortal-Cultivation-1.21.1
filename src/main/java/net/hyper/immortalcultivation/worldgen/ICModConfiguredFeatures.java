@@ -92,7 +92,7 @@ public class ICModConfiguredFeatures {
         register(context, OVERWORLD_FIRE_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldFireOres, 5));
         register(context, OVERWORLD_METAL_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMetalOres, 5));
         register(context, OVERWORLD_WATER_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWaterOres, 5));
-        register(context, OVERWORLD_SKY_IRON_ORE_KEY, Feature.ORE, new OreConfiguration(overworldSkyIronOres, 2));
+        register(context, OVERWORLD_SKY_IRON_ORE_KEY, Feature.ORE, new OreConfiguration(overworldSkyIronOres, 9));
     }
 
     public static ResourceKey<ConfiguredFeature<?, ?>> registerKey(String name) {

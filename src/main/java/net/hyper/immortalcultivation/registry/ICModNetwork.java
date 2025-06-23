@@ -114,6 +114,12 @@ public class ICModNetwork {
         );
 
         REGISTRY.playToServer(
+            CultivationFocusTogglePacket.ID,
+            CultivationFocusTogglePacket.STREAM_CODEC,
+            CultivationFocusTogglePacket::handleServer
+        );
+
+        REGISTRY.playToServer(
             CultivationBreakthroughRequestPacket.ID,
             CultivationBreakthroughRequestPacket.STREAM_CODEC,
             CultivationBreakthroughRequestPacket::handleServer

@@ -3,7 +3,9 @@ package net.hyper.immortalcultivation.ui.screens;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.network.CultivationFocusTogglePacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -150,7 +152,7 @@ public class CultivationStatsScreen extends Screen {
     }
 
     @Override
-    protected void init() {
+    public void init() {
         super.init();
 
         // [Your existing initialization logic remains unchanged]
@@ -645,8 +647,18 @@ public class CultivationStatsScreen extends Screen {
 
     private void switchCultivationFocus() {
         if (focusAttachment != null && focusAttachment.canSwitchFocus()) {
-            focusAttachment.toggleFocus();
-            init();
+            ImmortalCultivation.LOGGER.info("Client requesting focus toggle from {} to {} cultivation",
+                focusAttachment.getCurrentFocus().getDisplayName(),
+                focusAttachment.isFocusedOnQi() ? "Body" : "Qi");
+
+            // CRITICAL FIX: Send packet to server instead of changing client-side focus
+            ICModNetwork.sendToServer(new CultivationFocusTogglePacket());
+
+            // Don't call init() immediately - wait for server to sync back the change
+            // The server will sync the new focus state back to client via CultivationFocusSyncPacket
+            // which will trigger a GUI refresh when received
+        } else {
+            ImmortalCultivation.LOGGER.info("Cannot switch focus - cooldown active or focus attachment missing");
         }
     }
 

@@ -1,5 +1,7 @@
 package net.hyper.immortalcultivation.registry;
 
+import net.hyper.immortalcultivation.block.crafting.IronPillFurnaceBlock;
+import net.hyper.immortalcultivation.block.crafting.PillFurnaceBlock;
 import net.hyper.immortalcultivation.block.crops.*;
 import net.hyper.immortalcultivation.block.metals.*;
 import net.hyper.immortalcultivation.block.spirit_stones.*;
@@ -59,6 +61,10 @@ public class ICModBlocks {
     // Wood Plants
     public static final DeferredBlock<Block> BLUE_WOOD_ROOTS_CROP_BLOCK;
 
+    // === CRAFTING === //
+
+    // Pill Furnaces
+    public static final DeferredBlock<Block> PILL_FURNACE_BLOCK;
 
 
     static {
@@ -106,7 +112,10 @@ public class ICModBlocks {
         //  Plants
         BLUE_WOOD_ROOTS_CROP_BLOCK = registerBlockWithItem("blue_wood_roots_crop_block", WoodCropBlock.BLUE_WOOD_ROOTS());
 
+        // === CRAFTING === //
 
+        // Pill Furnaces
+        PILL_FURNACE_BLOCK = registerBlockWithItem("pill_furnace_block", PillFurnaceBlock.PILL_FURNACE_BLOCK());
     }
 
     private static DeferredBlock<Block> registerBlockWithItem(String name, Supplier<? extends Block> blockSupplier, Item.Properties itemProperties) {

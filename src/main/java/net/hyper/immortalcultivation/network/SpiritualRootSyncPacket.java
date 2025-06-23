@@ -16,10 +16,12 @@ public record SpiritualRootSyncPacket(int spiritualRoot, boolean hasBeenAssigned
     public static final Type<SpiritualRootSyncPacket> ID =
         new Type<>(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "spiritual_root_data"));
 
+    // FIXED: Now properly encodes/decodes both parameters
     public static final StreamCodec<RegistryFriendlyByteBuf, SpiritualRootSyncPacket> STREAM_CODEC =
         StreamCodec.composite(
             ByteBufCodecs.VAR_INT, SpiritualRootSyncPacket::spiritualRoot,
-            spiritualRoot1 -> new SpiritualRootSyncPacket(spiritualRoot1, false)
+            ByteBufCodecs.BOOL, SpiritualRootSyncPacket::hasBeenAssigned,
+            SpiritualRootSyncPacket::new
         );
 
     @Override
@@ -35,13 +37,13 @@ public record SpiritualRootSyncPacket(int spiritualRoot, boolean hasBeenAssigned
                 if (player != null) {
                     var spiritualRoot = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
                     if (spiritualRoot != null) {
-                        spiritualRoot.updateFromServer(msg.spiritualRoot, spiritualRoot.hasBeenAssigned());
+                        // FIXED: Now uses the hasBeenAssigned from the packet, not the current client state
+                        spiritualRoot.updateFromServer(msg.spiritualRoot, msg.hasBeenAssigned);
+
+                        ImmortalCultivation.LOGGER.debug("Client updated spiritual root: ordinal={}, assigned={}",
+                            msg.spiritualRoot, msg.hasBeenAssigned);
                     }
                 }
-
-                Minecraft.getInstance().player.sendSystemMessage(
-                    Component.literal("§6[DEBUG] Client received: " + msg.spiritualRoot));
-
             });
         }
     }
