@@ -18,6 +18,7 @@ public class ICModAttachmentTypes {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerCultivationBonusAttachment>> PLAYER_CULTIVATION_BONUS;
 
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerHealthAttachment>> PLAYER_HEALTH;
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerCombatStatsAttachment>> PLAYER_COMBAT_STATS;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerQiAttachment>> PLAYER_QI;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerBodyAttachment>> PLAYER_BODY;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerSpiritualRootAttachment>> PLAYER_SPIRITUAL_ROOT;
@@ -31,6 +32,7 @@ public class ICModAttachmentTypes {
         PLAYER_CULTIVATION_BONUS = REGISTRY.register("player_cultivation_bonus", () -> AttachmentType.builder(() -> new PlayerCultivationBonusAttachment()).serialize(PlayerCultivationBonusAttachment.CODEC).copyOnDeath().build());
 
         PLAYER_HEALTH = REGISTRY.register("player_health", () -> AttachmentType.builder(() -> new PlayerHealthAttachment()).serialize(PlayerHealthAttachment.CODEC).copyOnDeath().build());
+        PLAYER_COMBAT_STATS = REGISTRY.register("player_combat_stats", () -> AttachmentType.builder(() -> new PlayerCombatStatsAttachment()).serialize(PlayerCombatStatsAttachment.CODEC).copyOnDeath().build());
         PLAYER_QI = REGISTRY.register("player_qi", () -> AttachmentType.builder(() -> new PlayerQiAttachment()).serialize(PlayerQiAttachment.CODEC).copyOnDeath().build());
         PLAYER_BODY = REGISTRY.register("player_body", () -> AttachmentType.builder(() -> new PlayerBodyAttachment()).serialize(PlayerBodyAttachment.CODEC).copyOnDeath().build());
         PLAYER_SPIRITUAL_ROOT = REGISTRY.register("player_spiritual_root", () -> AttachmentType.builder(() -> new PlayerSpiritualRootAttachment()).serialize(PlayerSpiritualRootAttachment.CODEC).copyOnDeath().build());

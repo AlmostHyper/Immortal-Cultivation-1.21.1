@@ -1,25 +1,18 @@
 package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerBodyCultivationAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerQiAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerBodyAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerCultivationFocusAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
+import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-import net.hyper.immortalcultivation.attachment.PlayerSpiritualRootAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerPhysiqueAttachment;
 import net.neoforged.fml.common.EventBusSubscriber;
 
 /**
  * Handles all cultivation-related ticking for players.
- * This includes both Qi and Body cultivation paths, as well as meditation detection
- * and resource regeneration for the dual cultivation system.
+ * This includes both Qi and Body cultivation paths, as well as meditation detection,
+ * resource regeneration, and bonus management for the dual cultivation system.
  */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class CultivationTickHandler {
@@ -33,6 +26,9 @@ public class CultivationTickHandler {
         // Process all cultivation attachments - they handle their own logic now
         tickCultivationAttachments(serverPlayer);
 
+        // Process cultivation bonus attachment for sync management
+        tickCultivationBonus(serverPlayer);
+
         // Process meditation detection for both cultivation types
         processMeditationDetection(serverPlayer);
 
@@ -44,6 +40,9 @@ public class CultivationTickHandler {
 
         // Tick the cultivation focus attachment
         tickCultivationFocus(serverPlayer);
+
+        // Tick combat stats attachment
+        tickCombatStats(serverPlayer);
     }
 
     /**
@@ -65,6 +64,22 @@ public class CultivationTickHandler {
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error ticking cultivation attachments for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Tick cultivation bonus attachment for periodic sync management and internal logic.
+     * This ensures that pill bonuses are properly maintained and synced to the client.
+     */
+    private static void tickCultivationBonus(ServerPlayer player) {
+        try {
+            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonusAttachment != null) {
+                bonusAttachment.tick();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error ticking cultivation bonus attachment for player {}",
                 player.getName().getString(), e);
         }
     }
@@ -158,6 +173,22 @@ public class CultivationTickHandler {
     }
 
     /**
+     * Tick combat stats attachment for sync management and internal logic.
+     * This ensures that combat bonuses are properly maintained and synced to the client.
+     */
+    private static void tickCombatStats(ServerPlayer player) {
+        try {
+            PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            if (combatStatsAttachment != null) {
+                combatStatsAttachment.tick();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error ticking combat stats attachment for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
      * Determine if a player is in meditation posture.
      * Meditation requires the player to be crouching and relatively stationary.
      * This is used by both Qi and Body cultivation for enhanced cultivation rates.
@@ -210,6 +241,26 @@ public class CultivationTickHandler {
             PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
             if (focus != null) {
                 debug.append("Cultivation Focus: ").append(focus.getCurrentFocus().getDisplayName()).append("\n");
+            }
+
+            // ADDED: Cultivation bonus info
+            PlayerCultivationBonusAttachment bonus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonus != null) {
+                debug.append("Cultivation Bonuses:\n");
+                debug.append("  - Qi Additive: +").append(String.format("%.3f", bonus.getQiCultivationRawAdditiveBonus())).append("/sec\n");
+                debug.append("  - Body Additive: +").append(String.format("%.3f", bonus.getBodyCultivationRawAdditiveBonus())).append("/sec\n");
+                debug.append("  - Qi Multiplicative: ").append(String.format("%.1fx", bonus.getQiCultivationMultiplicativeBonus())).append("\n");
+                debug.append("  - Body Multiplicative: ").append(String.format("%.1fx", bonus.getBodyCultivationMultiplicativeBonus())).append("\n");
+            }
+
+            // Combat stats info
+            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            if (combatStats != null) {
+                debug.append("Combat Stats:\n");
+                debug.append("  - Attack Damage: +").append(String.format("%.1f", combatStats.getAttackDamageBonus() * 100)).append("%\n");
+                debug.append("  - Movement Speed: +").append(String.format("%.1f", combatStats.getMovementSpeedBonus() * 100)).append("%\n");
+                debug.append("  - Jump Height: +").append(String.format("%.1f", combatStats.getJumpHeightBonus() * 100)).append("%\n");
+                debug.append("  - Total Score: ").append(String.format("%.1f", combatStats.getTotalBonusScore())).append("\n");
             }
 
             // Meditation state

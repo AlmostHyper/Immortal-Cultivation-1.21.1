@@ -35,6 +35,8 @@ public class PlayerLoginHandler {
             initializePhysique(player);
             initializeRealms(player);
             initializeCultivationFocus(player);
+            initializeCultivationBonus(player);
+            initializeCombatStats(player);
             initializeQiCultivation(player);
             initializeBodyCultivation(player);
             initializeResources(player);
@@ -202,6 +204,59 @@ public class PlayerLoginHandler {
     }
 
     /**
+     * Initialize cultivation bonus attachment.
+     * This manages permanent cultivation rate bonuses from consumed pills and other sources.
+     * Bonuses persist through death and logout/login cycles.
+     */
+    private static void initializeCultivationBonus(ServerPlayer player) {
+        try {
+            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonusAttachment != null) {
+                // Log current bonus state for debugging
+                ImmortalCultivation.LOGGER.info("Player {} cultivation bonuses initialized - Qi additive: +{}/sec, Body additive: +{}/sec",
+                    player.getName().getString(),
+                    String.format("%.3f", bonusAttachment.getQiCultivationRawAdditiveBonus()),
+                    String.format("%.3f", bonusAttachment.getBodyCultivationRawAdditiveBonus()));
+
+                // Note: We don't reset bonuses here since they should persist through logout/login
+                // The attachment preserves all consumed pill bonuses automatically
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null cultivation bonus attachment!",
+                    player.getName().getString());
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error initializing cultivation bonus for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Initialize combat stats attachment for tracking attack damage, movement speed, and jump height bonuses.
+     * This manages permanent bonuses from cultivation that persist through death and logout.
+     */
+    private static void initializeCombatStats(ServerPlayer player) {
+        try {
+            PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            if (combatStatsAttachment != null) {
+                // IMPORTANT: Set player reference for calculations (CODEC doesn't handle this)
+                combatStatsAttachment.setPlayer(player);
+
+                ImmortalCultivation.LOGGER.info("Player {} combat stats initialized - ATK: +{}%, SPD: +{}%, JUMP: +{}%",
+                    player.getName().getString(),
+                    String.format("%.1f", combatStatsAttachment.getAttackDamageBonus() * 100),
+                    String.format("%.1f", combatStatsAttachment.getMovementSpeedBonus() * 100),
+                    String.format("%.1f", combatStatsAttachment.getJumpHeightBonus() * 100));
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null combat stats attachment!",
+                    player.getName().getString());
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error initializing combat stats for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
      * Initialize Qi cultivation attachment.
      * This handles the permanent Qi cultivation progress that determines
      * breakthrough eligibility and provides bonuses.
@@ -320,6 +375,21 @@ public class PlayerLoginHandler {
                 focusAttachment.forceSync();
             }
 
+            // ADDED: Sync cultivation bonus attachment
+            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonusAttachment != null) {
+                bonusAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Synced cultivation bonuses for player {}", player.getName().getString());
+            }
+
+            // Sync combat stats
+            PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            if (combatStatsAttachment != null) {
+                combatStatsAttachment.setPlayer(player); // IMPORTANT: Set player reference after CODEC loading
+                combatStatsAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Synced combat stats for player {}", player.getName().getString());
+            }
+
             // Sync Qi cultivation
             PlayerQiCultivationAttachment qiCultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
             if (qiCultivationAttachment != null) {
@@ -356,6 +426,5 @@ public class PlayerLoginHandler {
                 player.getName().getString(), e);
         }
     }
-
 
 }

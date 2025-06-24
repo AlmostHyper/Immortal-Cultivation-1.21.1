@@ -264,16 +264,16 @@ public class ICModItems {
         // === PILLS === //
 
         // Qi Cultivation Pills
-        LOW_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("low_quality_qi_cultivation_pill", CultivationPillItems.LOW_QUALITY_QI_CULTIVATION_PILL());
-        MEDIUM_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("medium_quality_qi_cultivation_pill", CultivationPillItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL());
-        HIGH_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("high_quality_qi_cultivation_pill", CultivationPillItems.HIGH_QUALITY_QI_CULTIVATION_PILL());
-        TOP_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("top_quality_qi_cultivation_pill", CultivationPillItems.TOP_QUALITY_QI_CULTIVATION_PILL());
+        LOW_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("low_quality_qi_absorption_pill", CultivationPillItems.LOW_QUALITY_QI_CULTIVATION_PILL());
+        MEDIUM_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("medium_quality_qi_absorption_pill", CultivationPillItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL());
+        HIGH_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("high_quality_qi_absorption_pill", CultivationPillItems.HIGH_QUALITY_QI_CULTIVATION_PILL());
+        TOP_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("top_quality_qi_absorption_pill", CultivationPillItems.TOP_QUALITY_QI_CULTIVATION_PILL());
 
         // Body Cultivation Pills
-        LOW_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("low_quality_body_cultivation_pill", CultivationPillItems.LOW_QUALITY_BODY_CULTIVATION_PILL());
-        MEDIUM_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("medium_quality_body_cultivation_pill", CultivationPillItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL());
-        HIGH_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("high_quality_body_cultivation_pill", CultivationPillItems.HIGH_QUALITY_BODY_CULTIVATION_PILL());
-        TOP_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("top_quality_body_cultivation_pill", CultivationPillItems.TOP_QUALITY_BODY_CULTIVATION_PILL());
+        LOW_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("low_quality_body_absorption_pill", CultivationPillItems.LOW_QUALITY_BODY_CULTIVATION_PILL());
+        MEDIUM_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("medium_quality_body_absorption_pill", CultivationPillItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL());
+        HIGH_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("high_quality_body_absorption_pill", CultivationPillItems.HIGH_QUALITY_BODY_CULTIVATION_PILL());
+        TOP_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("top_quality_body_absorption_pill", CultivationPillItems.TOP_QUALITY_BODY_CULTIVATION_PILL());
 
     }
 

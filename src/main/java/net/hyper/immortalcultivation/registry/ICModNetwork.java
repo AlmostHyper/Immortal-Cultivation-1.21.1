@@ -64,6 +64,12 @@ public class ICModNetwork {
         );
 
         REGISTRY.playToClient(
+            CombatStatsSyncPacket.ID,
+            CombatStatsSyncPacket.STREAM_CODEC,
+            CombatStatsSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
             HealthSyncPacket.ID,
             HealthSyncPacket.STREAM_CODEC,
             HealthSyncPacket::handleClient
@@ -135,6 +141,12 @@ public class ICModNetwork {
             CultivationBreakthroughRequestPacket.ID,
             CultivationBreakthroughRequestPacket.STREAM_CODEC,
             CultivationBreakthroughRequestPacket::handleServer
+        );
+
+        REGISTRY.playToServer(
+            CombatStatsRequestPacket.ID,
+            CombatStatsRequestPacket.STREAM_CODEC,
+            CombatStatsRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(

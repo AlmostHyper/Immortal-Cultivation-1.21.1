@@ -44,7 +44,14 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
             // Deepslate Ores
             .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+
+            // === CRAFTING === //
+
+            // Pill Furnaces
+            .add(ICModBlocks.PILL_FURNACE_BLOCK.get());
+
+
 
         tag(BlockTags.INCORRECT_FOR_WOODEN_TOOL)
             // Spirit Stones

@@ -3,10 +3,14 @@ package net.hyper.immortalcultivation.datagen;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.block.crops.*;
 import net.hyper.immortalcultivation.registry.ICModBlocks;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.data.PackOutput;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.neoforged.neoforge.client.model.generators.BlockStateProvider;
 import net.neoforged.neoforge.client.model.generators.ConfiguredModel;
@@ -67,7 +71,10 @@ public class ICModBlockStateProvider extends BlockStateProvider {
         // Earth Plants
         makeCrop((CropBlock) ICModBlocks.BLUE_WOOD_ROOTS_CROP_BLOCK.get(), WoodCropBlock.AGE, "blue_wood_roots_stage", "blue_wood_roots_stage");
 
+        // === CRAFTING === //
 
+        // Pill Furnaces
+        pillFurnaceBlock(ICModBlocks.PILL_FURNACE_BLOCK);
     }
 
     private void blockWithItem(DeferredBlock<?> deferredBlock) {
@@ -88,5 +95,60 @@ public class ICModBlockStateProvider extends BlockStateProvider {
             .renderType("cutout"));
 
         return models;
+    }
+
+    private void pillFurnaceBlock(DeferredBlock<?> deferredBlock) {
+        Block block = deferredBlock.get();
+        String blockName = getBlockName(block);
+
+        // Create models for off and on states
+        ModelFile offModel = models().orientable(
+            blockName + "_off",
+            resourceLocation("block/" + blockName + "_side"),
+            resourceLocation("block/" + blockName + "_front_off"),
+            resourceLocation("block/" + blockName + "_top")
+        );
+
+        ModelFile onModel = models().orientable(
+            blockName + "_on",
+            resourceLocation("block/" + blockName + "_side"),
+            resourceLocation("block/" + blockName + "_front_on"),
+            resourceLocation("block/" + blockName + "_top")
+        );
+
+        // Create blockstate variants
+        getVariantBuilder(block)
+            .forAllStates(state -> {
+                // Replace "POWERED" with your actual boolean property name
+                boolean powered = state.getValue(BlockStateProperties.LIT); // or whatever your property is
+                Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+
+                return ConfiguredModel.builder()
+                    .modelFile(powered ? onModel : offModel)
+                    .rotationY(getRotationY(facing))
+                    .build();
+            });
+
+        // Generate item model
+        itemModels().getBuilder(blockName)
+            .parent(offModel);
+    }
+
+    private String getBlockName(Block block) {
+        return BuiltInRegistries.BLOCK.getKey(block).getPath();
+    }
+
+    private int getRotationY(Direction facing) {
+        return switch (facing) {
+            case NORTH -> 0;
+            case EAST -> 90;
+            case SOUTH -> 180;
+            case WEST -> 270;
+            default -> 0;
+        };
+    }
+
+    private ResourceLocation resourceLocation(String path) {
+        return ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, path);
     }
 }

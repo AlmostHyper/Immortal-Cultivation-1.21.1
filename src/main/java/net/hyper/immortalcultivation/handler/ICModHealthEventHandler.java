@@ -23,19 +23,6 @@ import net.neoforged.neoforge.event.entity.living.LivingHealEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-/**
- * FIXED VERSION: Health Event Handler that properly accounts for armor and protection effects
- * NOW WITH: Proper armor durability damage handling for NeoForge 1.21.1 AND damage immunity frames
- *
- * Key fixes:
- * 1. Use LOWEST priority to get damage AFTER armor/enchantment calculations
- * 2. Properly handle all vanilla protection mechanics
- * 3. Add option for manual armor calculation if needed
- * 4. Better fallback behavior when attachment system fails
- * 5. FIXED: Skip vanilla health sync for healing to prevent shake effects
- * 6. NEW: Properly damage armor when taking damage
- * 7. CRITICAL: Respect vanilla damage immunity frames to prevent rapid environmental damage
- */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public class ICModHealthEventHandler {
 

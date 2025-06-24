@@ -109,6 +109,19 @@ public class PlayerRespawnHandler {
                     player.getName().getString());
             }
 
+            // ADDED: Sync cultivation bonus attachment (critical for preserving pill bonuses through death!)
+            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
+            if (bonusAttachment != null) {
+                bonusAttachment.forceSync();
+                ImmortalCultivation.LOGGER.info("Resynced cultivation bonuses after respawn for player {} - Qi: +{}/sec, Body: +{}/sec",
+                    player.getName().getString(),
+                    String.format("%.3f", bonusAttachment.getQiCultivationRawAdditiveBonus()),
+                    String.format("%.3f", bonusAttachment.getBodyCultivationRawAdditiveBonus()));
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null cultivation bonus attachment after respawn!",
+                    player.getName().getString());
+            }
+
             PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
             if (healthAttachment != null) {
                 healthAttachment.forceSync();
@@ -142,6 +155,15 @@ public class PlayerRespawnHandler {
             PlayerCultivationFocusAttachment focusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
             if (focusAttachment != null) {
                 focusAttachment.forceSync();
+            }
+
+            PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            if (combatStatsAttachment != null) {
+                combatStatsAttachment.setPlayer(player); // IMPORTANT: Reset player reference after respawn
+                combatStatsAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Resynced combat stats after respawn for player {}", player.getName().getString());
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null combat stats attachment after respawn!", player.getName().getString());
             }
 
             ImmortalCultivation.LOGGER.info("Successfully resynced all attachments after respawn for player {}",

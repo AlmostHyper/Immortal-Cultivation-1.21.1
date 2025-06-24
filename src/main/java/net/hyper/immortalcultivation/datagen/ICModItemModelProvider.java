@@ -124,6 +124,15 @@ public class ICModItemModelProvider extends ItemModelProvider {
         // Wood Plants
         basicItem(ICModItems.BLUE_WOOD_ROOTS.get());
 
+        // === PILLS === //
+
+        // Qi Cultivation Pills
+        basicItem(ICModItems.LOW_QUALITY_QI_CULTIVATION_PILL.get());
+        basicItem(ICModItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL.get());
+
+        // Body Cultivation Pills
+        basicItem(ICModItems.LOW_QUALITY_BODY_CULTIVATION_PILL.get());
+        basicItem(ICModItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL.get());
 
     }
 }

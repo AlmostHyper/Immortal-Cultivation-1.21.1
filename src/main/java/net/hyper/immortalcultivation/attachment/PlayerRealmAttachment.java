@@ -6,6 +6,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.network.RealmSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
@@ -199,6 +200,13 @@ public class PlayerRealmAttachment {
      */
     public void setCurrentRealm(CultivationType type, CultivationRealm realm) {
         setCurrentRealm(type, realm, true);
+
+        if (findPlayer() instanceof ServerPlayer serverPlayer) {
+            CombatStatsEventHandler.refreshCombatStatsForRealmChange(serverPlayer);
+
+            ImmortalCultivation.LOGGER.info("Combat stats updated after {} realm change to {}",
+                type.getDisplayName(), realm.getDisplayName());
+        };
     }
 
     /**

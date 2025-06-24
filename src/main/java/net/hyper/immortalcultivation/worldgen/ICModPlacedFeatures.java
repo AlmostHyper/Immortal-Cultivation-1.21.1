@@ -51,19 +51,19 @@ public class ICModPlacedFeatures {
         // === Elemental === //
 
         register(context, EARTH_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_EARTH_ASPECTED_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(3,
+            ICModOrePlacements.commonOrePlacement(2,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(0), VerticalAnchor.absolute(31))));
 
         register(context, FIRE_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_FIRE_ASPECTED_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(3,
+            ICModOrePlacements.commonOrePlacement(2,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, METAL_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_METAL_ASPECTED_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(3,
+            ICModOrePlacements.commonOrePlacement(2,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0))));
 
         register(context, WATER_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_WATER_ASPECTED_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(3,
+            ICModOrePlacements.commonOrePlacement(2,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, SKY_IRON_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_SKY_IRON_ORE_KEY),

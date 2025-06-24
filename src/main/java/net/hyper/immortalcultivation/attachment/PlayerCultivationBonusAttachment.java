@@ -215,10 +215,10 @@ public class PlayerCultivationBonusAttachment {
     // === Pill Tier Enum ===
 
     public enum PillTier {
-        LOW_QUALITY(0.001, 0.001), // +0.001 Qi rate, +0.001 Body rate
-        MEDIUM_QUALITY(0.01, 0.01), // +0.01 Qi rate, +0.01 Body rate
-        HIGH_QUALITY(0.1, 0.1), // +0.1 Qi rate, +0.1 Body rate
-        TOP_QUALITY(1.0, 1.0); // +1.0 Qi rate, +1.0 Body rate
+        LOW_QUALITY(0.005, 0.005),
+        MEDIUM_QUALITY(0.02, 0.02),
+        HIGH_QUALITY(0.1, 0.1),
+        TOP_QUALITY(1.0, 1.0);
 
         private final double qiAdditiveBonus;
         private final double bodyAdditiveBonus;

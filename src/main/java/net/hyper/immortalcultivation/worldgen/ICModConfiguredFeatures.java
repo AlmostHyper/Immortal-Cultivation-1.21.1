@@ -85,13 +85,13 @@ public class ICModConfiguredFeatures {
         );
 
         register(context, OVERWORLD_LOW_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldLowQualitySpiritStoneOres, 9));
-        register(context, OVERWORLD_MEDIUM_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMediumQualitySpiritStoneOres, 7));
-        register(context, OVERWORLD_HIGH_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldHighQualitySpiritStoneOres, 5));
-        register(context, OVERWORLD_TOP_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldTopQualitySpiritStoneOres, 3));
-        register(context, OVERWORLD_EARTH_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldEarthOres, 5));
-        register(context, OVERWORLD_FIRE_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldFireOres, 5));
-        register(context, OVERWORLD_METAL_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMetalOres, 5));
-        register(context, OVERWORLD_WATER_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWaterOres, 5));
+        register(context, OVERWORLD_MEDIUM_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMediumQualitySpiritStoneOres, 6));
+        register(context, OVERWORLD_HIGH_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldHighQualitySpiritStoneOres, 4));
+        register(context, OVERWORLD_TOP_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldTopQualitySpiritStoneOres, 2));
+        register(context, OVERWORLD_EARTH_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldEarthOres, 3));
+        register(context, OVERWORLD_FIRE_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldFireOres, 3));
+        register(context, OVERWORLD_METAL_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMetalOres, 3));
+        register(context, OVERWORLD_WATER_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWaterOres, 3));
         register(context, OVERWORLD_SKY_IRON_ORE_KEY, Feature.ORE, new OreConfiguration(overworldSkyIronOres, 9));
     }
 

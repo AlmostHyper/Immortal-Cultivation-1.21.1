@@ -38,10 +38,6 @@ public record BodyCultivationSyncPacket(long bodyCultivation) implements CustomP
                         bodyCultivation.updateFromServer(msg.bodyCultivation);
                     }
                 }
-
-                Minecraft.getInstance().player.sendSystemMessage(
-                    Component.literal("§6[DEBUG] [BodyCultivation] Client received: " + msg.bodyCultivation));
-
             });
         }
     }

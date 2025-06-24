@@ -26,6 +26,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.wrapper.SidedInvWrapper;
+import net.hyper.immortalcultivation.block.crafting.PillFurnaceBlock;
 
 import javax.annotation.Nullable;
 import java.util.Optional;
@@ -151,10 +152,12 @@ public class PillFurnaceBlockEntity extends BaseContainerBlockEntity implements 
             changed = true;
         }
 
+        // In the tick method, replace the comment section with actual implementation:
         // Update block state if lit status changed
         if (wasLit != entity.isLit()) {
             changed = true;
-            // Update block state here if you have a lit property
+            // Update the LIT property in the blockstate
+            level.setBlock(pos, state.setValue(PillFurnaceBlock.LIT, entity.isLit()), 3);
         }
 
         if (changed) {
