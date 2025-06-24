@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation;
 
 import net.hyper.immortalcultivation.handler.CultivationTickHandler;
 import net.hyper.immortalcultivation.handler.ICModHealthHandler;
+import net.hyper.immortalcultivation.handler.ICModImmunityHandler;
 import net.hyper.immortalcultivation.registry.*;
 import org.slf4j.Logger;
 
@@ -45,14 +46,13 @@ public class ImmortalCultivation
         ICModMenuTypes.register(modEventBus);
         ICModRecipes.register(modEventBus);
 
-        LOGGER.info("Registering ICModHealthEventHandler...");
+        LOGGER.info("Registering Handlers...");
+
+        NeoForge.EVENT_BUS.register(ICModImmunityHandler.class);
         NeoForge.EVENT_BUS.register(ICModHealthHandler.class);
-        LOGGER.info("ICModHealthEventHandler registered successfully!");
+
+        LOGGER.info("Handlers registered successfully!");
         LOGGER.info("Immortal Cultivation mod initialization complete.");
-
-
-
-
 
         NeoForge.EVENT_BUS.register(CultivationTickHandler.class);
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us

@@ -51,8 +51,11 @@ public class ICModHealthHandler {
     /**
      * CRITICAL: Intercept ALL damage with HIGHEST priority.
      * This completely prevents vanilla damage from ever being applied.
+     *
+     * NOTE: ICModImmunityHandler runs first to filter out immune damage,
+     * so any damage that reaches here should be processed.
      */
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    @SubscribeEvent(priority = EventPriority.HIGH) // Changed from HIGHEST to HIGH (immunity handler runs at HIGHEST)
     public static void interceptAllDamage(LivingIncomingDamageEvent event) {
         if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()) {
             return;
@@ -73,40 +76,38 @@ public class ICModHealthHandler {
         ImmortalCultivation.LOGGER.debug("Intercepted {} vanilla damage for player {}",
             originalDamage, player.getName().getString());
 
-        // Only apply custom damage if not in immunity frames (unless it's environmental damage)
-        if (player.invulnerableTime <= 0 || isEnvironmentalDamage(event.getSource())) {
-            // Convert vanilla damage to custom damage with proper scaling
-            long customDamage = calculateCustomDamage(originalDamage, player, event.getSource());
+        // REMOVED: Immunity check - ICModImmunityHandler handles all immunity logic
+        // If damage reaches here, it means ICModImmunityHandler allowed it through
 
-            if (customDamage > 0) {
-                // Apply damage to custom health system
-                long healthBefore = healthAttachment.getCurrentHealth();
-                healthAttachment.consumeHealth(customDamage);
-                long healthAfter = healthAttachment.getCurrentHealth();
+        // Convert vanilla damage to custom damage with proper scaling
+        long customDamage = calculateCustomDamage(originalDamage, player, event.getSource());
 
-                long actualDamage = healthBefore - healthAfter;
+        if (customDamage > 0) {
+            // Apply damage to custom health system
+            long healthBefore = healthAttachment.getCurrentHealth();
+            healthAttachment.consumeHealth(customDamage);
+            long healthAfter = healthAttachment.getCurrentHealth();
 
-                if (actualDamage > 0) {
-                    // Set immunity frames (environmental damage gets shorter immunity)
-                    player.invulnerableTime = isEnvironmentalDamage(event.getSource()) ? 10 : 20;
-                    lastAppliedDamage.put(player.getUUID(), originalDamage);
+            long actualDamage = healthBefore - healthAfter;
 
-                    // Apply visual damage feedback
-                    applyDamageFeedback(player, actualDamage, event.getSource());
+            if (actualDamage > 0) {
+                // Set minimal vanilla immunity for visual feedback only
+                // ICModImmunityHandler manages the real immunity logic
+                player.invulnerableTime = isEnvironmentalDamage(event.getSource()) ? 10 : 5;
+                lastAppliedDamage.put(player.getUUID(), originalDamage);
 
-                    // Damage armor
-                    damagePlayerArmor(player, originalDamage, event.getSource());
+                // Apply visual damage feedback
+                applyDamageFeedback(player, actualDamage, event.getSource());
 
-                    // Immediately update vanilla health to match custom health
-                    updateVanillaHealthFromCustom(player, healthAttachment);
+                // Damage armor
+                damagePlayerArmor(player, originalDamage, event.getSource());
 
-                    ImmortalCultivation.LOGGER.debug("Applied {} custom damage to player {} (from {} vanilla damage)",
-                        actualDamage, player.getName().getString(), originalDamage);
-                }
+                // Immediately update vanilla health to match custom health
+                updateVanillaHealthFromCustom(player, healthAttachment);
+
+                ImmortalCultivation.LOGGER.debug("Applied {} custom damage to player {} (from {} vanilla damage)",
+                    actualDamage, player.getName().getString(), originalDamage);
             }
-        } else {
-            ImmortalCultivation.LOGGER.debug("Player {} is in immunity frames, ignoring damage",
-                player.getName().getString());
         }
     }
 
