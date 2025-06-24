@@ -14,14 +14,17 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 /**
- * FIXED VERSION: PlayerHealthAttachment with proper player reference management
+ * ENHANCED COMPATIBILITY VERSION: PlayerHealthAttachment optimized for the Enhanced Health Protection System
  *
- * Key Fix: The findPlayer() method now works correctly after death/respawn
- * and all methods that depend on player context have better error handling.
+ * This version removes all vanilla health synchronization logic since that's now handled
+ * by the EnhancedHealthProtectionHandler. This attachment focuses purely on managing
+ * the custom health system without interfering with vanilla health.
  *
- * Manages the player's cultivation health system - an enhanced health pool that grows
- * with cultivation advancement. This is separate from Body, which is a different stat.
- * Health represents the cultivator's life force and vitality.
+ * Key Changes:
+ * - Removed onHealthChanged vanilla health management
+ * - Simplified health operations
+ * - Enhanced error handling and logging
+ * - Better integration with the protection system
  */
 public class PlayerHealthAttachment implements IHealthData {
     // Core health tracking
@@ -36,13 +39,10 @@ public class PlayerHealthAttachment implements IHealthData {
 
     public PlayerHealthAttachment() {}
 
-    // === FIXED: Player Reference Management ===
+    // === ENHANCED: Player Reference Management ===
 
     /**
-     * CRITICAL FIX: This method was causing the "lost attachments" and damage system issues
-     *
-     * OLD BROKEN VERSION used reference equality (== this) which fails after respawn
-     * NEW FIXED VERSION uses a more reliable approach with better error handling
+     * IMPROVED: More reliable player finding with better error handling
      */
     private Player findPlayer() {
         // On client side, there's only one player - the local player
@@ -54,10 +54,10 @@ public class PlayerHealthAttachment implements IHealthData {
             }
         }
 
-        // FIXED: Server side now has better error handling and logging
+        // Server side player lookup with enhanced error handling
         if (ServerLifecycleHooks.getCurrentServer() != null) {
             for (ServerPlayer serverPlayer : ServerLifecycleHooks.getCurrentServer().getPlayerList().getPlayers()) {
-                // FIXED: More reliable check with null safety
+                // More reliable check with null safety
                 PlayerHealthAttachment playerHealthAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
                 if (playerHealthAttachment != null && playerHealthAttachment == this) {
                     return serverPlayer;
@@ -69,18 +69,17 @@ public class PlayerHealthAttachment implements IHealthData {
     }
 
     /**
-     * IMPROVED: Safe player retrieval with better debug logging
+     * Safe player retrieval with minimal logging to avoid spam
      */
     private Player getPlayerSafe() {
         Player player = findPlayer();
-        if (player == null) {
-            // IMPROVED: Better logging that doesn't spam but indicates the issue
+        if (player == null && tickCounter % 200 == 0) { // Log every 10 seconds max
             ImmortalCultivation.LOGGER.debug("Could not find player for HealthAttachment - this may indicate a respawn issue");
         }
         return player;
     }
 
-    // === ENHANCED: Core Health Management methods now work after respawn ===
+    // === CORE HEALTH MANAGEMENT (SIMPLIFIED) ===
 
     @Override
     public long getCurrentHealth() {
@@ -95,26 +94,104 @@ public class PlayerHealthAttachment implements IHealthData {
         // Clamp between 0 and max
         this.currentHealth = Math.max(0, Math.min(health, maxHealth));
 
-        // Handle sync if value changed
+        // Handle sync if value changed significantly
         Player player = getPlayerSafe();
         if (player != null && !player.level().isClientSide() && shouldSync(oldHealth)) {
             syncToClient();
         }
 
-        // Trigger change event if health actually changed
-        if (oldHealth != this.currentHealth) {
-            onHealthChanged(oldHealth, this.currentHealth);
+        // Log significant health changes for debugging
+        if (Math.abs(oldHealth - this.currentHealth) > 10) {
+            ImmortalCultivation.LOGGER.debug("Health changed for player: {} -> {} (max: {})",
+                oldHealth, this.currentHealth, maxHealth);
+        }
+
+        // NOTE: Vanilla health synchronization is now handled by EnhancedHealthProtectionHandler
+        // No need to manage vanilla health here anymore
+    }
+
+    @Override
+    public long addHealth(long amount) {
+        if (amount <= 0) {
+            return 0;
+        }
+
+        long oldHealth = this.currentHealth;
+        long maxHealth = getMaxHealth();
+        long newHealth = Math.min(oldHealth + amount, maxHealth);
+        long actualHealing = newHealth - oldHealth;
+
+        if (actualHealing > 0) {
+            this.currentHealth = newHealth;
+
+            // Sync to client if significant healing
+            Player player = getPlayerSafe();
+            if (player != null && !player.level().isClientSide() && shouldSync(oldHealth)) {
+                syncToClient();
+            }
+
+            ImmortalCultivation.LOGGER.debug("Applied {} healing to player (requested {}, actual {})",
+                actualHealing, amount, actualHealing);
+        }
+
+        return actualHealing;
+    }
+
+    @Override
+    public long consumeHealth(long amount) {
+        if (amount <= 0) {
+            return 0;
+        }
+
+        long oldHealth = this.currentHealth;
+        long newHealth = Math.max(0, oldHealth - amount);
+        long actualDamage = oldHealth - newHealth;
+
+        if (actualDamage > 0) {
+            this.currentHealth = newHealth;
+
+            // Sync to client for any damage
+            Player player = getPlayerSafe();
+            if (player != null && !player.level().isClientSide()) {
+                syncToClient();
+            }
+
+            ImmortalCultivation.LOGGER.debug("Applied {} damage to player (requested {}, actual {})",
+                actualDamage, amount, actualDamage);
+
+            // Check for death condition
+            if (newHealth <= 0) {
+                handleCustomDeath();
+            }
+        }
+
+        return actualDamage;
+    }
+
+    /**
+     * NEW: Handle death when custom health reaches 0
+     * The EnhancedHealthProtectionHandler will detect this and authorize vanilla death
+     */
+    private void handleCustomDeath() {
+        Player player = getPlayerSafe();
+        if (player != null) {
+            ImmortalCultivation.LOGGER.info("Custom health system: Player {} has died (health reached 0)",
+                player.getName().getString());
+
+            // The EnhancedHealthProtectionHandler will detect this condition
+            // and set vanilla health to 0 to trigger proper death
+
+            // Force immediate sync to ensure the protection handler sees the death state
+            syncToClient();
         }
     }
 
-    // === FIXED: Capacity Management methods now work after respawn ===
+    // === CAPACITY MANAGEMENT ===
 
     @Override
     public long getBaseMaxHealth() {
         Player player = getPlayerSafe();
         if (player == null) {
-            // IMPROVED: Better fallback when player can't be found
-            ImmortalCultivation.LOGGER.debug("No player found for getBaseMaxHealth, returning default (20)");
             return 20; // Default Minecraft health
         }
 
@@ -122,8 +199,7 @@ public class PlayerHealthAttachment implements IHealthData {
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment == null) return 20;
 
-            // Health is now COMBINED from both cultivation paths
-            // This rewards dual cultivation by stacking benefits
+            // Health is COMBINED from both cultivation paths
             long qiRealmHealth = realmAttachment.getCurrentQiRealm().getBaseHealth();
             long bodyRealmHealth = realmAttachment.getCurrentBodyRealm().getBaseHealth();
 
@@ -132,74 +208,50 @@ public class PlayerHealthAttachment implements IHealthData {
                 return 20; // Still just a mortal
             }
 
-            // Otherwise, combine the health bonuses
-            // Subtract base mortal health to avoid double-counting
-            long qiBonus = Math.max(0, qiRealmHealth - 20);
-            long bodyBonus = Math.max(0, bodyRealmHealth - 20);
-
-            return 20 + qiBonus + bodyBonus; // Base health + bonuses from both paths
+            // Otherwise, add the bonuses from both paths
+            long totalBonus = Math.max(0, qiRealmHealth - 20) + Math.max(0, bodyRealmHealth - 20);
+            return 20 + totalBonus;
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting base max health from realms", e);
+            ImmortalCultivation.LOGGER.error("Error calculating base max health", e);
             return 20;
         }
     }
 
-    @Override
-    public long getMaxHealth() {
-        long baseMax = getBaseMaxHealth();
-
-        Player player = getPlayerSafe();
-        if (player == null) {
-            // IMPROVED: Return sensible fallback instead of potentially broken calculation
-            return baseMax;
-        }
-
-        long cultivationBonus = 0;
-
-        try {
-            PlayerBodyCultivationAttachment bodyCultivation =
-                player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
-            if (bodyCultivation != null) {
-                cultivationBonus += (long)(bodyCultivation.getCurrentBodyCultivation() * 0.01);
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating cultivation health bonuses", e);
-        }
-
-        return baseMax + cultivationBonus;
+    public long getMaxHealthBonus() {
+        // Additional health bonuses from other sources (items, effects, etc.)
+        return 0; // Implement as needed
     }
 
-    // === FIXED: Regeneration System methods now work after respawn ===
+    // === REGENERATION SYSTEM ===
 
     @Override
     public double getBaseHealthRegenerationRate() {
         Player player = getPlayerSafe();
         if (player == null) {
-            ImmortalCultivation.LOGGER.debug("No player found for getBaseHealthRegenerationRate, returning 0");
-            return 0.0;
+            return 0.1; // Default slow regeneration
         }
 
         try {
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment == null) return 0.0;
+            if (realmAttachment == null) {
+                return 0.1;
+            }
 
-            // Health regeneration is COMBINED from both realms
-            // Qi provides spiritual healing, Body provides physical recovery
+            // Health regeneration from both cultivation paths
             double qiRegen = realmAttachment.getCurrentQiRealm().getBaseHealthRegeneration();
             double bodyRegen = realmAttachment.getCurrentBodyRealm().getBaseHealthRegeneration();
 
-            // Both types of cultivation contribute to overall vitality
+            // Both cultivation paths contribute to overall vitality
             return qiRegen + bodyRegen;
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error getting base health regeneration rate", e);
-            return 0.0;
+            return 0.1;
         }
     }
 
     @Override
     public double getBaseCirculatingHealthRegenerationRate() {
         // Enhanced regeneration when actively circulating energy (3x normal rate)
-        // This could be triggered by meditation or special healing techniques
         return getBaseHealthRegenerationRate() * 3.0;
     }
 
@@ -209,12 +261,10 @@ public class PlayerHealthAttachment implements IHealthData {
 
         Player player = getPlayerSafe();
         if (player == null) {
-            // IMPROVED: Return base rate instead of broken calculation
             return baseRate;
         }
 
         // Apply spiritual roots multiplier to health regeneration
-        // Good roots enhance all aspects of cultivation including recovery
         try {
             PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
             if (roots != null) {
@@ -226,7 +276,6 @@ public class PlayerHealthAttachment implements IHealthData {
         }
 
         // Apply cultivation focus bonus
-        // When focused on Body cultivation, health regeneration is enhanced
         try {
             PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
             if (focus != null) {
@@ -241,7 +290,6 @@ public class PlayerHealthAttachment implements IHealthData {
 
     @Override
     public double getEffectiveCirculatingHealthRegenerationRate() {
-        // Apply same multipliers to the enhanced rate
         return getEffectiveHealthRegenerationRate() * 3.0;
     }
 
@@ -255,7 +303,7 @@ public class PlayerHealthAttachment implements IHealthData {
         this.healthRegenFraction = fraction;
     }
 
-    // === FIXED: Tick Update now works after respawn ===
+    // === TICK PROCESSING ===
 
     @Override
     public void tick() {
@@ -263,17 +311,12 @@ public class PlayerHealthAttachment implements IHealthData {
 
         Player player = getPlayerSafe();
         if (player == null) {
-            // IMPROVED: Don't spam logs, but do track the issue
-            if (tickCounter % 200 == 0) { // Log every 10 seconds
-                ImmortalCultivation.LOGGER.debug("HealthAttachment ticking without player reference (tick {})", tickCounter);
-            }
-            return;
+            return; // Can't process without player reference
         }
 
         // Only process regeneration on server side
         if (!player.level().isClientSide()) {
             // Use the interface's default tick implementation for regeneration
-            // This properly handles fractional regeneration
             IHealthData.super.tick();
 
             // Periodic sync check
@@ -283,93 +326,35 @@ public class PlayerHealthAttachment implements IHealthData {
         }
     }
 
-    // === FIXED: Event Callbacks now work after respawn ===
+    // === SYNCHRONIZATION ===
 
-    @Override
-    public void onHealthChanged(long oldHealth, long newHealth) {
-        Player player = getPlayerSafe();
-        if (player != null) {
-            // AUTHORITATIVE: Only custom health system can trigger death
-            if (newHealth <= 0) {
-                // Custom system authorizes death
-                player.setHealth(0.0f);
-                ImmortalCultivation.LOGGER.info("Custom health system triggered death for {}",
-                    player.getName().getString());
-            } else {
-                // Keep vanilla health as visual proxy (never 0)
-                float healthPercentage = (float)newHealth / getMaxHealth();
-                float maxVanillaHealth = player.getMaxHealth();
-
-                // Scale between 0.5 and max
-                float targetVanillaHealth = 0.5f + (maxVanillaHealth - 0.5f) * healthPercentage;
-                player.setHealth(targetVanillaHealth);
-            }
-        }
-    }
-
-    @Override
-    public void onHealthConsumed(long amount) {
-        // This is called when health is reduced (damage taken)
-        Player player = getPlayerSafe();
-        if (player != null) {
-            ImmortalCultivation.LOGGER.debug("Player {} consumed {} health",
-                player.getName().getString(), amount);
-        }
-    }
-
-    @Override
-    public void onHealthAdded(long amount) {
-        // This is called when health is restored (healing)
-        Player player = getPlayerSafe();
-        if (player != null) {
-            ImmortalCultivation.LOGGER.debug("Player {} restored {} health",
-                player.getName().getString(), amount);
-        }
-    }
-
-    // === FIXED: Synchronization now works after respawn ===
-
-    /**
-     * Determines if we should sync to client based on change magnitude
-     */
     private boolean shouldSync(long oldHealth) {
-        long difference = Math.abs(currentHealth - lastSyncedHealth);
-        // Always sync health changes - it's critical information
-        return difference > 0;
+        return Math.abs(currentHealth - lastSyncedHealth) >= SYNC_THRESHOLD ||
+            (oldHealth != currentHealth && currentHealth <= 0);
     }
 
-    /**
-     * FIXED: Sync current health to client with proper null checking
-     */
-    private void syncToClient() {
+    public void syncToClient() {
         Player player = getPlayerSafe();
         if (player instanceof ServerPlayer serverPlayer) {
-            lastSyncedHealth = currentHealth;
             try {
-                ICModNetwork.sendToPlayer(new HealthSyncPacket(currentHealth), serverPlayer);
+                HealthSyncPacket packet = new HealthSyncPacket(currentHealth);
+                ICModNetwork.sendToPlayer(packet, serverPlayer);
+                lastSyncedHealth = currentHealth;
+
+                ImmortalCultivation.LOGGER.debug("Synced health {} to client for player {}",
+                    currentHealth, serverPlayer.getName().getString());
             } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error syncing health to client", e);
+                ImmortalCultivation.LOGGER.error("Error syncing health to client for player {}",
+                    player.getName().getString(), e);
             }
-        } else if (player == null) {
-            ImmortalCultivation.LOGGER.debug("Cannot sync health - no player found");
         }
     }
 
-    /**
-     * FIXED: Force immediate sync to client with proper null checking
-     */
     public void forceSync() {
-        Player player = getPlayerSafe();
-        if (player instanceof ServerPlayer serverPlayer) {
-            lastSyncedHealth = currentHealth;
-            try {
-                ICModNetwork.sendToPlayer(new HealthSyncPacket(currentHealth), serverPlayer);
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error force syncing health to client", e);
-            }
-        } else if (player == null) {
-            ImmortalCultivation.LOGGER.debug("Cannot force sync health - no player found");
-        }
+        long oldSynced = lastSyncedHealth;
+        lastSyncedHealth = -1; // Force sync by making them different
+        syncToClient();
+        ImmortalCultivation.LOGGER.debug("Force synced health (was {}, now {})", oldSynced, currentHealth);
     }
 
     /**
@@ -380,12 +365,12 @@ public class PlayerHealthAttachment implements IHealthData {
         this.currentHealth = newHealth;
         this.lastSyncedHealth = newHealth;
 
-        if (oldHealth != newHealth) {
-            onHealthChanged(oldHealth, newHealth);
+        if (Math.abs(oldHealth - newHealth) > 0) {
+            ImmortalCultivation.LOGGER.debug("Health updated from server: {} -> {}", oldHealth, newHealth);
         }
     }
 
-    // === Serialization (unchanged) ===
+    // === SERIALIZATION ===
 
     @Override
     public void deserializeNBT(CompoundTag tag) {
@@ -405,7 +390,7 @@ public class PlayerHealthAttachment implements IHealthData {
         return tag;
     }
 
-    // === Codec (unchanged) ===
+    // === CODEC ===
 
     public static final Codec<PlayerHealthAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
         Codec.LONG.optionalFieldOf("health", 20L).forGetter(PlayerHealthAttachment::getCurrentHealth),
@@ -421,7 +406,7 @@ public class PlayerHealthAttachment implements IHealthData {
         return comp;
     }));
 
-    // === FIXED: Debug Utilities now work after respawn ===
+    // === DEBUG UTILITIES ===
 
     /**
      * Print debug information about this attachment's state
@@ -431,31 +416,33 @@ public class PlayerHealthAttachment implements IHealthData {
         String side = player != null ? (player.level().isClientSide() ? "Client" : "Server") : "Unknown";
         String playerName = player != null ? player.getName().getString() : "Unknown";
 
-        ImmortalCultivation.LOGGER.info("=== Health Attachment Debug Info ===");
-        ImmortalCultivation.LOGGER.info("Player: {} ({})", playerName, side);
-        ImmortalCultivation.LOGGER.info("Current Health: {}/{} ({}%)",
-            getCurrentHealth(), getMaxHealth(), String.format("%.1f", getHealthPercentage() * 100));
-        ImmortalCultivation.LOGGER.info("Regen Rate: {}/sec (Base: {}), Fraction: {}",
-            String.format("%.2f", getEffectiveHealthRegenerationRate()),
-            String.format("%.2f", getBaseHealthRegenerationRate()),
-            String.format("%.3f", healthRegenFraction));
-        ImmortalCultivation.LOGGER.info("Sync Status: Last synced at {}, Current diff: {}",
-            lastSyncedHealth, Math.abs(currentHealth - lastSyncedHealth));
-
+        ImmortalCultivation.LOGGER.info("=== HEALTH DEBUG INFO ===");
+        ImmortalCultivation.LOGGER.info("Side: {}", side);
+        ImmortalCultivation.LOGGER.info("Player: {}", playerName);
+        ImmortalCultivation.LOGGER.info("Current Health: {}/{}", currentHealth, getMaxHealth());
+        ImmortalCultivation.LOGGER.info("Regen Fraction: {}", healthRegenFraction);
+        ImmortalCultivation.LOGGER.info("Tick Counter: {}", tickCounter);
+        ImmortalCultivation.LOGGER.info("Last Synced Health: {}", lastSyncedHealth);
         if (player != null) {
-            try {
-                PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-                if (realmAttachment != null) {
-                    ImmortalCultivation.LOGGER.info("Qi Realm: {} | Body Realm: {}",
-                        realmAttachment.getCurrentQiRealm().getDisplayName(),
-                        realmAttachment.getCurrentBodyRealm().getDisplayName());
-                }
-
-                ImmortalCultivation.LOGGER.info("Vanilla Health: {}/{}",
-                    player.getHealth(), player.getMaxHealth());
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error getting debug info", e);
-            }
+            ImmortalCultivation.LOGGER.info("Vanilla Health: {}/{}", player.getHealth(), player.getMaxHealth());
         }
+        ImmortalCultivation.LOGGER.info("=== END DEBUG INFO ===");
+    }
+
+    /**
+     * Emergency health restoration - sets health to a safe percentage of max
+     */
+    public void emergencyRestore(double percentage) {
+        long maxHealth = getMaxHealth();
+        long targetHealth = Math.max(1, Math.round(maxHealth * Math.max(0.1, Math.min(1.0, percentage))));
+
+        long oldHealth = currentHealth;
+        this.currentHealth = targetHealth;
+
+        ImmortalCultivation.LOGGER.warn("Emergency health restore: {} -> {} ({}% of max {})",
+            oldHealth, targetHealth, percentage * 100, maxHealth);
+
+        // Force sync the emergency restoration
+        forceSync();
     }
 }

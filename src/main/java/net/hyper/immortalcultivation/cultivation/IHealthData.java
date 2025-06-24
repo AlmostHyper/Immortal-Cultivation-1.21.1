@@ -33,15 +33,15 @@ public interface IHealthData {
 
     /**
      * Consumes Health from the current amount
+     *
      * @param amount Amount to consume
      * @return True if successful, false if insufficient Health
      */
-    default boolean consumeHealth(long amount) {
+    default long consumeHealth(long amount) {
         if (getCurrentHealth() >= amount) {
             setCurrentHealth(getCurrentHealth() - amount);
-            return true;
         }
-        return false;
+        return amount;
     }
 
     /**

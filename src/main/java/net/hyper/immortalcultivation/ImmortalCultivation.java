@@ -1,10 +1,8 @@
 package net.hyper.immortalcultivation;
 
 import net.hyper.immortalcultivation.handler.CultivationTickHandler;
-import net.hyper.immortalcultivation.handler.ICModHealthEventHandler;
+import net.hyper.immortalcultivation.handler.ICModHealthHandler;
 import net.hyper.immortalcultivation.registry.*;
-import net.minecraft.world.entity.EntityAttachments;
-import net.minecraft.world.entity.player.Player;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -48,7 +46,7 @@ public class ImmortalCultivation
         ICModRecipes.register(modEventBus);
 
         LOGGER.info("Registering ICModHealthEventHandler...");
-        NeoForge.EVENT_BUS.register(ICModHealthEventHandler.class);
+        NeoForge.EVENT_BUS.register(ICModHealthHandler.class);
         LOGGER.info("ICModHealthEventHandler registered successfully!");
         LOGGER.info("Immortal Cultivation mod initialization complete.");
 
