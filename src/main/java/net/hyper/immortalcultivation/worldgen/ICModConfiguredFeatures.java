@@ -27,6 +27,7 @@ public class ICModConfiguredFeatures {
     public static final ResourceKey<ConfiguredFeature<?, ?>> OVERWORLD_FIRE_ASPECTED_ORE_KEY = registerKey("fire_aspected_ore");
     public static final ResourceKey<ConfiguredFeature<?, ?>> OVERWORLD_METAL_ASPECTED_ORE_KEY = registerKey("metal_aspected_ore");
     public static final ResourceKey<ConfiguredFeature<?, ?>> OVERWORLD_WATER_ASPECTED_ORE_KEY = registerKey("water_aspected_ore");
+    public static final ResourceKey<ConfiguredFeature<?, ?>> OVERWORLD_WOOD_ASPECTED_ORE_KEY = registerKey("wood_aspected_ore");
     public static final ResourceKey<ConfiguredFeature<?, ?>> OVERWORLD_SKY_IRON_ORE_KEY = registerKey("sky_iron_ore");
 
 
@@ -38,45 +39,45 @@ public class ICModConfiguredFeatures {
 
         List<OreConfiguration.TargetBlockState> overworldLowQualitySpiritStoneOres = List.of(
             OreConfiguration.target(stoneReplaceables, ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get().defaultBlockState()),
-
             OreConfiguration.target(deepslateReplaceables, ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldMediumQualitySpiritStoneOres = List.of(
             OreConfiguration.target(stoneReplaceables, ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get().defaultBlockState()),
-
             OreConfiguration.target(deepslateReplaceables, ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldHighQualitySpiritStoneOres = List.of(
             OreConfiguration.target(deepslateReplaceables, ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
-
         );
 
         List<OreConfiguration.TargetBlockState> overworldTopQualitySpiritStoneOres = List.of(
             OreConfiguration.target(deepslateReplaceables, ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get().defaultBlockState())
-
         );
 
         List<OreConfiguration.TargetBlockState> overworldEarthOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get().defaultBlockState())
-
+            OreConfiguration.target(stoneReplaceables, ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, ICModBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldFireOres = List.of(
             OreConfiguration.target(stoneReplaceables, ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
-
             OreConfiguration.target(deepslateReplaceables, ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldMetalOres = List.of(
+            OreConfiguration.target(stoneReplaceables, ICModBlocks.METAL_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
             OreConfiguration.target(deepslateReplaceables, ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldWaterOres = List.of(
             OreConfiguration.target(stoneReplaceables, ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
-
             OreConfiguration.target(deepslateReplaceables, ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+        );
+
+        List<OreConfiguration.TargetBlockState> overworldWoodOres = List.of(
+            OreConfiguration.target(stoneReplaceables, ICModBlocks.WOOD_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, ICModBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldSkyIronOres = List.of(
@@ -92,6 +93,7 @@ public class ICModConfiguredFeatures {
         register(context, OVERWORLD_FIRE_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldFireOres, 3));
         register(context, OVERWORLD_METAL_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMetalOres, 3));
         register(context, OVERWORLD_WATER_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWaterOres, 3));
+        register(context, OVERWORLD_WOOD_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWoodOres, 3));
         register(context, OVERWORLD_SKY_IRON_ORE_KEY, Feature.ORE, new OreConfiguration(overworldSkyIronOres, 9));
     }
 

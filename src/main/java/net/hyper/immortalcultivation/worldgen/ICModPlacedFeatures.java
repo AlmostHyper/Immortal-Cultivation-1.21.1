@@ -25,6 +25,7 @@ public class ICModPlacedFeatures {
     public static final ResourceKey<PlacedFeature> FIRE_ASPECTED_ORE_PLACED_KEY = registerKey("fire_aspected_ore_placed");
     public static final ResourceKey<PlacedFeature> METAL_ASPECTED_ORE_PLACED_KEY = registerKey("metal_aspected_ore_placed");
     public static final ResourceKey<PlacedFeature> WATER_ASPECTED_ORE_PLACED_KEY = registerKey("water_aspected_ore_placed");
+    public static final ResourceKey<PlacedFeature> WOOD_ASPECTED_ORE_PLACED_KEY = registerKey("wood_aspected_ore_placed");
     public static final ResourceKey<PlacedFeature> SKY_IRON_ORE_PLACED_KEY = registerKey("sky_iron_ore_placed");
 
     public static void bootstrap(BootstrapContext<PlacedFeature> context) {
@@ -52,19 +53,23 @@ public class ICModPlacedFeatures {
 
         register(context, EARTH_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_EARTH_ASPECTED_ORE_KEY),
             ICModOrePlacements.commonOrePlacement(2,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(0), VerticalAnchor.absolute(31))));
+                HeightRangePlacement.triangle(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, FIRE_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_FIRE_ASPECTED_ORE_KEY),
             ICModOrePlacements.commonOrePlacement(2,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
+                HeightRangePlacement.triangle(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, METAL_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_METAL_ASPECTED_ORE_KEY),
             ICModOrePlacements.commonOrePlacement(2,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0))));
+                HeightRangePlacement.triangle(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, WATER_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_WATER_ASPECTED_ORE_KEY),
             ICModOrePlacements.commonOrePlacement(2,
-                HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
+                HeightRangePlacement.triangle(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
+
+        register(context, WOOD_ASPECTED_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_WOOD_ASPECTED_ORE_KEY),
+            ICModOrePlacements.commonOrePlacement(2,
+                HeightRangePlacement.triangle(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, SKY_IRON_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_SKY_IRON_ORE_KEY),
             ICModOrePlacements.commonOrePlacement(9,

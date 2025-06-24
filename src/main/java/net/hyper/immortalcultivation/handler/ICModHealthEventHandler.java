@@ -2,52 +2,46 @@ package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.PlayerHealthAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
+import net.hyper.immortalcultivation.handler.DamageFeedbackHandler;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.damagesource.DamageSource;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.living.LivingHealEvent;
+import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-@EventBusSubscriber(modid = ImmortalCultivation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * DEBUG VERSION: ICModHealthEventHandler with extensive logging to diagnose damage interception issues.
+ */
 public class ICModHealthEventHandler {
 
-    // Enchantment resource keys for efficient lookups
-    private static final ResourceKey<Enchantment> UNBREAKING_KEY = ResourceKey.create(Registries.ENCHANTMENT,
-        ResourceLocation.withDefaultNamespace("unbreaking"));
-    private static final ResourceKey<Enchantment> PROTECTION_KEY = ResourceKey.create(Registries.ENCHANTMENT,
-        ResourceLocation.withDefaultNamespace("protection"));
-    private static final ResourceKey<Enchantment> FIRE_PROTECTION_KEY = ResourceKey.create(Registries.ENCHANTMENT,
-        ResourceLocation.withDefaultNamespace("fire_protection"));
-    private static final ResourceKey<Enchantment> BLAST_PROTECTION_KEY = ResourceKey.create(Registries.ENCHANTMENT,
-        ResourceLocation.withDefaultNamespace("blast_protection"));
-    private static final ResourceKey<Enchantment> PROJECTILE_PROTECTION_KEY = ResourceKey.create(Registries.ENCHANTMENT,
-        ResourceLocation.withDefaultNamespace("projectile_protection"));
+    // Track last damage for immunity calculations and feedback
+    private static final Map<UUID, Float> lastDamageMap = new ConcurrentHashMap<>();
+    private static final Map<UUID, DamageSource> lastDamageSourceMap = new ConcurrentHashMap<>();
 
-    // Track last damage amounts for immunity checking
-    private static final java.util.Map<java.util.UUID, Float> lastDamageMap = new java.util.concurrent.ConcurrentHashMap<>();
+    // === DAMAGE INTERCEPTION WITH DEBUG LOGGING ===
 
     /**
-     * FIXED: Manual armor calculation that respects vanilla damage immunity
-     * This prevents rapid damage from environmental sources like lava, fire, berry bushes
+     * DEBUG: Primary damage event handler with extensive logging
      */
-    @SubscribeEvent(priority = EventPriority.HIGH)
-    public static void onPlayerIncomingDamageManual(LivingIncomingDamageEvent event) {
-
+    @SubscribeEvent(priority = EventPriority.HIGHEST) // Changed to HIGHEST to ensure we run first
+    public static void onPlayerDamage(LivingIncomingDamageEvent event) {
         if (!(event.getEntity() instanceof Player player)) {
             return;
         }
@@ -56,209 +50,182 @@ public class ICModHealthEventHandler {
             return;
         }
 
+        // DEBUG: Log every damage event
+        ImmortalCultivation.LOGGER.info("=== DAMAGE EVENT START ===");
+        ImmortalCultivation.LOGGER.info("Player: {}", player.getName().getString());
+        ImmortalCultivation.LOGGER.info("Damage Source: {}", event.getSource().getMsgId());
+        ImmortalCultivation.LOGGER.info("Original Damage: {}", event.getContainer().getNewDamage());
+        ImmortalCultivation.LOGGER.info("Player Invulnerable Time: {}", player.invulnerableTime);
+        ImmortalCultivation.LOGGER.info("Player Vanilla Health: {}/{}", player.getHealth(), player.getMaxHealth());
+
         PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
         if (healthAttachment == null) {
+            ImmortalCultivation.LOGGER.error("No health attachment found for player {}!", player.getName().getString());
             return;
         }
+
+        // DEBUG: Log custom health state
+        ImmortalCultivation.LOGGER.info("Player Custom Health: {}/{}",
+            healthAttachment.getCurrentHealth(), healthAttachment.getMaxHealth());
 
         float originalDamage = event.getContainer().getNewDamage();
         if (originalDamage <= 0) {
+            ImmortalCultivation.LOGGER.info("No damage to apply, exiting");
+            ImmortalCultivation.LOGGER.info("=== DAMAGE EVENT END ===");
             return;
         }
 
-        // CRITICAL FIX: Check vanilla damage immunity
-        // This prevents rapid damage from environmental sources
+        // Store damage source for feedback system
+        lastDamageSourceMap.put(player.getUUID(), event.getSource());
+
+        // DEBUG: Check immunity
+        boolean isImmune = false;
         if (player.invulnerableTime > 0) {
-            // Player is still immune from recent damage
-            // Only allow damage if it's significantly higher than the last damage
             Float lastDamage = lastDamageMap.get(player.getUUID());
+            ImmortalCultivation.LOGGER.info("Player has invulnerability time. Last damage: {}", lastDamage);
 
-            // If new damage isn't significantly higher, skip it
             if (lastDamage != null && originalDamage <= lastDamage) {
-                ImmortalCultivation.LOGGER.debug("Skipping damage for player {} - still immune (invulnTime: {}, lastDamage: {}, newDamage: {})",
-                    player.getName().getString(), player.invulnerableTime, lastDamage, originalDamage);
-                return;
+                ImmortalCultivation.LOGGER.info("BLOCKING damage - player is immune");
+                isImmune = true;
+            } else {
+                ImmortalCultivation.LOGGER.info("ALLOWING damage - higher than last damage");
             }
+        } else {
+            ImmortalCultivation.LOGGER.info("Player has no invulnerability time - damage allowed");
+        }
 
-            // If new damage is higher, we'll process it but reset immunity timer
-            if (lastDamage != null) {
-                ImmortalCultivation.LOGGER.debug("Processing higher damage for player {} despite immunity (lastDamage: {}, newDamage: {})",
-                    player.getName().getString(), lastDamage, originalDamage);
-            }
+        if (isImmune) {
+            ImmortalCultivation.LOGGER.info("=== DAMAGE EVENT END (IMMUNE) ===");
+            return;
         }
 
         // Calculate damage reduction manually
         float finalDamage = calculateDamageWithArmor(originalDamage, player, event.getSource());
+        ImmortalCultivation.LOGGER.info("Damage after armor: {} (from {})", finalDamage, originalDamage);
 
         // Convert and apply through custom system
         long moddedDamage = convertFinalDamageToModded(finalDamage, event, player);
-        boolean damageApplied = applyCustomDamage(healthAttachment, moddedDamage, event, player);
+        ImmortalCultivation.LOGGER.info("Converted to modded damage: {}", moddedDamage);
+
+        // CRITICAL: Cancel vanilla damage FIRST
+        ImmortalCultivation.LOGGER.info("CANCELLING vanilla damage (setting to 0)");
+        event.getContainer().setNewDamage(0.0f);
+
+        // DEBUG: Verify cancellation
+        ImmortalCultivation.LOGGER.info("Damage after cancellation: {}", event.getContainer().getNewDamage());
+
+        // Apply custom damage
+        long healthBefore = healthAttachment.getCurrentHealth();
+        ImmortalCultivation.LOGGER.info("Health before custom damage: {}", healthBefore);
+
+        boolean damageApplied = applyCustomDamageSimple(healthAttachment, moddedDamage, player);
+
+        long healthAfter = healthAttachment.getCurrentHealth();
+        ImmortalCultivation.LOGGER.info("Health after custom damage: {}", healthAfter);
+        ImmortalCultivation.LOGGER.info("Custom damage applied: {}", damageApplied);
+        ImmortalCultivation.LOGGER.info("Actual health lost: {}", healthBefore - healthAfter);
 
         if (damageApplied) {
-            event.getContainer().setNewDamage(0.0f);
+            // Set immunity frames
+            player.invulnerableTime = 20;
+            lastDamageMap.put(player.getUUID(), originalDamage);
 
-            // CRITICAL FIX: Set vanilla immunity frames to prevent rapid damage
-            // This matches vanilla behavior for damage immunity
-            player.invulnerableTime = 20; // 20 ticks = 1 second immunity
-            lastDamageMap.put(player.getUUID(), originalDamage); // Track this damage amount
-
-            // For certain damage types, use shorter immunity
             if (isDamageSourceEnvironmental(event.getSource())) {
-                player.invulnerableTime = 10; // 0.5 seconds for environmental damage
+                player.invulnerableTime = 10;
             }
 
-            // NEW: Damage armor items based on the original damage amount
+            ImmortalCultivation.LOGGER.info("Set invulnerability time to: {}", player.invulnerableTime);
+
+            // Damage armor items
             damageArmor(player, originalDamage, event.getSource());
 
-            // Only sync vanilla health for damage (not healing) to prevent shake effects
+            // Sync vanilla health
+            float vanillaHealthBefore = player.getHealth();
             synchronizeVanillaHealthForDamage(player, healthAttachment);
+            float vanillaHealthAfter = player.getHealth();
+
+            ImmortalCultivation.LOGGER.info("Vanilla health sync: {} -> {}", vanillaHealthBefore, vanillaHealthAfter);
+
             checkAndHandleDeath(player, healthAttachment);
+            verifyHealthSync(player, healthAttachment);
 
-            ImmortalCultivation.LOGGER.debug("Applied {} modded damage to player {} (from {} vanilla damage), immunity set to {} ticks",
-                moddedDamage, player.getName().getString(), originalDamage, player.invulnerableTime);
+            ImmortalCultivation.LOGGER.info("SUCCESS: Applied {} modded damage", moddedDamage);
+        } else {
+            // If custom damage failed, restore vanilla damage
+            ImmortalCultivation.LOGGER.error("FAILED to apply custom damage! Restoring vanilla damage");
+            event.getContainer().setNewDamage(originalDamage);
         }
 
+        ImmortalCultivation.LOGGER.info("Final vanilla health: {}/{}", player.getHealth(), player.getMaxHealth());
+        ImmortalCultivation.LOGGER.info("Final custom health: {}/{}",
+            healthAttachment.getCurrentHealth(), healthAttachment.getMaxHealth());
+        ImmortalCultivation.LOGGER.info("=== DAMAGE EVENT END ===");
     }
 
     /**
-     * NEW: Damage armor items when taking damage
-     * Armor takes 1 durability damage for every 4 points of damage (before reduction)
+     * NEW: Check if damage source is environmental (should have shorter immunity)
      */
-    private static void damageArmor(Player player, float damageAmount, DamageSource damageSource) {
-        // Don't damage armor if the damage source bypasses armor
+    private static boolean isDamageSourceEnvironmental(DamageSource damageSource) {
+        return damageSource.is(net.minecraft.tags.DamageTypeTags.IS_FIRE) ||
+            damageSource.is(net.minecraft.tags.DamageTypeTags.IS_LIGHTNING) ||
+            damageSource.getMsgId().equals("lava") ||
+            damageSource.getMsgId().equals("inFire") ||
+            damageSource.getMsgId().equals("onFire") ||
+            damageSource.getMsgId().equals("sweetBerryBush") ||
+            damageSource.getMsgId().equals("cactus") ||
+            damageSource.getMsgId().equals("hotFloor") ||
+            damageSource.getMsgId().equals("magma");
+    }
+
+    /**
+     * Calculate damage reduction from armor and enchantments
+     */
+    private static float calculateDamageWithArmor(float damage, Player player, DamageSource damageSource) {
         if (damageSource.is(net.minecraft.tags.DamageTypeTags.BYPASSES_ARMOR)) {
-            return;
-        }
-
-        // Calculate armor damage (1 durability per 4 damage points)
-        int armorDamage = Math.max(1, (int)(damageAmount / 4.0F));
-
-        // Damage each armor piece
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
-                ItemStack armorPiece = player.getItemBySlot(slot);
-                if (!armorPiece.isEmpty() && armorPiece.isDamageableItem()) {
-                    damageArmorItem(player, armorPiece, armorDamage, slot);
-                }
-            }
-        }
-    }
-
-    /**
-     * NEW: Damage a specific armor item, respecting Unbreaking enchantment
-     */
-    private static void damageArmorItem(Player player, ItemStack armorItem, int damage, EquipmentSlot slot) {
-        if (armorItem.isEmpty() || !armorItem.isDamageableItem()) {
-            return;
-        }
-
-        // Check for Unbreaking enchantment
-        int unbreakingLevel = getUnbreakingLevel(player, armorItem);
-
-        // Apply Unbreaking chance (chance to not take damage)
-        if (unbreakingLevel > 0) {
-            // Armor has 60% + 40%/(level+1) chance to not lose durability
-            float chance = 0.6F + (0.4F / (float)(unbreakingLevel + 1));
-            if (player.getRandom().nextFloat() < chance) {
-                return; // Unbreaking prevented the durability loss
-            }
-        }
-
-        // Actually damage the item
-        armorItem.hurtAndBreak(damage, player, slot);
-
-        ImmortalCultivation.LOGGER.debug("Damaged {} in slot {} by {} points (Unbreaking {})",
-            armorItem.getItem().getDescriptionId(), slot.getName(), damage, unbreakingLevel);
-    }
-
-    /**
-     * NEW: Get the Unbreaking enchantment level for NeoForge 1.21.1 using Holders
-     */
-    private static int getUnbreakingLevel(Player player, ItemStack itemStack) {
-        // In 1.21.1, enchantments are stored as a component
-        ItemEnchantments enchantments = itemStack.get(DataComponents.ENCHANTMENTS);
-        if (enchantments != null && player.level() != null) {
-            // Get the enchantment holder from the registry
-            var registry = player.level().registryAccess().registryOrThrow(Registries.ENCHANTMENT);
-            var unbreakingHolder = registry.getHolder(UNBREAKING_KEY);
-
-            if (unbreakingHolder.isPresent()) {
-                return enchantments.getLevel(unbreakingHolder.get());
-            }
-        }
-        return 0;
-    }
-
-    /**
-     * Manual armor calculation method (use with HIGH priority approach)
-     */
-    private static float calculateDamageWithArmor(float originalDamage, Player player, DamageSource damageSource) {
-        // If damage bypasses armor, return original damage
-        if (damageSource.is(net.minecraft.tags.DamageTypeTags.BYPASSES_ARMOR)) {
-            return originalDamage;
-        }
-
-        float damage = originalDamage;
-
-        // Calculate armor reduction
-        float armorValue = player.getArmorValue();
-        float armorToughness = (float) player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS);
-
-        // Minecraft's armor calculation formula
-        if (armorValue > 0) {
-            float f = 2.0F + armorToughness / 4.0F;
-            float f1 = Math.max(armorValue - damage / f, armorValue * 0.2F);
-            damage = damage * (1.0F - f1 / 25.0F);
-        }
-
-        // Calculate enchantment protection
-        if (!damageSource.is(net.minecraft.tags.DamageTypeTags.BYPASSES_ENCHANTMENTS)) {
-            damage = calculateEnchantmentReduction(damage, player, damageSource);
-        }
-
-        // Calculate resistance effect
-        if (player.hasEffect(net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE)) {
-            int amplifier = player.getEffect(net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE).getAmplifier();
-            damage = damage * (1.0F - (amplifier + 1) * 0.2F);
-        }
-
-        return Math.max(0, damage);
-    }
-
-    /**
-     * Calculate enchantment-based damage reduction
-     * Updated for NeoForge 1.21.1 enchantment system using Holders
-     */
-    private static float calculateEnchantmentReduction(float damage, Player player, DamageSource damageSource) {
-        if (player.level() == null) {
             return damage;
         }
 
-        // Get the enchantment registry
-        var registry = player.level().registryAccess().registryOrThrow(Registries.ENCHANTMENT);
+        // Calculate armor value
+        int armorValue = 0;
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
+                ItemStack armorPiece = player.getItemBySlot(slot);
+                if (!armorPiece.isEmpty() && armorPiece.getItem() instanceof net.minecraft.world.item.ArmorItem armorItem) {
+                    armorValue += armorItem.getDefense();
+                }
+            }
+        }
 
-        // Get holders for all protection enchantments
-        var protectionHolder = registry.getHolder(PROTECTION_KEY);
-        var fireProtectionHolder = registry.getHolder(FIRE_PROTECTION_KEY);
-        var blastProtectionHolder = registry.getHolder(BLAST_PROTECTION_KEY);
-        var projectileProtectionHolder = registry.getHolder(PROJECTILE_PROTECTION_KEY);
+        // Apply armor reduction (vanilla formula)
+        float armorReduction = Math.min(20, Math.max(armorValue / 5.0F, armorValue - damage / 2.0F)) / 25.0F;
+        damage = damage * (1.0F - armorReduction);
 
-        // Get total protection level from all armor pieces
+        // Apply enchantment protection
+        Optional<Holder.Reference<Enchantment>> protectionHolder = player.level().registryAccess()
+            .registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+            .getHolder(net.minecraft.world.item.enchantment.Enchantments.PROTECTION);
+        Optional<Holder.Reference<Enchantment>> fireProtectionHolder = player.level().registryAccess()
+            .registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+            .getHolder(net.minecraft.world.item.enchantment.Enchantments.FIRE_PROTECTION);
+        Optional<Holder.Reference<Enchantment>> blastProtectionHolder = player.level().registryAccess()
+            .registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+            .getHolder(net.minecraft.world.item.enchantment.Enchantments.BLAST_PROTECTION);
+        Optional<Holder.Reference<Enchantment>> projectileProtectionHolder = player.level().registryAccess()
+            .registryOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT)
+            .getHolder(net.minecraft.world.item.enchantment.Enchantments.PROJECTILE_PROTECTION);
+
         int protectionLevel = 0;
 
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
                 ItemStack armorPiece = player.getItemBySlot(slot);
                 if (!armorPiece.isEmpty()) {
-                    // Get enchantments from the item's components
                     ItemEnchantments enchantments = armorPiece.get(DataComponents.ENCHANTMENTS);
                     if (enchantments != null) {
-                        // Add up protection levels from different protection enchantments
                         if (protectionHolder.isPresent()) {
                             protectionLevel += enchantments.getLevel(protectionHolder.get());
                         }
 
-                        // Add specific protections if applicable
                         if (damageSource.is(net.minecraft.tags.DamageTypeTags.IS_FIRE) && fireProtectionHolder.isPresent()) {
                             protectionLevel += enchantments.getLevel(fireProtectionHolder.get());
                         } else if (damageSource.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION) && blastProtectionHolder.isPresent()) {
@@ -281,8 +248,204 @@ public class ICModHealthEventHandler {
     }
 
     /**
-     * FIXED: Healing interception with NO vanilla health sync to prevent shake effects
+     * Convert final vanilla damage to modded damage scale
      */
+    private static long convertFinalDamageToModded(float finalDamage, LivingIncomingDamageEvent event, Player player) {
+        long baseDamage = Math.round(finalDamage);
+
+        try {
+            PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+            if (healthAttachment != null) {
+                float damageMultiplier = Math.max(1.0f, healthAttachment.getMaxHealth() / 200.0f);
+                baseDamage = Math.round(baseDamage * damageMultiplier);
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error calculating damage multiplier for player {}",
+                player.getName().getString(), e);
+        }
+
+        return Math.max(1, baseDamage);
+    }
+
+    /**
+     * DEBUG: Simplified custom damage application with logging
+     */
+    private static boolean applyCustomDamageSimple(PlayerHealthAttachment healthAttachment, long damage, Player player) {
+        if (damage <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to apply damage <= 0: {}", damage);
+            return false;
+        }
+
+        try {
+            ImmortalCultivation.LOGGER.info("Attempting to consume {} health from attachment", damage);
+            long oldHealth = healthAttachment.getCurrentHealth();
+            boolean success = healthAttachment.consumeHealth(damage);
+            long newHealth = healthAttachment.getCurrentHealth();
+
+            ImmortalCultivation.LOGGER.info("consumeHealth() returned: {}", success);
+            ImmortalCultivation.LOGGER.info("Health change: {} -> {} (diff: {})", oldHealth, newHealth, oldHealth - newHealth);
+
+            if (success) {
+                onCustomDamageApplied(player, damage, oldHealth, newHealth);
+                return true;
+            } else {
+                ImmortalCultivation.LOGGER.warn("consumeHealth() returned false - damage not applied");
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Exception in applyCustomDamageSimple for player {}: {}",
+                player.getName().getString(), e.getMessage(), e);
+        }
+
+        return false;
+    }
+
+    /**
+     * DEBUG: Custom damage applied callback with logging
+     */
+    private static void onCustomDamageApplied(Player player, long damage, long oldHealth, long newHealth) {
+        long healthLost = oldHealth - newHealth;
+
+        ImmortalCultivation.LOGGER.info("onCustomDamageApplied: Player {} lost {} health from {} damage ({}->{})",
+            player.getName().getString(), healthLost, damage, oldHealth, newHealth);
+
+        // Apply vanilla-style damage feedback
+        DamageSource damageSource = getLastDamageSource(player);
+        ImmortalCultivation.LOGGER.info("Applying damage feedback with source: {}", damageSource.getMsgId());
+
+        try {
+            DamageFeedbackHandler.applyVanillaDamageFeedback(player, healthLost, damageSource);
+            ImmortalCultivation.LOGGER.info("Damage feedback applied successfully");
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying damage feedback: {}", e.getMessage(), e);
+        }
+
+        if (healthLost > 50) {
+            ImmortalCultivation.LOGGER.info("Player {} took major damage!", player.getName().getString());
+        }
+    }
+
+    /**
+     * Get the last damage source for a player, with fallback
+     */
+    private static DamageSource getLastDamageSource(Player player) {
+        DamageSource source = lastDamageSourceMap.get(player.getUUID());
+        if (source == null) {
+            source = player.damageSources().generic();
+        }
+        return source;
+    }
+
+    /**
+     * NEW: Damage armor items when taking damage
+     */
+    private static void damageArmor(Player player, float damageAmount, DamageSource damageSource) {
+        if (damageSource.is(net.minecraft.tags.DamageTypeTags.BYPASSES_ARMOR)) {
+            return;
+        }
+
+        int armorDamage = Math.max(1, (int)(damageAmount / 4.0F));
+
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
+                ItemStack armorPiece = player.getItemBySlot(slot);
+                if (!armorPiece.isEmpty() && armorPiece.isDamageableItem()) {
+                    damageArmorItem(player, armorPiece, armorDamage, slot);
+                }
+            }
+        }
+    }
+
+    /**
+     * Damage individual armor item
+     */
+    private static void damageArmorItem(Player player, ItemStack armorItem, int damage, EquipmentSlot slot) {
+        try {
+            armorItem.hurtAndBreak(damage, player, slot);
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error damaging armor item in slot {}", slot, e);
+        }
+    }
+
+    private static void checkAndHandleDeath(Player player, PlayerHealthAttachment healthAttachment) {
+        long currentModdedHealth = healthAttachment.getCurrentHealth();
+        float currentVanillaHealth = player.getHealth();
+
+        ImmortalCultivation.LOGGER.debug("Death check - Modded: {}, Vanilla: {}",
+            currentModdedHealth, currentVanillaHealth);
+
+        if (currentModdedHealth <= 0) {
+            // Player should be dead according to modded system
+            ImmortalCultivation.LOGGER.info("Player {} has died (modded health reached zero)",
+                player.getName().getString());
+            player.setHealth(0.0f); // Trigger vanilla death
+        } else if (currentVanillaHealth <= 0.1f && currentModdedHealth > 0) {
+            // CRITICAL FIX: Vanilla health is too low but modded health is positive
+            // This is the desync issue - fix it by resyncing vanilla health
+            ImmortalCultivation.LOGGER.warn("Health desync detected for player {} - resyncing vanilla health",
+                player.getName().getString());
+
+            synchronizeVanillaHealthForDamage(player, healthAttachment);
+
+            // Double-check: if vanilla health is still 0 after sync, there's a bigger problem
+            if (player.getHealth() <= 0.1f) {
+                ImmortalCultivation.LOGGER.error("Failed to sync vanilla health for player {} - forcing to safe value",
+                    player.getName().getString());
+
+                // Force vanilla health to safe minimum based on modded health percentage
+                long maxModdedHealth = healthAttachment.getMaxHealth();
+                if (maxModdedHealth > 0) {
+                    float healthPercentage = (float) currentModdedHealth / maxModdedHealth;
+                    float safeVanillaHealth = Math.max(0.5f, player.getMaxHealth() * healthPercentage);
+                    player.setHealth(safeVanillaHealth);
+                }
+            }
+        }
+    }
+
+    private static void verifyHealthSync(Player player, PlayerHealthAttachment healthAttachment) {
+        long moddedHealth = healthAttachment.getCurrentHealth();
+        float vanillaHealth = player.getHealth();
+
+        // If vanilla health is 0 but modded health is positive, fix it immediately
+        if (vanillaHealth <= 0.1f && moddedHealth > 0) {
+            ImmortalCultivation.LOGGER.warn("Prevented health desync for player {} immediately after damage",
+                player.getName().getString());
+
+            synchronizeVanillaHealthForDamage(player, healthAttachment);
+
+            // Double-check the fix worked
+            if (player.getHealth() <= 0.1f) {
+                float emergencyHealth = Math.max(1.0f, player.getMaxHealth() * 0.1f);
+                player.setHealth(emergencyHealth);
+                ImmortalCultivation.LOGGER.error("Emergency health fix applied for player {}",
+                    player.getName().getString());
+            }
+        }
+    }
+
+    // Also add this emergency recovery method you can call manually
+    public static void emergencyHealthSync(Player player) {
+        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+        if (healthAttachment == null) {
+            ImmortalCultivation.LOGGER.error("No health attachment found for emergency sync!");
+            return;
+        }
+
+        long currentModdedHealth = healthAttachment.getCurrentHealth();
+        long maxModdedHealth = healthAttachment.getMaxHealth();
+
+        if (maxModdedHealth > 0 && currentModdedHealth > 0) {
+            float healthPercentage = (float) currentModdedHealth / maxModdedHealth;
+            float targetVanillaHealth = Math.max(1.0f, player.getMaxHealth() * healthPercentage);
+            player.setHealth(targetVanillaHealth);
+
+            ImmortalCultivation.LOGGER.info("Emergency health sync completed for {} - set to {} vanilla health",
+                player.getName().getString(), targetVanillaHealth);
+        }
+    }
+
+    // === HEALING INTERCEPTION ===
+
     @SubscribeEvent(priority = EventPriority.HIGH)
     public static void onPlayerHeal(LivingHealEvent event) {
         if (!(event.getEntity() instanceof Player player)) {
@@ -295,178 +458,24 @@ public class ICModHealthEventHandler {
 
         PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
         if (healthAttachment == null) {
-            // Let vanilla handle healing if our system isn't available
-            ImmortalCultivation.LOGGER.warn("No health attachment found for player {}, using vanilla healing",
-                player.getName().getString());
             return;
         }
 
-        // Cancel vanilla healing and handle through our system
-        event.setCanceled(true);
+        float originalHealing = event.getAmount();
+        if (originalHealing <= 0) {
+            return;
+        }
 
-        // Convert and apply healing through our system
-        float vanillaHealing = event.getAmount();
-        long moddedHealing = convertVanillaHealingToModded(vanillaHealing, event, player);
-
+        long moddedHealing = convertVanillaHealingToModded(originalHealing, event, player);
         long actualHealing = applyCustomHealing(healthAttachment, moddedHealing, player);
 
         if (actualHealing > 0) {
+            event.setAmount(0.0f);
             ImmortalCultivation.LOGGER.debug("Applied {} modded healing to player {} (from {} vanilla healing)",
-                actualHealing, player.getName().getString(), vanillaHealing);
-
-            // REMOVED: Don't sync vanilla health for healing to prevent shake effects
-            // synchronizeVanillaHealth(player, healthAttachment);
+                actualHealing, player.getName().getString(), originalHealing);
         }
     }
 
-    /**
-     * FIXED: Player login synchronization with better error handling
-     */
-    @SubscribeEvent
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) {
-            return;
-        }
-
-        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
-        if (healthAttachment == null) {
-            ImmortalCultivation.LOGGER.error("No health attachment found for player {} on login!",
-                player.getName().getString());
-            return;
-        }
-
-        // Sync vanilla health to match modded health percentage on login
-        synchronizeVanillaHealthCapped(player, healthAttachment);
-
-        // Force sync to client to ensure GUI displays correctly
-        healthAttachment.forceSync();
-
-        ImmortalCultivation.LOGGER.debug("Synchronized health for player {} on login: {}/{}",
-            player.getName().getString(),
-            healthAttachment.getCurrentHealth(),
-            healthAttachment.getMaxHealth());
-    }
-
-    /**
-     * Handle player respawn to fix attachment states
-     */
-    @SubscribeEvent
-    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) {
-            return;
-        }
-
-        ImmortalCultivation.LOGGER.info("Player {} respawned, resetting health attachment state",
-            player.getName().getString());
-
-        // Clear damage tracking for respawned player
-        lastDamageMap.remove(player.getUUID());
-
-        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
-        if (healthAttachment != null) {
-            // Reset health to full on respawn
-            long maxHealth = calculateMaxHealthForPlayer(player);
-            healthAttachment.setCurrentHealth(maxHealth);
-
-            // Reset regeneration fraction
-            healthAttachment.setRegenFraction(0.0);
-
-            // Sync vanilla health bar to full on respawn
-            player.setHealth(player.getMaxHealth());
-
-            // Force sync to client
-            healthAttachment.forceSync();
-
-            ImmortalCultivation.LOGGER.info("Reset health for player {} on respawn: {}/{}",
-                player.getName().getString(),
-                healthAttachment.getCurrentHealth(),
-                maxHealth);
-        } else {
-            ImmortalCultivation.LOGGER.error("No health attachment found for player {} on respawn!",
-                player.getName().getString());
-        }
-    }
-
-    /**
-     * Clean up damage tracking when players disconnect
-     */
-    @SubscribeEvent
-    public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
-        if (event.getEntity() instanceof Player player) {
-            // Clean up damage tracking to prevent memory leaks
-            lastDamageMap.remove(player.getUUID());
-            ImmortalCultivation.LOGGER.debug("Cleaned up damage tracking for disconnected player: {}",
-                player.getName().getString());
-        }
-    }
-
-    // === DAMAGE CONVERSION AND APPLICATION ===
-
-    /**
-     * FIXED: Convert FINAL damage (after armor) to modded damage
-     */
-    private static long convertFinalDamageToModded(float finalVanillaDamage, LivingIncomingDamageEvent event, Player player) {
-        // The damage we receive here has already been reduced by armor/enchantments
-        // So we can do a more direct conversion
-        long baseDamage = Math.round(finalVanillaDamage);
-
-        // Apply cultivation-based damage reduction (additional to vanilla armor)
-        try {
-            PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
-            if (healthAttachment != null) {
-                long maxHealth = healthAttachment.getMaxHealth();
-
-                // Higher max health provides additional damage resistance beyond armor
-                if (maxHealth > 100) {
-                    float cultivationResistance = Math.min(0.3f, (maxHealth - 100) / 2000.0f);
-                    baseDamage = Math.round(baseDamage * (1.0f - cultivationResistance));
-
-                    if (cultivationResistance > 0) {
-                        ImmortalCultivation.LOGGER.debug("Applied {}% cultivation damage resistance to player {}",
-                            String.format("%.1f", cultivationResistance * 100), player.getName().getString());
-                    }
-                }
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating cultivation damage reduction for player {}",
-                player.getName().getString(), e);
-        }
-
-        return Math.max(1, baseDamage);
-    }
-
-    /**
-     * Custom damage application with better error handling
-     */
-    private static boolean applyCustomDamage(PlayerHealthAttachment healthAttachment, long damage,
-                                             LivingIncomingDamageEvent event, Player player) {
-
-        // Check for damage immunity or special conditions
-        if (shouldPreventDamage(player, damage, event)) {
-            return false;
-        }
-
-        try {
-            // Apply the damage
-            long oldHealth = healthAttachment.getCurrentHealth();
-            boolean success = healthAttachment.consumeHealth(damage);
-
-            if (success) {
-                // Trigger custom damage effects
-                onCustomDamageApplied(player, damage, oldHealth, healthAttachment.getCurrentHealth());
-                return true;
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying custom damage to player {}",
-                player.getName().getString(), e);
-        }
-
-        return false;
-    }
-
-    /**
-     * Custom healing application
-     */
     private static long applyCustomHealing(PlayerHealthAttachment healthAttachment, long healing, Player player) {
         try {
             return healthAttachment.addHealth(healing);
@@ -480,7 +489,6 @@ public class ICModHealthEventHandler {
     private static long convertVanillaHealingToModded(float vanillaHealing, LivingHealEvent event, Player player) {
         long baseHealing = Math.round(vanillaHealing);
 
-        // Apply cultivation bonuses
         try {
             PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
             if (healthAttachment != null) {
@@ -497,9 +505,6 @@ public class ICModHealthEventHandler {
 
     // === SYNCHRONIZATION UTILITIES ===
 
-    /**
-     * Synchronize vanilla health for damage events only (prevents healing shake effects)
-     */
     private static void synchronizeVanillaHealthForDamage(Player player, PlayerHealthAttachment healthAttachment) {
         try {
             long currentModdedHealth = healthAttachment.getCurrentHealth();
@@ -512,10 +517,8 @@ public class ICModHealthEventHandler {
             float healthPercentage = (float) currentModdedHealth / maxModdedHealth;
             float maxVanillaHealth = player.getMaxHealth();
 
-            // Cap the vanilla health to prevent shake effects
             float targetVanillaHealth = Math.min(maxVanillaHealth, maxVanillaHealth * healthPercentage);
 
-            // Ensure we never set health to exactly 0 unless the player should be dead
             if (currentModdedHealth > 0) {
                 targetVanillaHealth = Math.max(0.1f, targetVanillaHealth);
             }
@@ -531,9 +534,6 @@ public class ICModHealthEventHandler {
         }
     }
 
-    /**
-     * Synchronize vanilla health for login/respawn events (uses capped approach)
-     */
     private static void synchronizeVanillaHealthCapped(Player player, PlayerHealthAttachment healthAttachment) {
         try {
             long currentModdedHealth = healthAttachment.getCurrentHealth();
@@ -546,10 +546,8 @@ public class ICModHealthEventHandler {
             float healthPercentage = (float) currentModdedHealth / maxModdedHealth;
             float maxVanillaHealth = player.getMaxHealth();
 
-            // Cap the vanilla health to prevent shake effects
             float targetVanillaHealth = Math.min(maxVanillaHealth, maxVanillaHealth * healthPercentage);
 
-            // Ensure we never set health to exactly 0 unless the player should be dead
             if (currentModdedHealth > 0) {
                 targetVanillaHealth = Math.max(0.1f, targetVanillaHealth);
             }
@@ -565,158 +563,103 @@ public class ICModHealthEventHandler {
         }
     }
 
-    // === CUSTOM DAMAGE LOGIC ===
+    // === PLAYER LIFECYCLE EVENTS ===
 
-    /**
-     * NEW: Check if damage source is environmental (should have shorter immunity)
-     */
-    private static boolean isDamageSourceEnvironmental(DamageSource damageSource) {
-        // Check for environmental damage types that should have shorter immunity
-        return damageSource.is(net.minecraft.tags.DamageTypeTags.IS_FIRE) ||
-            damageSource.is(net.minecraft.tags.DamageTypeTags.IS_LIGHTNING) ||
-            damageSource.getMsgId().equals("lava") ||
-            damageSource.getMsgId().equals("inFire") ||
-            damageSource.getMsgId().equals("onFire") ||
-            damageSource.getMsgId().equals("sweetBerryBush") ||
-            damageSource.getMsgId().equals("cactus") ||
-            damageSource.getMsgId().equals("hotFloor") ||
-            damageSource.getMsgId().equals("magma");
-    }
-
-    /**
-     * ENHANCED: Better damage prevention logic that considers immunity
-     */
-    private static boolean shouldPreventDamage(Player player, long damage, LivingIncomingDamageEvent event) {
-        if (damage <= 0) {
-            return true;
-        }
-
-        // Additional check: if player has recently taken damage and this is the same or less
-        // This is a backup check in case the main immunity check missed something
-        if (player.invulnerableTime > 10) {
-            Float lastDamage = lastDamageMap.get(player.getUUID());
-            if (lastDamage != null && damage <= lastDamage) {
-                ImmortalCultivation.LOGGER.debug("Preventing duplicate damage for player {} (lastDamage: {}, newDamage: {})",
-                    player.getName().getString(), lastDamage, damage);
-                return true;
-            }
-        }
-
-        // Add custom immunity checks here
-        // Example: Check for special damage immunities based on cultivation realm
-        try {
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment != null) {
-                // High level cultivators might have immunity to certain damage types
-                int realmLevel = Math.max(
-                    realmAttachment.getCurrentQiRealm().getRealmLevel(),
-                    realmAttachment.getCurrentBodyRealm().getRealmLevel()
-                );
-
-                // Example: Fire immunity for high level cultivators
-                if (realmLevel >= 5 && event.getSource().is(net.minecraft.tags.DamageTypeTags.IS_FIRE)) {
-                    if (damage < 10) { // Only small fire damage is negated
-                        ImmortalCultivation.LOGGER.debug("High realm cultivator {} immune to minor fire damage",
-                            player.getName().getString());
-                        return true;
-                    }
-                }
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error checking cultivation immunities", e);
-        }
-
-        return false;
-    }
-
-    /**
-     * DEBUG: Add this method to help debug damage immunity issues
-     * Call this when you want to check why damage isn't being applied
-     */
-    public static void debugDamageImmunity(Player player, DamageSource damageSource, float damage) {
-        ImmortalCultivation.LOGGER.info("=== Damage Immunity Debug for {} ===", player.getName().getString());
-        ImmortalCultivation.LOGGER.info("Damage Source: {} ({})", damageSource.getMsgId(), damageSource.getClass().getSimpleName());
-        ImmortalCultivation.LOGGER.info("Damage Amount: {}", damage);
-        ImmortalCultivation.LOGGER.info("Player Invulnerable Time: {} ticks", player.invulnerableTime);
-
-        Float lastDamage = lastDamageMap.get(player.getUUID());
-        ImmortalCultivation.LOGGER.info("Last Hurt Amount: {}", lastDamage != null ? lastDamage : "none");
-        ImmortalCultivation.LOGGER.info("Is Environmental: {}", isDamageSourceEnvironmental(damageSource));
-        ImmortalCultivation.LOGGER.info("Should Skip: {}", (player.invulnerableTime > 0 && lastDamage != null && damage <= lastDamage));
-
-        // Check custom health system
-        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
-        if (healthAttachment != null) {
-            ImmortalCultivation.LOGGER.info("Current Health: {}/{}",
-                healthAttachment.getCurrentHealth(), healthAttachment.getMaxHealth());
-        }
-    }
-
-    private static void onCustomDamageApplied(Player player, long damage, long oldHealth, long newHealth) {
-        long healthLost = oldHealth - newHealth;
-
-        ImmortalCultivation.LOGGER.debug("Player {} lost {} health from {} damage ({}->{})",
-            player.getName().getString(), healthLost, damage, oldHealth, newHealth);
-
-        if (healthLost > 50) {
-            ImmortalCultivation.LOGGER.info("Player {} took major damage!", player.getName().getString());
-        }
-    }
-
-    private static void checkAndHandleDeath(Player player, PlayerHealthAttachment healthAttachment) {
-        if (healthAttachment.getCurrentHealth() <= 0) {
-            ImmortalCultivation.LOGGER.info("Player {} has died (custom health reached zero)",
-                player.getName().getString());
-
-            // Set vanilla health to 0 to trigger death
-            player.setHealth(0.0f);
-        }
-    }
-
-    /**
-     * Helper method to safely calculate max health for a player
-     */
-    private static long calculateMaxHealthForPlayer(ServerPlayer player) {
-        try {
-            PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+    @SubscribeEvent
+    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            PlayerHealthAttachment healthAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
             if (healthAttachment != null) {
-                return healthAttachment.getMaxHealth();
+                synchronizeVanillaHealthCapped(serverPlayer, healthAttachment);
+                healthAttachment.forceSync();
             }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating max health for player {}",
-                player.getName().getString(), e);
         }
-
-        return 20; // Default Minecraft health
     }
 
     @SubscribeEvent
-    public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof Player player)) {
-            return;
-        }
-
-        // Only tick on server side to avoid double-processing
-        if (player.level().isClientSide()) {
-            return;
-        }
-
-        try {
-            // Tick the health attachment for regeneration
-            PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+        if (event.getEntity() instanceof ServerPlayer serverPlayer) {
+            PlayerHealthAttachment healthAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
             if (healthAttachment != null) {
-                healthAttachment.tick();
+                synchronizeVanillaHealthCapped(serverPlayer, healthAttachment);
+                healthAttachment.forceSync();
             }
-
-            // Also tick other cultivation attachments if they have tick methods
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment != null) {
-                realmAttachment.tick();
-            }
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error ticking player attachments for player: {}",
-                player.getName().getString(), e);
         }
+    }
+
+    private static final Map<UUID, Integer> healthCheckCooldown = new HashMap<>();
+
+    @SubscribeEvent
+    public static void onPlayerTick(PlayerTickEvent.Post event) {
+        if (!(event.getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+
+        // Only check every 20 ticks (1 second) to avoid performance issues
+        UUID playerId = player.getUUID();
+        int cooldown = healthCheckCooldown.getOrDefault(playerId, 0);
+
+        if (cooldown > 0) {
+            healthCheckCooldown.put(playerId, cooldown - 1);
+            return;
+        }
+
+        // Reset cooldown
+        healthCheckCooldown.put(playerId, 20);
+
+        // Check for health desync
+        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+        if (healthAttachment == null) {
+            return;
+        }
+
+        long moddedHealth = healthAttachment.getCurrentHealth();
+        long maxModdedHealth = healthAttachment.getMaxHealth();
+        float vanillaHealth = player.getHealth();
+        float maxVanillaHealth = player.getMaxHealth();
+
+        // Skip if player is actually dead
+        if (moddedHealth <= 0) {
+            return;
+        }
+
+        // Check for critical desync
+        boolean isDesyncCritical = vanillaHealth <= 0.1f && moddedHealth > 0;
+        boolean isDesyncMinor = maxModdedHealth > 0 &&
+            Math.abs((vanillaHealth / maxVanillaHealth) - ((float) moddedHealth / maxModdedHealth)) > 0.1f;
+
+        if (isDesyncCritical) {
+            ImmortalCultivation.LOGGER.warn("CRITICAL health desync detected for player {} - auto-fixing",
+                player.getName().getString());
+
+            // Emergency fix
+            float healthPercentage = (float) moddedHealth / maxModdedHealth;
+            float targetVanillaHealth = Math.max(1.0f, maxVanillaHealth * healthPercentage);
+            player.setHealth(targetVanillaHealth);
+
+            // Reset stuck states
+            player.invulnerableTime = 0;
+            player.hurtTime = 0;
+            player.deathTime = 0;
+
+            // Force sync
+            healthAttachment.forceSync();
+
+        } else if (isDesyncMinor) {
+            // Minor desync - gentle correction
+            synchronizeVanillaHealthCapped(player, healthAttachment);
+        }
+    }
+
+    // === CLEANUP EVENTS ===
+
+    @SubscribeEvent
+    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+        UUID playerId = event.getEntity().getUUID();
+        lastDamageMap.remove(playerId);
+        lastDamageSourceMap.remove(playerId);
+
+        ImmortalCultivation.LOGGER.debug("Cleaned up damage tracking data for player {}",
+            event.getEntity().getName().getString());
     }
 }

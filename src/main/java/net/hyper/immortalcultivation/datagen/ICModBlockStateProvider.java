@@ -46,13 +46,17 @@ public class ICModBlockStateProvider extends BlockStateProvider {
         // Ores
         blockWithItem(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK);
         blockWithItem(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK);
+        blockWithItem(ICModBlocks.METAL_ASPECTED_ORE_BLOCK);
         blockWithItem(ICModBlocks.WATER_ASPECTED_ORE_BLOCK);
+        blockWithItem(ICModBlocks.WOOD_ASPECTED_ORE_BLOCK);
         blockWithItem(ICModBlocks.SKY_IRON_ORE_BLOCK);
 
         // Deepslate Ores
+        blockWithItem(ICModBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK);
         blockWithItem(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK);
         blockWithItem(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK);
         blockWithItem(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
+        blockWithItem(ICModBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK);
 
         // === PLANTS === //
 

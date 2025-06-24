@@ -38,13 +38,17 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
             // Ores
             .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
-            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.WOOD_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
 
             // Deepslate Ores
+            .add(ICModBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
 
             // === CRAFTING === //
 

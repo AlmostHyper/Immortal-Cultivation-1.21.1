@@ -99,6 +99,12 @@ public class ICModNetwork {
             PhysiqueSyncPacket::handleClient
         );
 
+        REGISTRY.playToClient(
+            DamageFeedbackSyncPacket.ID,
+            DamageFeedbackSyncPacket.STREAM_CODEC,
+            DamageFeedbackSyncPacket::handleClient
+        );
+
         // === CLIENT -> SERVER === //
 
         REGISTRY.playToServer(

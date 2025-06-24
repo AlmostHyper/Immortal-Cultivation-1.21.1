@@ -113,10 +113,10 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
                 return 1.0 + attackDamageBonus;
             }
 
-            // Get base attack damage from highest realm
+            // Get base attack damage from both realms
             double qiRealmDamage = realmAttachment.getCurrentQiRealm().getBaseAttackDamage();
             double bodyRealmDamage = realmAttachment.getCurrentBodyRealm().getBaseAttackDamage();
-            double baseRealmBonus = Math.max(qiRealmDamage, bodyRealmDamage) - 1.0;
+            double baseRealmBonus = qiRealmDamage + bodyRealmDamage;
 
             // Combine realm bonus with persistent bonuses
             double total = 1.0 + baseRealmBonus + attackDamageBonus;
@@ -177,10 +177,10 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment == null) return movementSpeedBonus;
 
-            // Get base movement speed from highest realm
+            // Get base movement speed from both realms
             double qiRealmSpeed = realmAttachment.getCurrentQiRealm().getBaseMovementSpeed();
             double bodyRealmSpeed = realmAttachment.getCurrentBodyRealm().getBaseMovementSpeed();
-            double baseRealmBonus = Math.max(qiRealmSpeed, bodyRealmSpeed);
+            double baseRealmBonus = qiRealmSpeed + bodyRealmSpeed;
 
             // Combine realm bonus with persistent bonuses
             return baseRealmBonus + movementSpeedBonus;
@@ -234,10 +234,10 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
             PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
             if (realmAttachment == null) return jumpHeightBonus;
 
-            // Get base jump height from highest realm
+            // Get base jump height from both realms
             double qiRealmJump = realmAttachment.getCurrentQiRealm().getBaseJumpHeight();
             double bodyRealmJump = realmAttachment.getCurrentBodyRealm().getBaseJumpHeight();
-            double baseRealmBonus = Math.max(qiRealmJump, bodyRealmJump);
+            double baseRealmBonus = qiRealmJump + bodyRealmJump;
 
             // Combine realm bonus with persistent bonuses
             return baseRealmBonus + jumpHeightBonus;

@@ -20,10 +20,12 @@ import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
+import net.neoforged.neoforge.event.entity.living.LivingEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -293,9 +295,74 @@ public class CombatStatsEventHandler {
         }
     }
 
+    /**
+     * Handle actual jump height increases through jump event
+     */
+    @SubscribeEvent(priority = EventPriority.HIGHEST) // Changed to HIGHEST to run first
+    public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
+        // Accept any living entity, not just ServerPlayer for debugging
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        // Add debug logging to see if event fires at all
+        ImmortalCultivation.LOGGER.info("LivingJumpEvent fired for player: {}", player.getName().getString());
+
+        try {
+            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            if (combatStats == null) {
+                ImmortalCultivation.LOGGER.warn("No combat stats attachment for player: {}", player.getName().getString());
+                return;
+            }
+
+            // Get the effective jump height multiplier
+            double jumpMultiplier = combatStats.getEffectiveJumpHeightMultiplier();
+
+            ImmortalCultivation.LOGGER.info("Jump multiplier for {}: {}", player.getName().getString(), jumpMultiplier);
+
+            if (jumpMultiplier > 0.0) {
+                // Get current movement - log it for debugging
+                Vec3 currentMovement = player.getDeltaMovement();
+                ImmortalCultivation.LOGGER.info("Current movement before jump: X={}, Y={}, Z={}",
+                    currentMovement.x, currentMovement.y, currentMovement.z);
+
+                // Try different approaches based on current Y velocity
+                double newJumpVelocity;
+
+                if (Math.abs(currentMovement.y) < 0.1) {
+                    // If Y velocity is near zero, set it to enhanced jump velocity
+                    newJumpVelocity = 0.42 * (1.0 + jumpMultiplier); // Base jump is ~0.42
+                } else {
+                    // If Y velocity already exists, enhance it
+                    newJumpVelocity = currentMovement.y * (1.0 + jumpMultiplier);
+                }
+
+                // Update player's movement with enhanced jump
+                player.setDeltaMovement(currentMovement.x, newJumpVelocity, currentMovement.z);
+
+                // Log the change
+                ImmortalCultivation.LOGGER.info("Applied jump height bonus: {}% (velocity: {} -> {}) for player {}",
+                    String.format("%.1f", jumpMultiplier * 100),
+                    String.format("%.3f", currentMovement.y),
+                    String.format("%.3f", newJumpVelocity),
+                    player.getName().getString());
+
+                // Verify the change was applied
+                Vec3 newMovement = player.getDeltaMovement();
+                ImmortalCultivation.LOGGER.info("Movement after setting: X={}, Y={}, Z={}",
+                    newMovement.x, newMovement.y, newMovement.z);
+            } else {
+                ImmortalCultivation.LOGGER.info("No jump bonus to apply (multiplier: {})", jumpMultiplier);
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying jump height bonus for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
     private static void applyJumpHeightModifier(ServerPlayer player, PlayerCombatStatsAttachment combatStats) {
         try {
-            // Use step height as a proxy for jump height enhancement
+            // Keep step height enhancement as an additional perk (optional)
             AttributeInstance stepHeightAttribute = player.getAttribute(Attributes.STEP_HEIGHT);
             if (stepHeightAttribute == null) {
                 return;
@@ -309,7 +376,8 @@ public class CombatStatsEventHandler {
 
             if (jumpBonus > 0.0) {
                 // Convert jump height bonus to step height (allows stepping up higher blocks)
-                double stepHeightBonus = Math.min(jumpBonus * 2.0, 3.0); // Cap at 3 blocks
+                // This is now just a secondary benefit, real jump height is handled by LivingJumpEvent
+                double stepHeightBonus = Math.min(jumpBonus * 0.5, 1.0); // Reduced bonus for step height
 
                 AttributeModifier modifier = new AttributeModifier(
                     CULTIVATION_JUMP_HEIGHT_ID,
@@ -319,12 +387,12 @@ public class CombatStatsEventHandler {
 
                 stepHeightAttribute.addPermanentModifier(modifier);
 
-                ImmortalCultivation.LOGGER.debug("Applied jump/step height modifier: +{} blocks for player {}",
+                ImmortalCultivation.LOGGER.debug("Applied step height modifier: +{} blocks for player {}",
                     String.format("%.1f", stepHeightBonus),
                     player.getName().getString());
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying jump height modifier for player {}",
+            ImmortalCultivation.LOGGER.error("Error applying step height modifier for player {}",
                 player.getName().getString(), e);
         }
     }

@@ -57,6 +57,9 @@ public class PillFurnaceBlockEntity extends BaseContainerBlockEntity implements 
     private int fuelTime = 0;
     private int maxFuelTime = 0;
 
+    // Store items as NonNullList for BaseContainerBlockEntity compatibility
+    private NonNullList<ItemStack> items = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
+
     // === CONSTRUCTORS === //
 
     public PillFurnaceBlockEntity(BlockPos pos, BlockState blockState) {
@@ -69,6 +72,10 @@ public class PillFurnaceBlockEntity extends BaseContainerBlockEntity implements 
     private final ItemStackHandler itemHandler = new ItemStackHandler(SLOT_COUNT) {
         @Override
         protected void onContentsChanged(int slot) {
+            // Sync with the NonNullList
+            if (slot >= 0 && slot < SLOT_COUNT) {
+                items.set(slot, getStackInSlot(slot).copy());
+            }
             setChanged();
         }
 
@@ -81,6 +88,15 @@ public class PillFurnaceBlockEntity extends BaseContainerBlockEntity implements 
                 case OUTPUT_SLOT -> false;
                 default -> false;
             };
+        }
+
+        @Override
+        public void setStackInSlot(int slot, ItemStack stack) {
+            super.setStackInSlot(slot, stack);
+            // Sync with the NonNullList
+            if (slot >= 0 && slot < SLOT_COUNT) {
+                items.set(slot, stack.copy());
+            }
         }
     };
 
@@ -152,7 +168,6 @@ public class PillFurnaceBlockEntity extends BaseContainerBlockEntity implements 
             changed = true;
         }
 
-        // In the tick method, replace the comment section with actual implementation:
         // Update block state if lit status changed
         if (wasLit != entity.isLit()) {
             changed = true;
@@ -364,6 +379,10 @@ public class PillFurnaceBlockEntity extends BaseContainerBlockEntity implements 
         for (int i = 0; i < SLOT_COUNT; i++) {
             itemHandler.setStackInSlot(i, ItemStack.EMPTY);
         }
+        items.clear();
+        for (int i = 0; i < SLOT_COUNT; i++) {
+            items.add(ItemStack.EMPTY);
+        }
     }
 
     @Override
@@ -371,14 +390,23 @@ public class PillFurnaceBlockEntity extends BaseContainerBlockEntity implements 
         return Component.translatable("container.immortalcultivation.pill_furnace");
     }
 
+    // ✅ FIXED: Properly implement getItems() and setItems()
     @Override
     protected NonNullList<ItemStack> getItems() {
-        return null;
+        // Sync itemHandler to items list before returning
+        for (int i = 0; i < SLOT_COUNT; i++) {
+            items.set(i, itemHandler.getStackInSlot(i).copy());
+        }
+        return items;
     }
 
     @Override
-    protected void setItems(NonNullList<ItemStack> nonNullList) {
-
+    protected void setItems(NonNullList<ItemStack> itemList) {
+        // Sync items list to itemHandler
+        for (int i = 0; i < Math.min(itemList.size(), SLOT_COUNT); i++) {
+            itemHandler.setStackInSlot(i, itemList.get(i).copy());
+            items.set(i, itemList.get(i).copy());
+        }
     }
 
     @Override
@@ -478,6 +506,11 @@ public class PillFurnaceBlockEntity extends BaseContainerBlockEntity implements 
         maxProgress = tag.getInt("MaxProgress");
         fuelTime = tag.getInt("FuelTime");
         maxFuelTime = tag.getInt("MaxFuelTime");
+
+        // Sync ItemStackHandler to NonNullList after loading
+        for (int i = 0; i < SLOT_COUNT; i++) {
+            items.set(i, itemHandler.getStackInSlot(i).copy());
+        }
     }
 
     // Capability handling

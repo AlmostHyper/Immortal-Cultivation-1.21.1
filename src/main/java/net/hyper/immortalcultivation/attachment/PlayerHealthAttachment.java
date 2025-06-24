@@ -154,8 +154,6 @@ public class PlayerHealthAttachment implements IHealthData {
             return baseMax;
         }
 
-        // Add bonuses from both cultivation paths
-        // Both Qi and Body cultivation enhance overall vitality
         long cultivationBonus = 0;
 
         try {
@@ -291,20 +289,21 @@ public class PlayerHealthAttachment implements IHealthData {
     public void onHealthChanged(long oldHealth, long newHealth) {
         Player player = getPlayerSafe();
         if (player != null) {
-            // Use a non-linear mapping for better low-health granularity
-            float healthPercentage = (float)newHealth / getMaxHealth();
-
-            // Apply a curve that gives more vanilla hearts to low percentages
-            float adjustedPercentage = (float)Math.pow(healthPercentage, 0.7);
-
-            float targetVanillaHealth = player.getMaxHealth() * adjustedPercentage;
-
-            // Ensure we can actually reach zero
+            // AUTHORITATIVE: Only custom health system can trigger death
             if (newHealth <= 0) {
-                targetVanillaHealth = 0;
-            }
+                // Custom system authorizes death
+                player.setHealth(0.0f);
+                ImmortalCultivation.LOGGER.info("Custom health system triggered death for {}",
+                    player.getName().getString());
+            } else {
+                // Keep vanilla health as visual proxy (never 0)
+                float healthPercentage = (float)newHealth / getMaxHealth();
+                float maxVanillaHealth = player.getMaxHealth();
 
-            player.setHealth(targetVanillaHealth);
+                // Scale between 0.5 and max
+                float targetVanillaHealth = 0.5f + (maxVanillaHealth - 0.5f) * healthPercentage;
+                player.setHealth(targetVanillaHealth);
+            }
         }
     }
 

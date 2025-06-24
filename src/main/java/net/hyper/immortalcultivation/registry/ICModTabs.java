@@ -33,12 +33,17 @@ public class ICModTabs {
                         output.accept(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK);
                         output.accept(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK);
                         output.accept(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK);
+                        output.accept(ICModBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK);
                         output.accept(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK);
                         output.accept(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK);
+                        output.accept(ICModBlocks.METAL_ASPECTED_ORE_BLOCK);
                         output.accept(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK);
-                        output.accept(ICModBlocks.SKY_IRON_ORE_BLOCK);
                         output.accept(ICModBlocks.WATER_ASPECTED_ORE_BLOCK);
                         output.accept(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK);
+                        output.accept(ICModBlocks.WOOD_ASPECTED_ORE_BLOCK);
+                        output.accept(ICModBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK);
+                        output.accept(ICModBlocks.SKY_IRON_ORE_BLOCK);
+                        output.accept(ICModBlocks.PILL_FURNACE_BLOCK);
                     }).build());
 
     public static final Supplier<CreativeModeTab> immortalcultivation_ITEMS_TAB = REGISTRY.register("immortalcultivation_items_tab",
@@ -67,6 +72,10 @@ public class ICModTabs {
                         output.accept(ICModItems.WHITE_METAL_ROOTS);
                         output.accept(ICModItems.BLACK_WATER_ROOTS);
                         output.accept(ICModItems.BLUE_WOOD_ROOTS);
+                        output.accept(ICModItems.LOW_QUALITY_QI_CULTIVATION_PILL);
+                        output.accept(ICModItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL);
+                        output.accept(ICModItems.LOW_QUALITY_BODY_CULTIVATION_PILL);
+                        output.accept(ICModItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL);
                     }).build());
 
     public static final Supplier<CreativeModeTab> immortalcultivation_TOOLS_TAB = REGISTRY.register("immortalcultivation_tools_tab",

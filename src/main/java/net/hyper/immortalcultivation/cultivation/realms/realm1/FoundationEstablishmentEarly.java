@@ -26,9 +26,9 @@ public class FoundationEstablishmentEarly extends CultivationRealm {
 
     private static final long BASE_HEALTH = 200;
     private static final double BASE_HEALTH_REGEN = 0.1;
-    private static final double BASE_ATTACK_DAMAGE = 5.0;
-    private static final double BASE_MOVEMENT_SPEED = 2.0;
-    private static final double BASE_JUMP_HEIGHT = 2.0;
+    private static final double BASE_ATTACK_DAMAGE = 3.0;
+    private static final double BASE_MOVEMENT_SPEED = 1.0;
+    private static final double BASE_JUMP_HEIGHT = 1.0;
 
     private static final long BASE_MAX_QI = 500;
     private static final double BASE_QI_REGEN_RATE = 5.0;

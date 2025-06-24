@@ -22,6 +22,7 @@ public class ICModBiomeModifiers {
     public static final ResourceKey<BiomeModifier> ADD_OVERWORLD_FIRE_ASPECTED_ORE = registerKey("add_overworld_fire_aspected_ore");
     public static final ResourceKey<BiomeModifier> ADD_OVERWORLD_METAL_ASPECTED_ORE = registerKey("add_overworld_metal_aspected_ore");
     public static final ResourceKey<BiomeModifier> ADD_OVERWORLD_WATER_ASPECTED_ORE = registerKey("add_overworld_water_aspected_ore");
+    public static final ResourceKey<BiomeModifier> ADD_OVERWORLD_WOOD_ASPECTED_ORE = registerKey("add_overworld_wood_aspected_ore");
     public static final ResourceKey<BiomeModifier> ADD_OVERWORLD_SKY_IRON_ORE = registerKey("add_overworld_sky_iron_ore");
 
     public static void bootstrap(BootstrapContext<BiomeModifier> context) {
@@ -66,6 +67,11 @@ public class ICModBiomeModifiers {
         context.register(ADD_OVERWORLD_WATER_ASPECTED_ORE, new BiomeModifiers.AddFeaturesBiomeModifier(
             biomes.getOrThrow(BiomeTags.IS_OVERWORLD),
             HolderSet.direct(placedFeatures.getOrThrow(ICModPlacedFeatures.WATER_ASPECTED_ORE_PLACED_KEY)),
+            GenerationStep.Decoration.UNDERGROUND_ORES));
+
+        context.register(ADD_OVERWORLD_WOOD_ASPECTED_ORE, new BiomeModifiers.AddFeaturesBiomeModifier(
+            biomes.getOrThrow(BiomeTags.IS_OVERWORLD),
+            HolderSet.direct(placedFeatures.getOrThrow(ICModPlacedFeatures.WOOD_ASPECTED_ORE_PLACED_KEY)),
             GenerationStep.Decoration.UNDERGROUND_ORES));
 
         context.register(ADD_OVERWORLD_SKY_IRON_ORE, new BiomeModifiers.AddFeaturesBiomeModifier(

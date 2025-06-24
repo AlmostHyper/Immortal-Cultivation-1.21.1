@@ -11,7 +11,7 @@ public class SkyIronBlocks {
     public static Supplier<Block> SKY_IRON_ORE_BLOCK() {
         return () -> new Block(BlockBehaviour.Properties.of()
             .sound(SoundType.STONE)
-            .strength(1.5F, 10.0F)
+            .strength(2.5F, 10.0F)
             .requiresCorrectToolForDrops());
     }
 }

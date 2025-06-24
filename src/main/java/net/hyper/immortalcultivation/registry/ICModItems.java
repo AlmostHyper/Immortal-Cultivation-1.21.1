@@ -22,9 +22,9 @@ public class ICModItems {
     public static final DeferredItem<Item> EARTH_ASPECTED_ORE;
     public static final DeferredItem<Item> FIRE_ASPECTED_ORE;
     public static final DeferredItem<Item> METAL_ASPECTED_ORE;
-    public static final DeferredItem<Item> SKY_IRON_ORE;
     public static final DeferredItem<Item> WATER_ASPECTED_ORE;
     public static final DeferredItem<Item> WOOD_ASPECTED_ORE;
+    public static final DeferredItem<Item> SKY_IRON_ORE;
 
     // Ingots
     public static final DeferredItem<Item> EARTH_ASPECTED_INGOT;

@@ -423,8 +423,8 @@ public class PlayerRealmAttachment {
         if (level == 7) return ICModCultivationRealms.QI_CONDENSATION_L7;
         if (level == 8) return ICModCultivationRealms.QI_CONDENSATION_L8;
         if (level == 9) return ICModCultivationRealms.QI_CONDENSATION_L9;
-
-        // Add more realm mappings as needed
+        if (level == 10) return ICModCultivationRealms.QI_CONDENSATION_L10;
+        if (level == 11) return ICModCultivationRealms.FOUNDATION_ESTABLISHMENT_EARLY;
 
         // Fallback to current realm if not found
         ImmortalCultivation.LOGGER.warn("Unknown realm level: {}, using current realm", level);

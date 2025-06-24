@@ -145,8 +145,9 @@ public class BodyCultivationPillItem extends CultivationPillItem {
         }
     }
 
-    public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
-        super.appendHoverText(stack, TooltipContext.of(level), tooltipComponents, isAdvanced);
+    @Override
+    public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag isAdvanced) {
+        super.appendHoverText(stack, context, tooltipComponents, isAdvanced);
 
         // Basic description
         tooltipComponents.add(Component.literal("A pill that permanently increases Body cultivation rate.")
@@ -162,6 +163,7 @@ public class BodyCultivationPillItem extends CultivationPillItem {
             .withStyle(ChatFormatting.YELLOW));
 
         // Add warning about consumption limits if we have a player context
+        Level level = context.level();
         if (level != null && level.isClientSide()) {
             var minecraft = net.minecraft.client.Minecraft.getInstance();
             if (minecraft.player != null) {

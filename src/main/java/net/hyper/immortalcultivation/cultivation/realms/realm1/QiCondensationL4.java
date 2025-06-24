@@ -26,7 +26,7 @@ public class QiCondensationL4 extends CultivationRealm {
 
     private static final long BASE_HEALTH = 40;
     private static final double BASE_HEALTH_REGEN = 0.025;
-    private static final double BASE_ATTACK_DAMAGE = 1.25;
+    private static final double BASE_ATTACK_DAMAGE = 0.4;
     private static final double BASE_MOVEMENT_SPEED = 0.2;
     private static final double BASE_JUMP_HEIGHT = 0.25;
 

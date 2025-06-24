@@ -32,7 +32,9 @@ public class ICModBlocks {
     public static final DeferredBlock<Block> MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK;
     public static final DeferredBlock<Block> EARTH_ASPECTED_ORE_BLOCK;
     public static final DeferredBlock<Block> FIRE_ASPECTED_ORE_BLOCK;
+    public static final DeferredBlock<Block> METAL_ASPECTED_ORE_BLOCK;
     public static final DeferredBlock<Block> WATER_ASPECTED_ORE_BLOCK;
+    public static final DeferredBlock<Block> WOOD_ASPECTED_ORE_BLOCK;
     public static final DeferredBlock<Block> SKY_IRON_ORE_BLOCK;
 
     // Deepslate Ores
@@ -40,9 +42,11 @@ public class ICModBlocks {
     public static final DeferredBlock<Block> MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK;
     public static final DeferredBlock<Block> HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK;
     public static final DeferredBlock<Block> TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK;
+    public static final DeferredBlock<Block> EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK;
     public static final DeferredBlock<Block> FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK;
     public static final DeferredBlock<Block> METAL_ASPECTED_DEEPSLATE_ORE_BLOCK;
     public static final DeferredBlock<Block> WATER_ASPECTED_DEEPSLATE_ORE_BLOCK;
+    public static final DeferredBlock<Block> WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK;
 
     // === PLANTS === //
 
@@ -83,17 +87,21 @@ public class ICModBlocks {
         MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK = registerBlockWithItem("medium_quality_spirit_stone_ore_block", R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK());
         EARTH_ASPECTED_ORE_BLOCK = registerBlockWithItem("earth_aspected_ore_block", EarthAspectedBlocks.EARTH_ASPECTED_ORE_BLOCK());
         FIRE_ASPECTED_ORE_BLOCK = registerBlockWithItem("fire_aspected_ore_block", FireAspectedBlocks.FIRE_ASPECTED_ORE_BLOCK());
+        METAL_ASPECTED_ORE_BLOCK = registerBlockWithItem("metal_aspected_ore_block", MetalAspectedBlocks.METAL_ASPECTED_ORE_BLOCK());
         WATER_ASPECTED_ORE_BLOCK = registerBlockWithItem("water_aspected_ore_block", WaterAspectedBlocks.WATER_ASPECTED_ORE_BLOCK());
-        SKY_IRON_ORE_BLOCK = registerBlockWithItem("sky_iron_ore_block", WoodAspectedBlocks.WOOD_ASPECTED_ORE_BLOCK());
+        WOOD_ASPECTED_ORE_BLOCK = registerBlockWithItem("wood_aspected_ore_block", WoodAspectedBlocks.WOOD_ASPECTED_ORE_BLOCK());
+        SKY_IRON_ORE_BLOCK = registerBlockWithItem("sky_iron_ore_block", SkyIronBlocks.SKY_IRON_ORE_BLOCK());
 
         // Deepslate Ores
         LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("low_quality_spirit_stone_deepslate_ore_block", R1SpiritStoneBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK());
         MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("medium_quality_spirit_stone_deepslate_ore_block", R1SpiritStoneBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK());
         HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("high_quality_spirit_stone_deepslate_ore_block", R1SpiritStoneBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK());
         TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("top_quality_spirit_stone_deepslate_ore_block", R1SpiritStoneBlocks.TOP_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK());
+        EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("earth_aspected_deepslate_ore_block", EarthAspectedBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK());
         FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("fire_aspected_deepslate_ore_block", FireAspectedBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK());
         METAL_ASPECTED_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("metal_aspected_deepslate_ore_block", MetalAspectedBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK());
         WATER_ASPECTED_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("water_aspected_deepslate_ore_block", WaterAspectedBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK());
+        WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK = registerBlockWithItem("wood_aspected_deepslate_ore_block", WoodAspectedBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK());
 
         // === PLANTS == //
 
@@ -121,7 +129,6 @@ public class ICModBlocks {
     private static DeferredBlock<Block> registerBlockWithItem(String name, Supplier<? extends Block> blockSupplier, Item.Properties itemProperties) {
         DeferredBlock<Block> block = REGISTRY.register(name, blockSupplier);
 
-        // Register the block item in the items registry
         Item.Properties properties = itemProperties != null ? itemProperties : new Item.Properties();
         ICModItems.REGISTRY.register(name, () -> new BlockItem(block.get(), properties));
 

@@ -11,14 +11,14 @@ public class WaterAspectedBlocks {
     public static Supplier<Block> WATER_ASPECTED_ORE_BLOCK() {
         return () -> new Block(BlockBehaviour.Properties.of()
             .sound(SoundType.STONE)
-            .strength(1.5F, 10.0F)
+            .strength(2.0f, 10.0f)
             .requiresCorrectToolForDrops());
     }
 
     public static Supplier<Block> WATER_ASPECTED_DEEPSLATE_ORE_BLOCK() {
         return () -> new Block(BlockBehaviour.Properties.of()
             .sound(SoundType.STONE)
-            .strength(1.5F, 10.0F)
+            .strength(2.0f, 10.0f)
             .requiresCorrectToolForDrops());
     }
 
