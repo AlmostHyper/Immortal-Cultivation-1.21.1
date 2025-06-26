@@ -3,6 +3,8 @@ package net.hyper.immortalcultivation.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.attachment.PlayerTalentAttachment;
 import net.hyper.immortalcultivation.cultivation.SpiritualRootType;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
@@ -32,16 +34,21 @@ public class SetRandomSpiritualRootCommand {
             RandomSource random = player.level().getRandom();
             SpiritualRootType randomRoot = SpiritualRootType.generateRandom(random);
 
-            // Get the player's spiritual root attachment
-            var spiritualRootAttachment = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
-
-            if (spiritualRootAttachment == null) {
-                context.getSource().sendFailure(Component.literal("Failed to get spiritual root data for player"));
+            // Get the unified talent attachment
+            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            if (talentAttachment == null) {
+                context.getSource().sendFailure(Component.literal("Failed to get talent data for player"));
                 return 0;
             }
 
-            // Set the random spiritual root type
-            spiritualRootAttachment.assignRootType(randomRoot);
+            // Set the random spiritual root type using the unified system
+            if (talentAttachment.hasSpiritualRootAssigned()) {
+                // Force reassignment (admin override)
+                talentAttachment.forceReassignSpiritualRoot(randomRoot);
+            } else {
+                // Normal assignment
+                talentAttachment.assignSpiritualRoot(randomRoot);
+            }
 
             // Check if we need to broadcast to server
             float multiplier = randomRoot.getCultivationMultiplier();
@@ -54,7 +61,7 @@ public class SetRandomSpiritualRootCommand {
             }
 
             // Check for ultimate destiny (both heavenly talents)
-            checkForUltimateDestiny(player);
+            checkForUltimateDestiny(player, talentAttachment);
 
             // Send success message with rarity information
             String rarityInfo = getRarityInfo(randomRoot);
@@ -74,6 +81,16 @@ public class SetRandomSpiritualRootCommand {
                 String rarityMessage = getRarityMessage(randomRoot);
                 player.sendSystemMessage(Component.literal("✨ " + rarityMessage + " " +
                     randomRoot.getDisplayName() + "!"));
+            }
+
+            // Show combined talent status if both talents are assigned
+            if (talentAttachment.hasSpiritualRootAssigned() && talentAttachment.hasPhysiqueAssigned()) {
+                String combinedDesc = talentAttachment.getCombinedTalentDescription();
+                float overallMultiplier = talentAttachment.getOverallCultivationMultiplier();
+
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Combined Talent Status: " + combinedDesc +
+                        " (Overall: " + String.format("%.2fx", overallMultiplier) + " multiplier)"), false);
             }
 
             return 1;
@@ -143,7 +160,7 @@ public class SetRandomSpiritualRootCommand {
             });
         } catch (Exception e) {
             // Log error instead of sending to context
-            net.hyper.immortalcultivation.ImmortalCultivation.LOGGER.error("Error broadcasting legendary spiritual root achievement", e);
+            ImmortalCultivation.LOGGER.error("Error broadcasting legendary spiritual root achievement", e);
         }
     }
 
@@ -178,31 +195,23 @@ public class SetRandomSpiritualRootCommand {
             });
         } catch (Exception e) {
             // Log error instead of sending to context
-            net.hyper.immortalcultivation.ImmortalCultivation.LOGGER.error("Error broadcasting heavenly spiritual root achievement", e);
+            ImmortalCultivation.LOGGER.error("Error broadcasting heavenly spiritual root achievement", e);
         }
     }
 
     /**
-     * Check if player has achieved ultimate destiny (both heavenly talents)
+     * Check if player has achieved ultimate destiny (both heavenly talents) using unified attachment
      */
-    private static void checkForUltimateDestiny(ServerPlayer player) {
+    private static void checkForUltimateDestiny(ServerPlayer player, PlayerTalentAttachment talentAttachment) {
         try {
-            var rootAttachment = player.getData(net.hyper.immortalcultivation.registry.ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
-            var physiqueAttachment = player.getData(net.hyper.immortalcultivation.registry.ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
-
-            if (rootAttachment != null && physiqueAttachment != null) {
-                boolean hasHeavenlyRoot = rootAttachment.getRootType().getCultivationMultiplier() == 1.5f;
-                boolean hasHeavenlyPhysique = physiqueAttachment.getRootType().getCultivationMultiplier() == 1.5f;
-
-                if (hasHeavenlyRoot && hasHeavenlyPhysique) {
-                    // ULTIMATE DESTINY ACHIEVED!
-                    broadcastUltimateDestiny(player,
-                        rootAttachment.getRootType().getDisplayName(),
-                        physiqueAttachment.getRootType().getDisplayName());
-                }
+            if (talentAttachment.hasDivineDaoDestiny()) {
+                // ULTIMATE DESTINY ACHIEVED!
+                broadcastUltimateDestiny(player,
+                    talentAttachment.getSpiritualRootDisplayName(),
+                    talentAttachment.getPhysiqueDisplayName());
             }
         } catch (Exception e) {
-            net.hyper.immortalcultivation.ImmortalCultivation.LOGGER.error("Error checking ultimate destiny", e);
+            ImmortalCultivation.LOGGER.error("Error checking ultimate destiny", e);
         }
     }
 
@@ -237,7 +246,7 @@ public class SetRandomSpiritualRootCommand {
                 serverPlayer.sendSystemMessage(broadcast);
             });
         } catch (Exception e) {
-            net.hyper.immortalcultivation.ImmortalCultivation.LOGGER.error("Error broadcasting ultimate destiny", e);
+            ImmortalCultivation.LOGGER.error("Error broadcasting ultimate destiny", e);
         }
     }
 }

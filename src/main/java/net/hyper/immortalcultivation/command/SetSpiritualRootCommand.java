@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import net.hyper.immortalcultivation.attachment.PlayerTalentAttachment;
 import net.hyper.immortalcultivation.cultivation.SpiritualRootType;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.commands.CommandSourceStack;
@@ -47,26 +48,52 @@ public class SetSpiritualRootCommand {
         try {
             SpiritualRootType rootType = SpiritualRootType.valueOf(rootString);
 
-            // Get the player's spiritual root attachment
-            var spiritualRootAttachment = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
-
-            if (spiritualRootAttachment == null) {
-                context.getSource().sendFailure(Component.literal("Failed to get spiritual root data for player"));
+            // Get the unified talent attachment
+            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            if (talentAttachment == null) {
+                context.getSource().sendFailure(Component.literal("Failed to get talent data for player"));
                 return 0;
             }
 
-            // Set the spiritual root type
-            spiritualRootAttachment.assignRootType(rootType);
-
-            // Send success message
-            context.getSource().sendSuccess(() ->
-                Component.literal("Set spiritual root of " + player.getName().getString() +
-                    " to " + rootType.getDisplayName()), true);
+            // Set the spiritual root using the unified system
+            if (talentAttachment.hasSpiritualRootAssigned()) {
+                // Force reassignment (admin override)
+                talentAttachment.forceReassignSpiritualRoot(rootType);
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Forcibly reassigned spiritual root of " + player.getName().getString() +
+                        " to " + rootType.getDisplayName() + " (" +
+                        String.format("%.1fx", rootType.getCultivationMultiplier()) + " multiplier)"), true);
+            } else {
+                // Normal assignment
+                talentAttachment.assignSpiritualRoot(rootType);
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Set spiritual root of " + player.getName().getString() +
+                        " to " + rootType.getDisplayName() + " (" +
+                        String.format("%.1fx", rootType.getCultivationMultiplier()) + " multiplier)"), true);
+            }
 
             // Send message to the target player if different from command source
             if (!context.getSource().getEntity().equals(player)) {
                 player.sendSystemMessage(Component.literal("Your spiritual root has been set to " +
-                    rootType.getDisplayName()));
+                    rootType.getDisplayName() + " (" +
+                    String.format("%.1fx", rootType.getCultivationMultiplier()) + " cultivation multiplier)"));
+            }
+
+            // Show combined talent status if both talents are assigned
+            if (talentAttachment.hasSpiritualRootAssigned() && talentAttachment.hasPhysiqueAssigned()) {
+                String combinedDesc = talentAttachment.getCombinedTalentDescription();
+                float overallMultiplier = talentAttachment.getOverallCultivationMultiplier();
+
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Combined Talent Status: " + combinedDesc +
+                        " (Overall: " + String.format("%.2fx", overallMultiplier) + " multiplier)"), false);
+
+                // Check for Divine Dao Destiny
+                if (talentAttachment.hasDivineDaoDestiny()) {
+                    context.getSource().sendSuccess(() ->
+                        Component.literal("🌟 DIVINE DAO DESTINY ACHIEVED! 🌟")
+                            .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE, net.minecraft.ChatFormatting.BOLD), false);
+                }
             }
 
             return 1;

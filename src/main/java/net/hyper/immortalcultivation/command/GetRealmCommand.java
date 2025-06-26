@@ -1,8 +1,6 @@
 package net.hyper.immortalcultivation.command;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.mojang.brigadier.arguments.LongArgumentType;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
@@ -13,17 +11,11 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Enhanced GetRealmCommand for the dual cultivation system.
+ * Enhanced GetRealmCommand for the unified cultivation system.
  *
  * This command now provides comprehensive information about both cultivation paths,
  * helping players understand their complete cultivation state and the relationships
- * between different system components.
- *
- * The command serves both administrative and educational purposes:
- * - Shows current state of both Qi and Body cultivation paths
- * - Displays cultivation focus and its strategic implications
- * - Provides resource information (Health, Qi Energy, Body Energy)
- * - Helps players understand cultivation system interactions
+ * between different system components using the new unified attachment system.
  */
 public class GetRealmCommand {
     public GetRealmCommand(CommandDispatcher<CommandSourceStack> dispatcher) {
@@ -124,28 +116,22 @@ public class GetRealmCommand {
     }
 
     /**
-     * Gathers all cultivation-related data from the player.
+     * Gathers all cultivation-related data from the player using unified attachments.
      * This creates a consistent snapshot for display purposes.
      */
     private CultivationDataSnapshot gatherPlayerCultivationData(ServerPlayer player) {
         try {
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            PlayerQiCultivationAttachment qiCultivation = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
-            PlayerBodyCultivationAttachment bodyCultivation = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
-            PlayerCultivationFocusAttachment focus = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
-            PlayerHealthAttachment health = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
-            PlayerQiAttachment qi = player.getData(ICModAttachmentTypes.PLAYER_QI.get());
-            PlayerBodyAttachment body = player.getData(ICModAttachmentTypes.PLAYER_BODY.get());
-            PlayerSpiritualRootAttachment spiritualRoots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
-            PlayerPhysiqueAttachment physique = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            PlayerTalentAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
 
             // Verify we have critical data
-            if (realmAttachment == null || qiCultivation == null || bodyCultivation == null || focus == null) {
+            if (cultivation == null || resources == null || talents == null) {
                 return null;
             }
 
-            return new CultivationDataSnapshot(realmAttachment, qiCultivation, bodyCultivation, focus,
-                health, qi, body, spiritualRoots, physique);
+            return new CultivationDataSnapshot(cultivation, resources, talents, combatStats);
         } catch (Exception e) {
             return null;
         }
@@ -160,9 +146,20 @@ public class GetRealmCommand {
             .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 
         // Current focus with strategic context
-        String focusName = snapshot.focus.getCurrentFocus().getDisplayName();
+        String focusName = snapshot.cultivation.getCurrentFocus().getDisplayName();
         source.sendSuccess(() -> Component.literal("Current Focus: " + focusName + " Cultivation (2x rate)")
             .withStyle(ChatFormatting.YELLOW), false);
+
+        // Talent information
+        String talentDesc = snapshot.talents.getCombinedTalentDescription();
+        source.sendSuccess(() -> Component.literal("Talent Level: " + talentDesc)
+            .withStyle(ChatFormatting.LIGHT_PURPLE), false);
+
+        // Overall multiplier
+        float overallMultiplier = snapshot.talents.getOverallCultivationMultiplier();
+        source.sendSuccess(() -> Component.literal("Overall Talent Multiplier: " +
+                String.format("%.2fx", overallMultiplier))
+            .withStyle(ChatFormatting.GREEN), false);
     }
 
     /**
@@ -171,18 +168,18 @@ public class GetRealmCommand {
      */
     private void sendRealmInformation(CommandSourceStack source, CultivationDataSnapshot snapshot) {
         // Qi Realm Information
-        String qiRealm = snapshot.realm.getCurrentQiRealm().getDisplayName();
+        String qiRealm = snapshot.cultivation.getCurrentQiRealm().getDisplayName();
         source.sendSuccess(() -> Component.literal("Qi Realm: " + qiRealm)
             .withStyle(ChatFormatting.AQUA), false);
 
         // Body Realm Information
-        String bodyRealm = snapshot.realm.getCurrentBodyRealm().getDisplayName();
+        String bodyRealm = snapshot.cultivation.getCurrentBodyRealm().getDisplayName();
         source.sendSuccess(() -> Component.literal("Body Realm: " + bodyRealm)
             .withStyle(ChatFormatting.RED), false);
 
         // Overall cultivation level comparison
-        String higherPath = snapshot.realm.getCurrentQiRealm().getRealmLevel() >=
-            snapshot.realm.getCurrentBodyRealm().getRealmLevel() ? "Qi" : "Body";
+        String higherPath = snapshot.cultivation.getCurrentQiRealm().getRealmLevel() >=
+            snapshot.cultivation.getCurrentBodyRealm().getRealmLevel() ? "Qi" : "Body";
         source.sendSuccess(() -> Component.literal("Highest Path: " + higherPath + " Cultivation")
             .withStyle(ChatFormatting.GREEN), false);
     }
@@ -192,16 +189,21 @@ public class GetRealmCommand {
      * This teaches players about the focus system's benefits and timing.
      */
     private void sendFocusInformation(CommandSourceStack source, CultivationDataSnapshot snapshot) {
-        // Focus switch availability
-        if (snapshot.focus.canSwitchFocus()) {
-            String switchTo = snapshot.focus.isFocusedOnQi() ? "Body" : "Qi";
-            source.sendSuccess(() -> Component.literal("Focus Switch: Available (can switch to " + switchTo + ")")
-                .withStyle(ChatFormatting.GREEN), false);
-        } else {
-            long remainingSeconds = snapshot.focus.getRemainingCooldownTicks() / 20;
-            source.sendSuccess(() -> Component.literal("Focus Switch: Cooldown (" + remainingSeconds + "s remaining)")
-                .withStyle(ChatFormatting.RED), false);
-        }
+        // Focus switch availability (simplified check)
+        String currentFocus = snapshot.cultivation.getCurrentFocus().getDisplayName();
+        String switchTo = snapshot.cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ? "Body" : "Qi";
+
+        source.sendSuccess(() -> Component.literal("Focus Switch: Can switch to " + switchTo)
+            .withStyle(ChatFormatting.GREEN), false);
+
+        // Show current bonuses
+        source.sendSuccess(() -> Component.literal("Qi Cultivation Rate: " +
+                String.format("%.2f/sec", snapshot.cultivation.getEffectiveQiCultivationRate()))
+            .withStyle(ChatFormatting.AQUA), false);
+
+        source.sendSuccess(() -> Component.literal("Body Cultivation Rate: " +
+                String.format("%.2f/sec", snapshot.cultivation.getEffectiveBodyCultivationRate()))
+            .withStyle(ChatFormatting.RED), false);
     }
 
     /**
@@ -213,20 +215,34 @@ public class GetRealmCommand {
             .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 
         // Qi Cultivation Progress
-        long qiCurrent = snapshot.qiCultivation.getCurrentQiCultivation();
-        long qiMax = snapshot.qiCultivation.getMaxQiCultivation();
-        double qiPercent = qiMax > 0 ? (double)qiCurrent / qiMax * 100 : 0;
+        long qiCurrent = snapshot.cultivation.getCurrentQiCultivation();
+        long qiMax = snapshot.cultivation.getMaxQiCultivation();
+        double qiPercent = snapshot.cultivation.getQiProgress() * 100;
 
         source.sendSuccess(() -> Component.literal(String.format("Qi Cultivation: %d/%d (%.1f%%)",
             qiCurrent, qiMax, qiPercent)).withStyle(ChatFormatting.AQUA), false);
 
         // Body Cultivation Progress
-        long bodyCurrent = snapshot.bodyCultivation.getCurrentBodyCultivation();
-        long bodyMax = snapshot.bodyCultivation.getMaxBodyCultivation();
-        double bodyPercent = bodyMax > 0 ? (double)bodyCurrent / bodyMax * 100 : 0;
+        long bodyCurrent = snapshot.cultivation.getCurrentBodyCultivation();
+        long bodyMax = snapshot.cultivation.getMaxBodyCultivation();
+        double bodyPercent = snapshot.cultivation.getBodyProgress() * 100;
 
         source.sendSuccess(() -> Component.literal(String.format("Body Cultivation: %d/%d (%.1f%%)",
             bodyCurrent, bodyMax, bodyPercent)).withStyle(ChatFormatting.RED), false);
+
+        // Show bonuses if any
+        double qiBonus = snapshot.cultivation.getQiAdditiveBonus();
+        double bodyBonus = snapshot.cultivation.getBodyAdditiveBonus();
+
+        if (qiBonus > 0) {
+            source.sendSuccess(() -> Component.literal(String.format("Qi Bonus: +%.3f/sec from pills",
+                qiBonus)).withStyle(ChatFormatting.YELLOW), false);
+        }
+
+        if (bodyBonus > 0) {
+            source.sendSuccess(() -> Component.literal(String.format("Body Bonus: +%.3f/sec from pills",
+                bodyBonus)).withStyle(ChatFormatting.YELLOW), false);
+        }
     }
 
     /**
@@ -235,32 +251,31 @@ public class GetRealmCommand {
      */
     private void sendBreakthroughReadiness(CommandSourceStack source, CultivationDataSnapshot snapshot) {
         // Qi Breakthrough Readiness
-        boolean qiReady = snapshot.realm.meetsBreakthroughRequirements(PlayerRealmAttachment.CultivationType.QI);
-        boolean qiOnCooldown = snapshot.realm.isOnBreakthroughCooldown(PlayerRealmAttachment.CultivationType.QI);
-
+        boolean qiReady = snapshot.cultivation.getCurrentQiCultivation() >= snapshot.cultivation.getMaxQiCultivation();
         String qiStatus = qiReady ? "Ready" : "Not Ready";
-        if (qiOnCooldown) {
-            long qiCooldown = snapshot.realm.getRemainingCooldownTicks(PlayerRealmAttachment.CultivationType.QI) / 20;
-            qiStatus += " (Cooldown: " + qiCooldown + "s)";
-        }
+        ChatFormatting qiColor = qiReady ? ChatFormatting.GREEN : ChatFormatting.RED;
 
-        ChatFormatting qiColor = qiReady && !qiOnCooldown ? ChatFormatting.GREEN : ChatFormatting.RED;
-        String finalQiStatus = qiStatus;
-        source.sendSuccess(() -> Component.literal("Qi Breakthrough: " + finalQiStatus).withStyle(qiColor), false);
+        source.sendSuccess(() -> Component.literal("Qi Breakthrough: " + qiStatus).withStyle(qiColor), false);
 
         // Body Breakthrough Readiness
-        boolean bodyReady = snapshot.realm.meetsBreakthroughRequirements(PlayerRealmAttachment.CultivationType.BODY);
-        boolean bodyOnCooldown = snapshot.realm.isOnBreakthroughCooldown(PlayerRealmAttachment.CultivationType.BODY);
-
+        boolean bodyReady = snapshot.cultivation.getCurrentBodyCultivation() >= snapshot.cultivation.getMaxBodyCultivation();
         String bodyStatus = bodyReady ? "Ready" : "Not Ready";
-        if (bodyOnCooldown) {
-            long bodyCooldown = snapshot.realm.getRemainingCooldownTicks(PlayerRealmAttachment.CultivationType.BODY) / 20;
-            bodyStatus += " (Cooldown: " + bodyCooldown + "s)";
+        ChatFormatting bodyColor = bodyReady ? ChatFormatting.GREEN : ChatFormatting.RED;
+
+        source.sendSuccess(() -> Component.literal("Body Breakthrough: " + bodyStatus).withStyle(bodyColor), false);
+
+        // Show what's needed if not ready
+        if (!qiReady) {
+            long needed = snapshot.cultivation.getMaxQiCultivation() - snapshot.cultivation.getCurrentQiCultivation();
+            source.sendSuccess(() -> Component.literal("Need " + needed + " more Qi cultivation for breakthrough")
+                .withStyle(ChatFormatting.YELLOW), false);
         }
 
-        ChatFormatting bodyColor = bodyReady && !bodyOnCooldown ? ChatFormatting.GREEN : ChatFormatting.RED;
-        String finalBodyStatus = bodyStatus;
-        source.sendSuccess(() -> Component.literal("Body Breakthrough: " + finalBodyStatus).withStyle(bodyColor), false);
+        if (!bodyReady) {
+            long needed = snapshot.cultivation.getMaxBodyCultivation() - snapshot.cultivation.getCurrentBodyCultivation();
+            source.sendSuccess(() -> Component.literal("Need " + needed + " more Body cultivation for breakthrough")
+                .withStyle(ChatFormatting.YELLOW), false);
+        }
     }
 
     /**
@@ -272,48 +287,42 @@ public class GetRealmCommand {
             .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 
         // Health Information
-        if (snapshot.health != null) {
-            long healthCurrent = snapshot.health.getCurrentHealth();
-            long healthMax = snapshot.health.getMaxHealth();
-            double healthPercent = healthMax > 0 ? (double)healthCurrent / healthMax * 100 : 0;
+        long healthCurrent = snapshot.resources.getCurrentHealth();
+        long healthMax = snapshot.resources.getMaxHealth();
+        double healthPercent = snapshot.resources.getHealthProgress() * 100;
 
-            source.sendSuccess(() -> Component.literal(String.format("Health: %d/%d (%.1f%%)",
-                healthCurrent, healthMax, healthPercent)).withStyle(ChatFormatting.LIGHT_PURPLE), false);
-        }
+        source.sendSuccess(() -> Component.literal(String.format("Health: %d/%d (%.1f%%)",
+            healthCurrent, healthMax, healthPercent)).withStyle(ChatFormatting.LIGHT_PURPLE), false);
 
         // Qi Energy Information
-        if (snapshot.qi != null) {
-            long qiCurrent = snapshot.qi.getCurrentQi();
-            long qiMax = snapshot.qi.getMaxQi();
-            double qiPercent = qiMax > 0 ? (double)qiCurrent / qiMax * 100 : 0;
+        long qiCurrent = snapshot.resources.getCurrentQi();
+        long qiMax = snapshot.resources.getMaxQi();
+        double qiPercent = snapshot.resources.getQiProgress() * 100;
 
-            source.sendSuccess(() -> Component.literal(String.format("Qi Energy: %d/%d (%.1f%%)",
-                qiCurrent, qiMax, qiPercent)).withStyle(ChatFormatting.BLUE), false);
-        }
+        source.sendSuccess(() -> Component.literal(String.format("Qi Energy: %d/%d (%.1f%%)",
+            qiCurrent, qiMax, qiPercent)).withStyle(ChatFormatting.BLUE), false);
 
         // Body Energy Information
-        if (snapshot.body != null) {
-            long bodyCurrent = snapshot.body.getCurrentBody();
-            long bodyMax = snapshot.body.getMaxBody();
-            double bodyPercent = bodyMax > 0 ? (double)bodyCurrent / bodyMax * 100 : 0;
+        long bodyCurrent = snapshot.resources.getCurrentBody();
+        long bodyMax = snapshot.resources.getMaxBody();
+        double bodyPercent = snapshot.resources.getBodyProgress() * 100;
 
-            source.sendSuccess(() -> Component.literal(String.format("Body Energy: %d/%d (%.1f%%)",
-                bodyCurrent, bodyMax, bodyPercent)).withStyle(ChatFormatting.DARK_RED), false);
-        }
+        source.sendSuccess(() -> Component.literal(String.format("Body Energy: %d/%d (%.1f%%)",
+            bodyCurrent, bodyMax, bodyPercent)).withStyle(ChatFormatting.DARK_RED), false);
+
+        // Meditation Status
+        boolean meditating = snapshot.resources.isPlayerMeditating();
+        source.sendSuccess(() -> Component.literal("Meditation Status: " + (meditating ? "Active" : "Inactive"))
+            .withStyle(meditating ? ChatFormatting.GREEN : ChatFormatting.GRAY), false);
     }
 
     /**
-     * Data snapshot containing all cultivation information for consistent display.
+     * Data snapshot containing all cultivation information for consistent display using unified attachments.
      */
     private record CultivationDataSnapshot(
-        PlayerRealmAttachment realm,
-        PlayerQiCultivationAttachment qiCultivation,
-        PlayerBodyCultivationAttachment bodyCultivation,
-        PlayerCultivationFocusAttachment focus,
-        PlayerHealthAttachment health,
-        PlayerQiAttachment qi,
-        PlayerBodyAttachment body,
-        PlayerSpiritualRootAttachment spiritualRoots,
-        PlayerPhysiqueAttachment physique
+        PlayerCultivationAttachment cultivation,
+        PlayerResourceAttachment resources,
+        PlayerTalentAttachment talents,
+        PlayerCombatStatsAttachment combatStats
     ) {}
 }

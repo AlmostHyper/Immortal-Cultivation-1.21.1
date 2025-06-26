@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.network.DamageFeedbackSyncPacket;
+import net.hyper.immortalcultivation.network.server.DamageFeedbackSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;

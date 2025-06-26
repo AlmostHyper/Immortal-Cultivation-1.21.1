@@ -33,15 +33,13 @@ public interface IBodyData {
 
     /**
      * Consumes Body from the current amount
+     *
      * @param amount Amount to consume
-     * @return True if successful, false if insufficient Body
      */
-    default boolean consumeBody(long amount) {
+    default void consumeBody(long amount) {
         if (getCurrentBody() >= amount) {
             setCurrentBody(getCurrentBody() - amount);
-            return true;
         }
-        return false;
     }
 
     /**

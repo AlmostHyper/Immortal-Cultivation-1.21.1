@@ -4,10 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import net.hyper.immortalcultivation.attachment.PlayerBodyCultivationAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerCultivationFocusAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerQiCultivationAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -16,7 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
- * Enhanced SetCultivationCommand for the dual cultivation system.
+ * Enhanced SetCultivationCommand for the unified cultivation system.
  *
  * This command now supports setting cultivation values for both paths,
  * with clear specification of which cultivation type to modify.
@@ -64,16 +61,16 @@ public class SetCultivationCommand {
 
             long newCultivation = LongArgumentType.getLong(context, "amount");
 
-            // Get the Qi cultivation attachment
-            PlayerQiCultivationAttachment qiAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
-            if (qiAttachment == null) {
-                context.getSource().sendFailure(Component.literal("Failed to get Qi cultivation data"));
+            // Get the unified cultivation attachment
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation == null) {
+                context.getSource().sendFailure(Component.literal("Failed to get cultivation data"));
                 return 0;
             }
 
             // Store old value for comparison
-            long oldCultivation = qiAttachment.getCurrentQiCultivation();
-            long maxCultivation = qiAttachment.getMaxQiCultivation();
+            long oldCultivation = cultivation.getCurrentQiCultivation();
+            long maxCultivation = cultivation.getMaxQiCultivation();
 
             // Validate the new amount against current realm limits
             if (newCultivation > maxCultivation) {
@@ -83,7 +80,7 @@ public class SetCultivationCommand {
             }
 
             // Apply the change
-            qiAttachment.setCurrentQiCultivation(newCultivation);
+            cultivation.setCurrentQiCultivation(newCultivation);
 
             // Provide comprehensive feedback
             context.getSource().sendSuccess(() ->
@@ -91,7 +88,7 @@ public class SetCultivationCommand {
                     .withStyle(ChatFormatting.AQUA), true);
 
             // Check if this change affects breakthrough readiness
-            checkAndReportBreakthroughStatus(context.getSource(), player, PlayerRealmAttachment.CultivationType.QI);
+            checkAndReportBreakthroughStatus(context.getSource(), cultivation, PlayerCultivationAttachment.CultivationType.QI);
 
             return 1;
         } catch (Exception e) {
@@ -114,16 +111,16 @@ public class SetCultivationCommand {
 
             long newCultivation = LongArgumentType.getLong(context, "amount");
 
-            // Get the Body cultivation attachment
-            PlayerBodyCultivationAttachment bodyAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
-            if (bodyAttachment == null) {
-                context.getSource().sendFailure(Component.literal("Failed to get Body cultivation data"));
+            // Get the unified cultivation attachment
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation == null) {
+                context.getSource().sendFailure(Component.literal("Failed to get cultivation data"));
                 return 0;
             }
 
             // Store old value for comparison
-            long oldCultivation = bodyAttachment.getCurrentBodyCultivation();
-            long maxCultivation = bodyAttachment.getMaxBodyCultivation();
+            long oldCultivation = cultivation.getCurrentBodyCultivation();
+            long maxCultivation = cultivation.getMaxBodyCultivation();
 
             // Validate the new amount against current realm limits
             if (newCultivation > maxCultivation) {
@@ -133,7 +130,7 @@ public class SetCultivationCommand {
             }
 
             // Apply the change
-            bodyAttachment.setCurrentBodyCultivation(newCultivation);
+            cultivation.setCurrentBodyCultivation(newCultivation);
 
             // Provide comprehensive feedback
             context.getSource().sendSuccess(() ->
@@ -141,7 +138,7 @@ public class SetCultivationCommand {
                     .withStyle(ChatFormatting.RED), true);
 
             // Check if this change affects breakthrough readiness
-            checkAndReportBreakthroughStatus(context.getSource(), player, PlayerRealmAttachment.CultivationType.BODY);
+            checkAndReportBreakthroughStatus(context.getSource(), cultivation, PlayerCultivationAttachment.CultivationType.BODY);
 
             return 1;
         } catch (Exception e) {
@@ -164,39 +161,34 @@ public class SetCultivationCommand {
 
             String focusType = StringArgumentType.getString(context, "type").toLowerCase();
 
-            // Get the cultivation focus attachment
-            PlayerCultivationFocusAttachment focusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
-            if (focusAttachment == null) {
-                context.getSource().sendFailure(Component.literal("Failed to get cultivation focus data"));
-                return 0;
-            }
-
-            // Check if focus switch is available
-            if (!focusAttachment.canSwitchFocus()) {
-                long remainingSeconds = focusAttachment.getRemainingCooldownTicks() / 20;
-                context.getSource().sendFailure(Component.literal(
-                    "Focus switch on cooldown: " + remainingSeconds + " seconds remaining"));
+            // Get the unified cultivation attachment
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation == null) {
+                context.getSource().sendFailure(Component.literal("Failed to get cultivation data"));
                 return 0;
             }
 
             // Store old focus for comparison
-            String oldFocus = focusAttachment.getCurrentFocus().getDisplayName();
+            String oldFocus = cultivation.getCurrentFocus().getDisplayName();
 
-            // Apply focus change
+            // Apply focus change using the toggle system or direct setting
+            PlayerCultivationAttachment.CultivationType currentFocus = cultivation.getCurrentFocus();
+            PlayerCultivationAttachment.CultivationType newFocus;
+
             switch (focusType) {
                 case "qi" -> {
-                    if (focusAttachment.isFocusedOnQi()) {
+                    if (currentFocus == PlayerCultivationAttachment.CultivationType.QI) {
                         context.getSource().sendFailure(Component.literal("Already focused on Qi cultivation"));
                         return 0;
                     }
-                    focusAttachment.focusOnQi();
+                    newFocus = PlayerCultivationAttachment.CultivationType.QI;
                 }
                 case "body" -> {
-                    if (focusAttachment.isFocusedOnBody()) {
+                    if (currentFocus == PlayerCultivationAttachment.CultivationType.BODY) {
                         context.getSource().sendFailure(Component.literal("Already focused on Body cultivation"));
                         return 0;
                     }
-                    focusAttachment.focusOnBody();
+                    newFocus = PlayerCultivationAttachment.CultivationType.BODY;
                 }
                 default -> {
                     context.getSource().sendFailure(Component.literal("Invalid focus type. Use 'qi' or 'body'"));
@@ -204,16 +196,30 @@ public class SetCultivationCommand {
                 }
             }
 
-            String newFocus = focusAttachment.getCurrentFocus().getDisplayName();
+            // Attempt to toggle focus (this may have cooldown restrictions)
+            boolean success = cultivation.toggleFocus();
+            if (!success) {
+                context.getSource().sendFailure(Component.literal("Focus switch failed - may be on cooldown"));
+                return 0;
+            }
+
+            String newFocusName = cultivation.getCurrentFocus().getDisplayName();
 
             // Provide strategic feedback about the focus change
             context.getSource().sendSuccess(() ->
-                Component.literal("Cultivation focus changed: " + oldFocus + " → " + newFocus + " (2x rate)")
+                Component.literal("Cultivation focus changed: " + oldFocus + " → " + newFocusName + " (2x rate)")
                     .withStyle(ChatFormatting.YELLOW), true);
 
             context.getSource().sendSuccess(() ->
-                Component.literal("New focus will double advancement rate for " + newFocus + " cultivation")
+                Component.literal("New focus will double advancement rate for " + newFocusName + " cultivation")
                     .withStyle(ChatFormatting.GREEN), false);
+
+            // Show current rates
+            context.getSource().sendSuccess(() ->
+                Component.literal(String.format("Qi Rate: %.2f/sec | Body Rate: %.2f/sec",
+                        cultivation.getEffectiveQiCultivationRate(),
+                        cultivation.getEffectiveBodyCultivationRate()))
+                    .withStyle(ChatFormatting.AQUA), false);
 
             return 1;
         } catch (Exception e) {
@@ -226,14 +232,23 @@ public class SetCultivationCommand {
      * Checks if a cultivation change affects breakthrough readiness and reports the status.
      * This provides immediate feedback about strategic implications of cultivation changes.
      */
-    private void checkAndReportBreakthroughStatus(CommandSourceStack source, ServerPlayer player,
-                                                  PlayerRealmAttachment.CultivationType cultivationType) {
+    private void checkAndReportBreakthroughStatus(CommandSourceStack source, PlayerCultivationAttachment cultivation,
+                                                  PlayerCultivationAttachment.CultivationType cultivationType) {
         try {
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment == null) return;
-
-            boolean canBreakthrough = realmAttachment.meetsBreakthroughRequirements(cultivationType);
+            boolean canBreakthrough;
+            long current;
+            long max;
             String pathName = cultivationType.getDisplayName();
+
+            if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
+                current = cultivation.getCurrentQiCultivation();
+                max = cultivation.getMaxQiCultivation();
+            } else {
+                current = cultivation.getCurrentBodyCultivation();
+                max = cultivation.getMaxBodyCultivation();
+            }
+
+            canBreakthrough = current >= max;
 
             if (canBreakthrough) {
                 source.sendSuccess(() ->
@@ -241,12 +256,7 @@ public class SetCultivationCommand {
                         .withStyle(ChatFormatting.GREEN), false);
             } else {
                 // Calculate how much more cultivation is needed
-                long current = cultivationType == PlayerRealmAttachment.CultivationType.QI ?
-                    player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get()).getCurrentQiCultivation() :
-                    player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get()).getCurrentBodyCultivation();
-
-                long threshold = realmAttachment.getCurrentRealm(cultivationType).getBreakthroughCultivationThreshold();
-                long needed = threshold - current;
+                long needed = max - current;
 
                 source.sendSuccess(() ->
                     Component.literal("Need " + needed + " more " + pathName.toLowerCase() + " cultivation for breakthrough")

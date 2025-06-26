@@ -1,12 +1,12 @@
 package net.hyper.immortalcultivation.registry;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.network.*;
+import net.hyper.immortalcultivation.network.client.*;
+import net.hyper.immortalcultivation.network.server.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -28,161 +28,80 @@ public class ICModNetwork {
         // === SERVER -> CLIENT === //
 
         REGISTRY.playToClient(
-            RealmSyncPacket.ID,
-            RealmSyncPacket.STREAM_CODEC,
-            RealmSyncPacket::handleClient
+            CultivationSyncPacket.TYPE,
+            CultivationSyncPacket.STREAM_CODEC,
+            CultivationSyncPacket::handleClient
         );
 
         REGISTRY.playToClient(
-            QiCultivationSyncPacket.ID,
-            QiCultivationSyncPacket.STREAM_CODEC,
-            QiCultivationSyncPacket::handleClient
+            ResourceSyncPacket.TYPE,
+            ResourceSyncPacket.STREAM_CODEC,
+            ResourceSyncPacket::handleClient
         );
 
         REGISTRY.playToClient(
-            BodyCultivationSyncPacket.ID,
-            BodyCultivationSyncPacket.STREAM_CODEC,
-            BodyCultivationSyncPacket::handleClient
+            TalentSyncPacket.TYPE,
+            TalentSyncPacket.STREAM_CODEC,
+            TalentSyncPacket::handleClient
         );
 
         REGISTRY.playToClient(
-            CultivationFocusSyncPacket.ID,
-            CultivationFocusSyncPacket.STREAM_CODEC,
-            CultivationFocusSyncPacket::handleClient
+            BreakthroughSyncPacket.TYPE,
+            BreakthroughSyncPacket.STREAM_CODEC,
+            BreakthroughSyncPacket::handleClient
         );
 
         REGISTRY.playToClient(
-            CultivationBonusSyncPacket.ID,
-            CultivationBonusSyncPacket.STREAM_CODEC,
-            CultivationBonusSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            CultivationBreakthroughSyncPacket.ID,
-            CultivationBreakthroughSyncPacket.STREAM_CODEC,
-            CultivationBreakthroughSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            CombatStatsSyncPacket.ID,
+            CombatStatsSyncPacket.TYPE,
             CombatStatsSyncPacket.STREAM_CODEC,
             CombatStatsSyncPacket::handleClient
         );
 
         REGISTRY.playToClient(
-            HealthSyncPacket.ID,
-            HealthSyncPacket.STREAM_CODEC,
-            HealthSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            QiSyncPacket.ID,
-            QiSyncPacket.STREAM_CODEC,
-            QiSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            BodySyncPacket.ID,
-            BodySyncPacket.STREAM_CODEC,
-            BodySyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            SpiritualRootSyncPacket.ID,
-            SpiritualRootSyncPacket.STREAM_CODEC,
-            SpiritualRootSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            PhysiqueSyncPacket.ID,
-            PhysiqueSyncPacket.STREAM_CODEC,
-            PhysiqueSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            DamageFeedbackSyncPacket.ID,
+            DamageFeedbackSyncPacket.TYPE,
             DamageFeedbackSyncPacket.STREAM_CODEC,
             DamageFeedbackSyncPacket::handleClient
         );
 
         // === CLIENT -> SERVER === //
 
+
+
         REGISTRY.playToServer(
-            RealmRequestPacket.ID,
-            RealmRequestPacket.STREAM_CODEC,
-            RealmRequestPacket::handleServer
+            CultivationRequestPacket.TYPE,
+            CultivationRequestPacket.STREAM_CODEC,
+            CultivationRequestPacket::handleServer
+        );
+
+
+        REGISTRY.playToServer(
+            ResourceRequestPacket.TYPE,
+            ResourceRequestPacket.STREAM_CODEC,
+            ResourceRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(
-            QiCultivationRequestPacket.ID,
-            QiCultivationRequestPacket.STREAM_CODEC,
-            QiCultivationRequestPacket::handleServer
+            TalentRequestPacket.TYPE,
+            TalentRequestPacket.STREAM_CODEC,
+            TalentRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(
-            BodyCultivationRequestPacket.ID,
-            BodyCultivationRequestPacket.STREAM_CODEC,
-            BodyCultivationRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            CultivationFocusRequestPacket.ID,
-            CultivationFocusRequestPacket.STREAM_CODEC,
-            CultivationFocusRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            CultivationFocusTogglePacket.ID,
+            CultivationFocusTogglePacket.TYPE,
             CultivationFocusTogglePacket.STREAM_CODEC,
             CultivationFocusTogglePacket::handleServer
         );
 
         REGISTRY.playToServer(
-            CultivationBonusRequestPacket.ID,
-            CultivationBonusRequestPacket.STREAM_CODEC,
-            CultivationBonusRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            CultivationBreakthroughRequestPacket.ID,
-            CultivationBreakthroughRequestPacket.STREAM_CODEC,
-            CultivationBreakthroughRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            CombatStatsRequestPacket.ID,
+            CombatStatsRequestPacket.TYPE,
             CombatStatsRequestPacket.STREAM_CODEC,
             CombatStatsRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(
-            HealthRequestPacket.ID,
-            HealthRequestPacket.STREAM_CODEC,
-            HealthRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            QiRequestPacket.ID,
-            QiRequestPacket.STREAM_CODEC,
-            QiRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            BodyRequestPacket.ID,
-            BodyRequestPacket.STREAM_CODEC,
-            BodyRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            SpiritualRootRequestPacket.ID,
-            SpiritualRootRequestPacket.STREAM_CODEC,
-            SpiritualRootRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            PhysiqueRequestPacket.ID,
-            PhysiqueRequestPacket.STREAM_CODEC,
-            PhysiqueRequestPacket::handleServer
+            ConsumePillRequestPacket.TYPE,
+            ConsumePillRequestPacket.STREAM_CODEC,
+            ConsumePillRequestPacket::handleServer
         );
 
         ImmortalCultivation.LOGGER.info("Network packets registered successfully!");

@@ -5,7 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
@@ -62,10 +62,10 @@ public class SetRealmCommand {
 
         try {
             // Parse cultivation type
-            PlayerRealmAttachment.CultivationType cultivationType;
+            PlayerCultivationAttachment.CultivationType cultivationType;
             switch (cultivationTypeString) {
-                case "qi" -> cultivationType = PlayerRealmAttachment.CultivationType.QI;
-                case "body" -> cultivationType = PlayerRealmAttachment.CultivationType.BODY;
+                case "qi" -> cultivationType = PlayerCultivationAttachment.CultivationType.QI;
+                case "body" -> cultivationType = PlayerCultivationAttachment.CultivationType.BODY;
                 default -> {
                     context.getSource().sendFailure(Component.literal("Invalid cultivation type: " + cultivationTypeString));
                     context.getSource().sendFailure(Component.literal("Available types: qi, body"));
@@ -81,26 +81,57 @@ public class SetRealmCommand {
                 return 0;
             }
 
-            // Get the player's realm attachment
-            var realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment == null) {
-                context.getSource().sendFailure(Component.literal("Failed to get realm data for player"));
+            // Get the unified cultivation attachment
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation == null) {
+                context.getSource().sendFailure(Component.literal("Failed to get cultivation data for player"));
                 return 0;
             }
 
-            // Set the realm
-            realmAttachment.setCurrentRealm(cultivationType, realm);
+            // Set the realm using the unified system
+            if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
+                CultivationRealm oldRealm = cultivation.getCurrentQiRealm();
+                cultivation.setCurrentQiRealm(realm);
 
-            // Send success message
-            context.getSource().sendSuccess(() ->
-                Component.literal("Set " + cultivationType.getDisplayName() + " cultivation realm of " +
-                    player.getName().getString() + " to " + realm.getDisplayName()), true);
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Set Qi cultivation realm of " + player.getName().getString() +
+                        " from " + oldRealm.getDisplayName() + " to " + realm.getDisplayName()), true);
 
-            // Send message to the target player if different from command source
-            if (!context.getSource().getEntity().equals(player)) {
-                player.sendSystemMessage(Component.literal("Your " + cultivationType.getDisplayName() +
-                    " cultivation realm has been set to " + realm.getDisplayName()));
+                // Send message to the target player if different from command source
+                if (!context.getSource().getEntity().equals(player)) {
+                    player.sendSystemMessage(Component.literal("Your Qi cultivation realm has been set to " +
+                        realm.getDisplayName()));
+                }
+
+                // Show new cultivation limits
+                context.getSource().sendSuccess(() ->
+                    Component.literal("New Qi cultivation limit: " + cultivation.getMaxQiCultivation() +
+                        " (Current: " + cultivation.getCurrentQiCultivation() + ")"), false);
+
+            } else {
+                CultivationRealm oldRealm = cultivation.getCurrentBodyRealm();
+                cultivation.setCurrentBodyRealm(realm);
+
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Set Body cultivation realm of " + player.getName().getString() +
+                        " from " + oldRealm.getDisplayName() + " to " + realm.getDisplayName()), true);
+
+                // Send message to the target player if different from command source
+                if (!context.getSource().getEntity().equals(player)) {
+                    player.sendSystemMessage(Component.literal("Your Body cultivation realm has been set to " +
+                        realm.getDisplayName()));
+                }
+
+                // Show new cultivation limits
+                context.getSource().sendSuccess(() ->
+                    Component.literal("New Body cultivation limit: " + cultivation.getMaxBodyCultivation() +
+                        " (Current: " + cultivation.getCurrentBodyCultivation() + ")"), false);
             }
+
+            // Show realm benefits
+            context.getSource().sendSuccess(() ->
+                Component.literal("Realm Benefits - Health: +" + realm.getBaseHealth() +
+                    ", Cultivation Rate: " + String.format("%.2f", realm.getBaseCultivationRate()) + "/sec"), false);
 
             return 1;
 

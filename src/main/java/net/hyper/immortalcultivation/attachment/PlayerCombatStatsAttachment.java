@@ -4,21 +4,16 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
-import net.hyper.immortalcultivation.network.CombatStatsSyncPacket;
+import net.hyper.immortalcultivation.network.server.CombatStatsSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.AxeItem;
-import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.SwordItem;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -106,9 +101,9 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
                 return 1.0 + attackDamageBonus;
             }
 
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
+            PlayerCultivationAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (realmAttachment == null) {
-                ImmortalCultivation.LOGGER.warn("Realm attachment is null for player {}!",
+                ImmortalCultivation.LOGGER.warn("Cultivation attachment is null for player {}!",
                     player.getName().getString());
                 return 1.0 + attackDamageBonus;
             }
@@ -174,7 +169,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         try {
             if (player == null) return movementSpeedBonus;
 
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
+            PlayerCultivationAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (realmAttachment == null) return movementSpeedBonus;
 
             // Get base movement speed from both realms
@@ -231,7 +226,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         try {
             if (player == null) return jumpHeightBonus;
 
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
+            PlayerCultivationAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (realmAttachment == null) return jumpHeightBonus;
 
             // Get base jump height from both realms
@@ -355,7 +350,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         if (player instanceof ServerPlayer serverPlayer) {
             try {
                 // Ensure we have the latest realm data
-                PlayerRealmAttachment realmAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_REALM.get());
+                PlayerCultivationAttachment realmAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                 if (realmAttachment == null) {
                     ImmortalCultivation.LOGGER.warn("Cannot sync combat stats - no realm attachment for player: {}",
                         serverPlayer.getName().getString());

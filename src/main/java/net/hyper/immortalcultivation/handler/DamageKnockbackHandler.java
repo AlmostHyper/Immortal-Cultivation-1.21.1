@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.attachment.PlayerBodyCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
@@ -78,8 +78,8 @@ public class DamageKnockbackHandler {
 
         try {
             // Higher cultivation levels provide knockback resistance
-            PlayerBodyCultivationAttachment bodyCultivation =
-                player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
+            PlayerCultivationAttachment bodyCultivation =
+                player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
 
             if (bodyCultivation != null) {
                 long maxBodyCultivation = bodyCultivation.getMaxBodyCultivation();

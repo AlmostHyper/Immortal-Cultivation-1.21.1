@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.PlayerCombatStatsAttachment;
-import net.hyper.immortalcultivation.attachment.PlayerRealmAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;

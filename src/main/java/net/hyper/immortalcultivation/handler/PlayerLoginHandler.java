@@ -19,8 +19,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 /**
- * Handles player login initialization for the dual cultivation system.
- * This ensures that all cultivation attachments are properly initialized when
+ * Handles player login initialization for the unified dual cultivation system.
+ * This ensures that all unified cultivation attachments are properly initialized when
  * a player joins the world, including both Qi and Body cultivation paths.
  */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
@@ -29,66 +29,183 @@ public class PlayerLoginHandler {
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
-            ImmortalCultivation.LOGGER.info("Player {} logged in, initializing dual cultivation system attachments",
+            ImmortalCultivation.LOGGER.info("Player {} logged in, initializing unified dual cultivation system attachments",
                 player.getName().getString());
 
-            // Initialize all cultivation attachments in the proper order
+            // Initialize all unified cultivation attachments in the proper order
             // Order matters here because some attachments depend on others
-            initializeSpiritualRoots(player);
-            initializePhysique(player);
-            initializeRealms(player);
-            initializeCultivationFocus(player);
-            initializeCultivationBonus(player);
-            initializeCombatStats(player);
-            initializeQiCultivation(player);
-            initializeBodyCultivation(player);
-            initializeResources(player);
+            initializeTalentAttachment(player);    // First: talents (spiritual roots & physique)
+            initializeCultivationAttachment(player); // Second: cultivation (realms, progress, focus, bonuses)
+            initializeResourceAttachment(player);   // Third: resources (health, qi, body energy)
 
             // IMPORTANT: Force sync all data to ensure client has latest values
-            forceSyncAllData(player);
+            forceSyncAllUnifiedData(player);
 
             // Check for divine dao destiny achievement (both heavenly talents)
             checkForDivineDaoDestiny(player);
 
-            ImmortalCultivation.LOGGER.info("Dual cultivation system fully initialized for player: {}",
+            ImmortalCultivation.LOGGER.info("Unified dual cultivation system fully initialized for player: {}",
                 player.getName().getString());
         }
     }
 
     /**
-     * Initialize spiritual roots for Qi cultivation.
-     * This determines the player's natural affinity for Qi cultivation and provides
-     * a permanent multiplier to all Qi-related cultivation and regeneration.
+     * Initialize unified talent attachment (spiritual roots + physique).
+     * This determines the player's natural affinity for both Qi and Body cultivation
+     * and provides permanent multipliers to all cultivation and regeneration.
      */
-    private static void initializeSpiritualRoots(ServerPlayer player) {
+    private static void initializeTalentAttachment(ServerPlayer player) {
         try {
-            PlayerSpiritualRootAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
+            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
 
-            if (roots != null && !roots.hasBeenAssigned()) {
-                // Generate spiritual roots for new players
-                SpiritualRootType generatedType = SpiritualRootType.generateRandom(player.getRandom());
-                roots.assignRootType(generatedType);
+            if (talentAttachment != null) {
+                // IMPORTANT: Set player reference for proper functionality
+                talentAttachment.setPlayer(player);
 
-                // Send rarity-appropriate awakening message
-                sendSpiritualRootAwakeningMessage(player, generatedType);
+                // Initialize spiritual roots if not assigned
+                if (!talentAttachment.hasSpiritualRootAssigned()) {
+                    SpiritualRootType generatedType = SpiritualRootType.generateRandom(player.getRandom());
+                    talentAttachment.assignSpiritualRoot(generatedType);
 
-                // Play rarity-appropriate effects
-                playSpiritualRootAwakeningEffects(player, generatedType);
+                    sendSpiritualRootAwakeningMessage(player, generatedType);
+                    playSpiritualRootAwakeningEffects(player, generatedType);
 
-                ImmortalCultivation.LOGGER.info("Player {} assigned spiritual roots: {} ({}x multiplier)",
-                    player.getName().getString(), generatedType.getDisplayName(), generatedType.getCultivationMultiplier());
-            }
+                    ImmortalCultivation.LOGGER.info("Player {} assigned spiritual roots: {} ({}x multiplier)",
+                        player.getName().getString(), generatedType.getDisplayName(), generatedType.getCultivationMultiplier());
+                }
 
-            // Log current state for debugging
-            if (roots != null) {
-                ImmortalCultivation.LOGGER.info("Player {} spiritual roots state - Type: {}, Assigned: {}, Multiplier: {}",
+                // Initialize physique if not assigned
+                if (!talentAttachment.hasPhysiqueAssigned()) {
+                    PhysiqueType generatedType = PhysiqueType.generateRandom(player.getRandom());
+                    talentAttachment.assignPhysique(generatedType);
+
+                    sendPhysiqueAwakeningMessage(player, generatedType);
+                    playPhysiqueAwakeningEffects(player, generatedType);
+
+                    ImmortalCultivation.LOGGER.info("Player {} assigned physique: {} ({}x multiplier)",
+                        player.getName().getString(), generatedType.getDisplayName(), generatedType.getCultivationMultiplier());
+                }
+
+                // Log current unified talent state for debugging
+                ImmortalCultivation.LOGGER.info("Player {} unified talents - Spiritual Root: {} ({}x), Physique: {} ({}x), Overall: {}x",
                     player.getName().getString(),
-                    roots.getRootType().getDisplayName(),
-                    roots.hasBeenAssigned(),
-                    roots.getCultivationMultiplier());
+                    talentAttachment.getSpiritualRootDisplayName(),
+                    talentAttachment.getSpiritualRootMultiplier(),
+                    talentAttachment.getPhysiqueDisplayName(),
+                    talentAttachment.getPhysiqueMultiplier(),
+                    talentAttachment.getOverallCultivationMultiplier());
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null talent attachment!",
+                    player.getName().getString());
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing spiritual roots for player {}",
+            ImmortalCultivation.LOGGER.error("Error initializing talents for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Initialize unified cultivation attachment (realms + cultivation progress + focus + bonuses).
+     * This sets up the dual realm system and ensures both cultivation paths
+     * start at the proper mortal realm with correct focus and bonus states.
+     */
+    private static void initializeCultivationAttachment(ServerPlayer player) {
+        try {
+            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivationAttachment != null) {
+                // IMPORTANT: Set player reference for realm calculations and combat stats
+                cultivationAttachment.setPlayer(player);
+
+                // Initialize Qi realm if null
+                if (cultivationAttachment.getCurrentQiRealm() == null) {
+                    ImmortalCultivation.LOGGER.warn("Player {} has null Qi realm, setting to default mortal realm",
+                        player.getName().getString());
+                    cultivationAttachment.setCurrentQiRealm(ICModCultivationRealms.MORTAL);
+                }
+
+                // Initialize Body realm if null
+                if (cultivationAttachment.getCurrentBodyRealm() == null) {
+                    ImmortalCultivation.LOGGER.warn("Player {} has null Body realm, setting to default mortal realm",
+                        player.getName().getString());
+                    cultivationAttachment.setCurrentBodyRealm(ICModCultivationRealms.MORTAL);
+                }
+
+                ImmortalCultivation.LOGGER.info("Player {} unified cultivation initialized - Qi: {} ({}/{}), Body: {} ({}/{}), Focus: {}, Bonuses: Qi +{}/sec, Body +{}/sec",
+                    player.getName().getString(),
+                    cultivationAttachment.getCurrentQiRealm().getDisplayName(),
+                    cultivationAttachment.getCurrentQiCultivation(),
+                    cultivationAttachment.getMaxQiCultivation(),
+                    cultivationAttachment.getCurrentBodyRealm().getDisplayName(),
+                    cultivationAttachment.getCurrentBodyCultivation(),
+                    cultivationAttachment.getMaxBodyCultivation(),
+                    cultivationAttachment.getCurrentFocus().getDisplayName(),
+                    String.format("%.3f", cultivationAttachment.getQiCultivationRawAdditiveBonus()),
+                    String.format("%.3f", cultivationAttachment.getBodyCultivationRawAdditiveBonus()));
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null cultivation attachment!",
+                    player.getName().getString());
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error initializing cultivation for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Initialize unified resource attachment (health + qi + body energy).
+     * This manages the consumable resources used for techniques and abilities,
+     * separate from the cultivation progress values.
+     */
+    private static void initializeResourceAttachment(ServerPlayer player) {
+        try {
+            PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            if (resourceAttachment != null) {
+                // IMPORTANT: Set player reference for resource calculations
+                resourceAttachment.setPlayer(player);
+
+                // Update max values based on current cultivation state
+                updateResourceMaxValues(player, resourceAttachment);
+
+                ImmortalCultivation.LOGGER.info("Player {} unified resources initialized - Health: {}/{}, Qi: {}/{}, Body: {}/{}, Meditating: {}",
+                    player.getName().getString(),
+                    resourceAttachment.getCurrentHealth(),
+                    resourceAttachment.getMaxHealth(),
+                    resourceAttachment.getCurrentQi(),
+                    resourceAttachment.getMaxQi(),
+                    resourceAttachment.getCurrentBody(),
+                    resourceAttachment.getMaxBody(),
+                    resourceAttachment.isPlayerMeditating());
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null resource attachment!",
+                    player.getName().getString());
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error initializing resources for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    /**
+     * Update resource max values based on current cultivation state
+     */
+    private static void updateResourceMaxValues(ServerPlayer player, PlayerResourceAttachment resourceAttachment) {
+        try {
+            // Calculate and set max health
+            long maxHealth = resourceAttachment.getBaseMaxHealth();
+            resourceAttachment.setMaxHealth(maxHealth);
+
+            // Calculate and set max qi
+            long maxQi = resourceAttachment.getBaseMaxQi();
+            resourceAttachment.setMaxQi(maxQi);
+
+            // Calculate and set max body
+            long maxBody = resourceAttachment.getBaseMaxBody();
+            resourceAttachment.setMaxBody(maxBody);
+
+            ImmortalCultivation.LOGGER.debug("Updated max values for player {} - Health: {}, Qi: {}, Body: {}",
+                player.getName().getString(), maxHealth, maxQi, maxBody);
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error updating resource max values for player {}",
                 player.getName().getString(), e);
         }
     }
@@ -99,19 +216,13 @@ public class PlayerLoginHandler {
      */
     private static void checkForDivineDaoDestiny(ServerPlayer player) {
         try {
-            PlayerSpiritualRootAttachment rootAttachment = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
-            PlayerPhysiqueAttachment physiqueAttachment = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
+            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
 
-            if (rootAttachment != null && physiqueAttachment != null) {
-                boolean hasHeavenlyRoot = rootAttachment.getRootType().getCultivationMultiplier() == 1.5f;
-                boolean hasHeavenlyPhysique = physiqueAttachment.getRootType().getCultivationMultiplier() == 1.5f;
-
-                if (hasHeavenlyRoot && hasHeavenlyPhysique) {
-                    // DIVINE DAO DESTINY ACHIEVED!
-                    broadcastDivineDaoDestiny(player,
-                        rootAttachment.getRootType().getDisplayName(),
-                        physiqueAttachment.getRootType().getDisplayName());
-                }
+            if (talentAttachment != null && talentAttachment.hasDivineDaoDestiny()) {
+                // DIVINE DAO DESTINY ACHIEVED!
+                broadcastDivineDaoDestiny(player,
+                    talentAttachment.getSpiritualRootDisplayName(),
+                    talentAttachment.getPhysiqueDisplayName());
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error checking divine dao destiny for player {}",
@@ -216,7 +327,7 @@ public class PlayerLoginHandler {
             Component broadcast = Component.literal("⚡ ════════ DIVINE DAO DESTINY ════════ ⚡\n")
                 .append(Component.literal("ALL OF CREATION TREMBLES! THE DAO ITSELF BOWS IN RESPECT!\n"))
                 .append(playerName)
-                .append(Component.literal(" has achieved DIVINE DAO DIVINITY!\n"))
+                .append(Component.literal(" has achieved DIVINE DAO DESTINY!\n"))
                 .append(Component.literal("Blessed with BOTH the "))
                 .append(root)
                 .append(Component.literal(" AND "))
@@ -280,44 +391,6 @@ public class PlayerLoginHandler {
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error broadcasting divine dao destiny for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Initialize physique for Body cultivation.
-     * Similar to spiritual roots but for the Body cultivation path.
-     * This provides a multiplier for Body cultivation and physical enhancement.
-     */
-    private static void initializePhysique(ServerPlayer player) {
-        try {
-            PlayerPhysiqueAttachment physique = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
-
-            if (physique != null && !physique.hasBeenAssigned()) {
-                // Generate physique for new players
-                PhysiqueType generatedType = PhysiqueType.generateRandom(player.getRandom());
-                physique.assignRootType(generatedType);
-
-                // Send rarity-appropriate awakening message
-                sendPhysiqueAwakeningMessage(player, generatedType);
-
-                // Play rarity-appropriate effects
-                playPhysiqueAwakeningEffects(player, generatedType);
-
-                ImmortalCultivation.LOGGER.info("Player {} assigned physique: {} ({}x multiplier)",
-                    player.getName().getString(), generatedType.getDisplayName(), generatedType.getCultivationMultiplier());
-            }
-
-            // Log current state for debugging
-            if (physique != null) {
-                ImmortalCultivation.LOGGER.info("Player {} physique state - Type: {}, Assigned: {}, Multiplier: {}",
-                    player.getName().getString(),
-                    physique.getRootType().getDisplayName(),
-                    physique.hasBeenAssigned(),
-                    physique.getCultivationMultiplier());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing physique for player {}",
                 player.getName().getString(), e);
         }
     }
@@ -581,291 +654,57 @@ public class PlayerLoginHandler {
     }
 
     /**
-     * Initialize realm attachments for both Qi and Body cultivation.
-     * This sets up the dual realm system and ensures both cultivation paths
-     * start at the proper mortal realm.
-     */
-    private static void initializeRealms(ServerPlayer player) {
-        try {
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment != null) {
-                // Ensure player reference is set for realm calculations
-                realmAttachment.setPlayer(player);
-
-                // Initialize Qi realm if null
-                if (realmAttachment.getCurrentQiRealm() == null) {
-                    ImmortalCultivation.LOGGER.warn("Player {} has null Qi realm, setting to default mortal realm",
-                        player.getName().getString());
-                    realmAttachment.setCurrentRealm(PlayerRealmAttachment.CultivationType.QI,
-                        ICModCultivationRealms.MORTAL, false);
-                }
-
-                // Initialize Body realm if null
-                if (realmAttachment.getCurrentBodyRealm() == null) {
-                    ImmortalCultivation.LOGGER.warn("Player {} has null Body realm, setting to default mortal realm",
-                        player.getName().getString());
-                    realmAttachment.setCurrentRealm(PlayerRealmAttachment.CultivationType.BODY,
-                        ICModCultivationRealms.MORTAL, false);
-                }
-
-                ImmortalCultivation.LOGGER.info("Player {} realms initialized - Qi: {}, Body: {}",
-                    player.getName().getString(),
-                    realmAttachment.getCurrentQiRealm().getDisplayName(),
-                    realmAttachment.getCurrentBodyRealm().getDisplayName());
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null realm attachment!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing realms for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Initialize cultivation focus system.
-     * This allows players to focus their cultivation efforts on either Qi or Body
-     * cultivation for enhanced rates and bonuses.
-     */
-    private static void initializeCultivationFocus(ServerPlayer player) {
-        try {
-            PlayerCultivationFocusAttachment focusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
-            if (focusAttachment != null) {
-                // Default focus is Qi cultivation
-                // The attachment initializes with Qi focus by default, so we just log it
-                ImmortalCultivation.LOGGER.info("Player {} cultivation focus initialized: {} cultivation (2x rate bonus)",
-                    player.getName().getString(),
-                    focusAttachment.getCurrentFocus().getDisplayName());
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null cultivation focus attachment!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing cultivation focus for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Initialize cultivation bonus attachment.
-     * This manages permanent cultivation rate bonuses from consumed pills and other sources.
-     * Bonuses persist through death and logout/login cycles.
-     */
-    private static void initializeCultivationBonus(ServerPlayer player) {
-        try {
-            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
-            if (bonusAttachment != null) {
-                // Log current bonus state for debugging
-                ImmortalCultivation.LOGGER.info("Player {} cultivation bonuses initialized - Qi additive: +{}/sec, Body additive: +{}/sec",
-                    player.getName().getString(),
-                    String.format("%.3f", bonusAttachment.getQiCultivationRawAdditiveBonus()),
-                    String.format("%.3f", bonusAttachment.getBodyCultivationRawAdditiveBonus()));
-
-                // Note: We don't reset bonuses here since they should persist through logout/login
-                // The attachment preserves all consumed pill bonuses automatically
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null cultivation bonus attachment!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing cultivation bonus for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Initialize combat stats attachment for tracking attack damage, movement speed, and jump height bonuses.
-     * This manages permanent bonuses from cultivation that persist through death and logout.
-     */
-    private static void initializeCombatStats(ServerPlayer player) {
-        try {
-            PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-            if (combatStatsAttachment != null) {
-                // IMPORTANT: Set player reference for calculations (CODEC doesn't handle this)
-                combatStatsAttachment.setPlayer(player);
-
-                ImmortalCultivation.LOGGER.info("Player {} combat stats initialized - ATK: +{}%, SPD: +{}%, JUMP: +{}%",
-                    player.getName().getString(),
-                    String.format("%.1f", combatStatsAttachment.getAttackDamageBonus() * 100),
-                    String.format("%.1f", combatStatsAttachment.getMovementSpeedBonus() * 100),
-                    String.format("%.1f", combatStatsAttachment.getJumpHeightBonus() * 100));
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null combat stats attachment!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing combat stats for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Initialize Qi cultivation attachment.
-     * This handles the permanent Qi cultivation progress that determines
-     * breakthrough eligibility and provides bonuses.
-     */
-    private static void initializeQiCultivation(ServerPlayer player) {
-        try {
-            PlayerQiCultivationAttachment qiCultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
-            if (qiCultivationAttachment != null) {
-                ImmortalCultivation.LOGGER.info("Player {} Qi cultivation initialized: {}/{}",
-                    player.getName().getString(),
-                    qiCultivationAttachment.getCurrentQiCultivation(),
-                    qiCultivationAttachment.getMaxQiCultivation());
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null Qi cultivation attachment!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing Qi cultivation for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Initialize Body cultivation attachment.
-     * This handles the permanent Body cultivation progress, similar to Qi cultivation
-     * but for the physical enhancement path.
-     */
-    private static void initializeBodyCultivation(ServerPlayer player) {
-        try {
-            PlayerBodyCultivationAttachment bodyCultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
-            if (bodyCultivationAttachment != null) {
-                ImmortalCultivation.LOGGER.info("Player {} Body cultivation initialized: {}/{}",
-                    player.getName().getString(),
-                    bodyCultivationAttachment.getCurrentBodyCultivation(),
-                    bodyCultivationAttachment.getMaxBodyCultivation());
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null Body cultivation attachment!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing Body cultivation for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Initialize resource attachments (Qi and Body energy).
-     * These are the consumable resources used for techniques and abilities,
-     * separate from the cultivation progress values.
-     */
-    private static void initializeResources(ServerPlayer player) {
-        try {
-            // Initialize Qi resource attachment
-            PlayerQiAttachment qiAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI.get());
-            if (qiAttachment != null) {
-                ImmortalCultivation.LOGGER.info("Player {} Qi resource initialized: {}/{} (regen: {}/sec)",
-                    player.getName().getString(),
-                    qiAttachment.getCurrentQi(),
-                    qiAttachment.getMaxQi(),
-                    String.format("%.2f", qiAttachment.getEffectiveQiRegenerationRate()));
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null Qi resource attachment!",
-                    player.getName().getString());
-            }
-
-            // Initialize Body resource attachment
-            PlayerBodyAttachment bodyAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY.get());
-            if (bodyAttachment != null) {
-                ImmortalCultivation.LOGGER.info("Player {} Body resource initialized: {}/{} (regen: {}/sec)",
-                    player.getName().getString(),
-                    bodyAttachment.getCurrentBody(),
-                    bodyAttachment.getMaxBody(),
-                    String.format("%.2f", bodyAttachment.getEffectiveBodyRegenerationRate()));
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null Body resource attachment!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing resources for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Force sync all cultivation data to ensure client has the latest values.
+     * Force sync all unified cultivation data to ensure client has the latest values.
      * This is critical for proper display in GUIs and HUD elements.
      */
-    private static void forceSyncAllData(ServerPlayer player) {
+    private static void forceSyncAllUnifiedData(ServerPlayer player) {
         try {
-            ImmortalCultivation.LOGGER.info("Force syncing all cultivation data for player {}",
+            ImmortalCultivation.LOGGER.info("Force syncing all unified cultivation data for player {}",
                 player.getName().getString());
 
-            // FIXED: Sync spiritual roots (this was missing!)
-            PlayerSpiritualRootAttachment rootAttachment = player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
-            if (rootAttachment != null) {
-                rootAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Synced spiritual roots for player {}", player.getName().getString());
+            // Sync talent attachment (spiritual roots + physique)
+            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            if (talentAttachment != null) {
+                talentAttachment.setPlayer(player); // IMPORTANT: Set player reference
+                talentAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Synced unified talents for player {}", player.getName().getString());
             }
 
-            // FIXED: Sync physique (this was missing!)
-            PlayerPhysiqueAttachment physiqueAttachment = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
-            if (physiqueAttachment != null) {
-                physiqueAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Synced physique for player {}", player.getName().getString());
+            // Sync cultivation attachment (realms + cultivation progress + focus + bonuses)
+            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivationAttachment != null) {
+                cultivationAttachment.setPlayer(player); // IMPORTANT: Set player reference
+                cultivationAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Synced unified cultivation for player {}", player.getName().getString());
             }
 
-            // Sync realm data
-            PlayerRealmAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            if (realmAttachment != null) {
-                realmAttachment.forceSync();
+            // Sync resource attachment (health + qi + body energy)
+            PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            if (resourceAttachment != null) {
+                resourceAttachment.setPlayer(player); // IMPORTANT: Set player reference
+                resourceAttachment.forceSync();
+                ImmortalCultivation.LOGGER.debug("Synced unified resources for player {}", player.getName().getString());
             }
 
-            // Sync cultivation focus
-            PlayerCultivationFocusAttachment focusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
-            if (focusAttachment != null) {
-                focusAttachment.forceSync();
+            // OPTIONAL: Sync combat stats if still using separate attachment
+            try {
+                PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+                if (combatStatsAttachment != null) {
+                    combatStatsAttachment.setPlayer(player);
+                    combatStatsAttachment.forceSync();
+                    ImmortalCultivation.LOGGER.debug("Synced combat stats for player {}", player.getName().getString());
+                }
+            } catch (Exception e) {
+                // Combat stats might not exist in unified system
+                ImmortalCultivation.LOGGER.debug("Combat stats attachment not available (might be unified): {}",
+                    e.getMessage());
             }
 
-            // ADDED: Sync cultivation bonus attachment
-            PlayerCultivationBonusAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_BONUS.get());
-            if (bonusAttachment != null) {
-                bonusAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Synced cultivation bonuses for player {}", player.getName().getString());
-            }
-
-            // Sync combat stats
-            PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-            if (combatStatsAttachment != null) {
-                combatStatsAttachment.setPlayer(player); // IMPORTANT: Set player reference after CODEC loading
-                combatStatsAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Synced combat stats for player {}", player.getName().getString());
-            }
-
-            // Sync Qi cultivation
-            PlayerQiCultivationAttachment qiCultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
-            if (qiCultivationAttachment != null) {
-                qiCultivationAttachment.forceSync();
-            }
-
-            // Sync Body cultivation
-            PlayerBodyCultivationAttachment bodyCultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
-            if (bodyCultivationAttachment != null) {
-                bodyCultivationAttachment.forceSync();
-            }
-
-            // Sync resources
-            PlayerQiAttachment qiAttachment = player.getData(ICModAttachmentTypes.PLAYER_QI.get());
-            if (qiAttachment != null) {
-                qiAttachment.forceSync();
-            }
-
-            PlayerBodyAttachment bodyAttachment = player.getData(ICModAttachmentTypes.PLAYER_BODY.get());
-            if (bodyAttachment != null) {
-                bodyAttachment.forceSync();
-            }
-
-            PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
-            if (healthAttachment != null) {
-                healthAttachment.forceSync();
-            }
-
-            ImmortalCultivation.LOGGER.info("Successfully synced all cultivation data for player {}",
+            ImmortalCultivation.LOGGER.info("Successfully synced all unified cultivation data for player {}",
                 player.getName().getString());
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error force syncing data for player {}",
+            ImmortalCultivation.LOGGER.error("Error force syncing unified data for player {}",
                 player.getName().getString(), e);
         }
     }

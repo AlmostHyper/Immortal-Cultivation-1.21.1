@@ -33,15 +33,13 @@ public interface IQiData {
 
     /**
      * Consumes Qi from the current amount
+     *
      * @param amount Amount to consume
-     * @return True if successful, false if insufficient Qi
      */
-    default boolean consumeQi(long amount) {
+    default void consumeQi(long amount) {
         if (getCurrentQi() >= amount) {
             setCurrentQi(getCurrentQi() - amount);
-            return true;
         }
-        return false;
     }
 
     /**

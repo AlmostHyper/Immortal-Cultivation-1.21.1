@@ -394,6 +394,10 @@ public abstract class CultivationRealm {
         return getCultivationStage().equals(other.getCultivationStage());
     }
 
+    public boolean isMajorRealm() {
+        return false;
+    }
+
     /**
      * Get the cultivation stage/category this realm belongs to
      * @return Stage name (e.g., "Qi Condensation", "Foundation Establishment")
@@ -516,10 +520,5 @@ public abstract class CultivationRealm {
         if (obj == null || getClass() != obj.getClass()) return false;
         CultivationRealm that = (CultivationRealm) obj;
         return Objects.equals(getId(), that.getId());
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(getId());
     }
 }

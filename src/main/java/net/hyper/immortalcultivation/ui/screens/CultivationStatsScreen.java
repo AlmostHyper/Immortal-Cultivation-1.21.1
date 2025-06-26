@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.ui.screens;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
-import net.hyper.immortalcultivation.network.CultivationFocusTogglePacket;
+import net.hyper.immortalcultivation.network.client.CultivationFocusTogglePacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.ChatFormatting;
@@ -19,26 +19,17 @@ import org.lwjgl.opengl.GL11;
 
 /**
  * COMPLETE SOLUTION: General cultivation monitoring interface with responsive design,
- * pixel-perfect positioning, and sharp texture rendering.
+ * pixel-perfect positioning, and sharp texture rendering for the unified cultivation system.
  *
- * This version represents the culmination of our systematic approach to solving GUI blurriness:
- * 1. Responsive design ensures proper scaling across different screen sizes
- * 2. Pixel alignment eliminates coordinate-based blurriness
- * 3. Sharp texture filtering eliminates scaling-based blurriness
- * 4. Debug tools helped us identify the root cause systematically
- *
- * Key Technical Insights Demonstrated:
- * - How to diagnose rendering issues methodically
- * - The difference between coordinate precision and texture filtering
- * - Why GUI scale can cause unexpected visual problems
- * - How to control OpenGL texture parameters for crisp GUI rendering
- * - The importance of restoring graphics state after modifications
+ * Updated to work with the new unified attachment system:
+ * - PlayerCultivationAttachment for realm, cultivation progress, focus, and breakthrough data
+ * - PlayerResourceAttachment for health, qi energy, and body energy
+ * - PlayerTalentAttachment for spiritual roots and physique
+ * - PlayerCombatStatsAttachment for combat bonuses
  */
 public class CultivationStatsScreen extends Screen {
 
     // === RESPONSIVE SIZING SYSTEM ===
-    // [All your existing constants remain unchanged - these were working perfectly]
-
     private static final int PREFERRED_WIDTH = 480;
     private static final int PREFERRED_HEIGHT = 520;
     private static final int MIN_WIDTH = 400;
@@ -50,8 +41,6 @@ public class CultivationStatsScreen extends Screen {
     private static final int MAX_MARGIN = 25;
 
     // === LAYOUT CONSTANTS ===
-    // [All your existing layout variables remain unchanged]
-
     private int windowWidth;
     private int windowHeight;
     private int windowX, windowY;
@@ -62,8 +51,6 @@ public class CultivationStatsScreen extends Screen {
     private int columnWidth;
 
     // === VISUAL CONSTANTS ===
-    // [All your existing color constants remain unchanged]
-
     private static final int QI_COLOR = 0xFF87CEEB;
     private static final int BODY_COLOR = 0xFFFF6347;
     private static final int HEALTH_COLOR = 0xFFFF69B4;
@@ -73,29 +60,20 @@ public class CultivationStatsScreen extends Screen {
     private static final int SECTION_HEADER_COLOR = 0xFFDDA0DD;
     private static final int PROGRESS_BAR_HEIGHT = 8;
 
-    // === PLAYER DATA ===
-    // [All your existing attachment variables remain unchanged]
-
-    private PlayerRealmAttachment realmAttachment;
-    private PlayerQiCultivationAttachment qiCultivationAttachment;
-    private PlayerBodyCultivationAttachment bodyCultivationAttachment;
-    private PlayerCultivationFocusAttachment focusAttachment;
-    private PlayerHealthAttachment healthAttachment;
-    private PlayerQiAttachment qiAttachment;
-    private PlayerBodyAttachment bodyAttachment;
-    private PlayerSpiritualRootAttachment spiritualRoots;
-    private PlayerPhysiqueAttachment physique;
+    // === PLAYER DATA (Updated for unified system) ===
+    private PlayerCultivationAttachment cultivationAttachment;   // Unified cultivation data
+    private PlayerResourceAttachment resourceAttachment;        // Unified resource data
+    private PlayerTalentAttachment talentAttachment;           // Unified talent data
+    private PlayerCombatStatsAttachment combatStatsAttachment; // Combat bonuses
 
     public CultivationStatsScreen() {
         super(Component.literal("Cultivation Status Overview"));
     }
 
     // === PIXEL-PERFECT RENDERING HELPERS ===
-    // [All your existing helper methods remain unchanged - they're still essential]
 
     /**
      * Gets the current GUI scale factor that Minecraft is using.
-     * This method remains crucial for our pixel alignment calculations.
      */
     private double getGuiScale() {
         return minecraft.getWindow().getGuiScale();
@@ -103,8 +81,6 @@ public class CultivationStatsScreen extends Screen {
 
     /**
      * Rounds a coordinate to be pixel-perfect at the current GUI scale.
-     * This method works in conjunction with our texture filtering to ensure
-     * complete visual sharpness.
      */
     private int alignToPixel(double coordinate) {
         double scale = getGuiScale();
@@ -113,7 +89,6 @@ public class CultivationStatsScreen extends Screen {
 
     /**
      * Helper methods for drawing text with pixel-perfect positioning.
-     * These now work together with our sharp rendering mode for maximum effect.
      */
     private void drawStringAligned(GuiGraphics guiGraphics, String text, int x, int y, int color) {
         int alignedX = alignToPixel(x);
@@ -133,11 +108,8 @@ public class CultivationStatsScreen extends Screen {
      * CORE SOLUTION: Enable sharp texture rendering mode
      */
     private void enableSharpRendering() {
-        // Ensure blending is properly configured for GUI rendering
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
-
-        // This is the key fix: Configure OpenGL to use nearest-neighbor filtering
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
     }
@@ -146,7 +118,6 @@ public class CultivationStatsScreen extends Screen {
      * ESSENTIAL CLEANUP: Restore normal texture rendering mode
      */
     private void restoreNormalRendering() {
-        // Restore OpenGL's default texture filtering settings
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
     }
@@ -154,8 +125,6 @@ public class CultivationStatsScreen extends Screen {
     @Override
     public void init() {
         super.init();
-
-        // [Your existing initialization logic remains unchanged]
         calculateResponsiveDimensionsPixelPerfect();
         calculateLayoutConstantsPixelPerfect();
         loadCultivationData();
@@ -163,20 +132,17 @@ public class CultivationStatsScreen extends Screen {
     }
 
     /**
-     * UPDATED: Main render method with sharp rendering integration and blur fix
+     * UPDATED: Main render method with sharp rendering integration
      */
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
-        // SOLUTION: Wrap all rendering in sharp mode
         enableSharpRendering();
 
         try {
-            // All your existing rendering logic remains unchanged
             renderWindowFramePixelPerfect(guiGraphics);
             renderCultivationOverview(guiGraphics);
             super.render(guiGraphics, mouseX, mouseY, partialTicks);
         } finally {
-            // CRITICAL: Always restore normal rendering, even if an exception occurs
             restoreNormalRendering();
         }
     }
@@ -186,12 +152,10 @@ public class CultivationStatsScreen extends Screen {
      */
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // This prevents the default blur shader from being applied
-        // Just render a dark overlay instead
         guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
     }
 
-    // === ALL YOUR EXISTING METHODS REMAIN UNCHANGED ===
+    // === LAYOUT CALCULATION METHODS ===
 
     private void calculateResponsiveDimensionsPixelPerfect() {
         int availableWidth = width - 40;
@@ -252,20 +216,25 @@ public class CultivationStatsScreen extends Screen {
         columnWidth = alignToPixel(rawColumnWidth);
     }
 
+    /**
+     * UPDATED: Load cultivation data using unified attachment system
+     */
     private void loadCultivationData() {
         if (minecraft.player != null) {
-            realmAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_REALM.get());
-            qiCultivationAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_QI_CULTIVATION.get());
-            bodyCultivationAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_BODY_CULTIVATION.get());
-            focusAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION_FOCUS.get());
-            healthAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
-            qiAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_QI.get());
-            bodyAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_BODY.get());
-            spiritualRoots = minecraft.player.getData(ICModAttachmentTypes.PLAYER_SPIRITUAL_ROOT.get());
-            physique = minecraft.player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
+            cultivationAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            resourceAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            talentAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            combatStatsAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
 
-            if (realmAttachment != null) {
-                realmAttachment.setPlayer(minecraft.player);
+            // Set player reference for the attachments if needed
+            if (cultivationAttachment != null) {
+                cultivationAttachment.setPlayer(minecraft.player);
+            }
+            if (resourceAttachment != null) {
+                resourceAttachment.setPlayer(minecraft.player);
+            }
+            if (talentAttachment != null) {
+                talentAttachment.setPlayer(minecraft.player);
             }
         }
     }
@@ -286,7 +255,7 @@ public class CultivationStatsScreen extends Screen {
             .bounds(closeButtonX, closeButtonY, smallButtonWidth, buttonHeight)
             .build());
 
-        if (focusAttachment != null) {
+        if (cultivationAttachment != null) {
             createFocusToggleButtonPixelPerfect(buttonHeight, mediumButtonWidth);
         }
 
@@ -305,6 +274,9 @@ public class CultivationStatsScreen extends Screen {
             .build());
     }
 
+    /**
+     * UPDATED: Create focus toggle button using unified cultivation attachment
+     */
     private void createFocusToggleButtonPixelPerfect(int buttonHeight, int buttonWidth) {
         int bottomY = alignToPixel(windowY + windowHeight - buttonHeight - margin);
         int buttonX = alignToPixel(windowX + margin + 200);
@@ -313,22 +285,15 @@ public class CultivationStatsScreen extends Screen {
             buttonX = alignToPixel(windowX + windowWidth - buttonWidth - margin);
         }
 
-        if (focusAttachment.canSwitchFocus()) {
-            String switchTo = focusAttachment.isFocusedOnQi() ? "Body" : "Qi";
+        // Use simplified focus toggle - just show current focus and allow toggle
+        PlayerCultivationAttachment.CultivationType currentFocus = cultivationAttachment.getCurrentFocus();
+        String switchTo = currentFocus == PlayerCultivationAttachment.CultivationType.QI ? "Body" : "Qi";
 
-            addRenderableWidget(Button.builder(
-                    Component.literal("Switch to " + switchTo + " Focus"),
-                    button -> switchCultivationFocus())
-                .bounds(buttonX, bottomY, buttonWidth, buttonHeight)
-                .build());
-        } else {
-            long remainingSeconds = focusAttachment.getRemainingCooldownTicks() / 20;
-            addRenderableWidget(Button.builder(
-                    Component.literal("Focus Cooldown: " + remainingSeconds + "s"),
-                    button -> {})
-                .bounds(buttonX, bottomY, buttonWidth, buttonHeight)
-                .build());
-        }
+        addRenderableWidget(Button.builder(
+                Component.literal("Switch to " + switchTo + " Focus"),
+                button -> switchCultivationFocus())
+            .bounds(buttonX, bottomY, buttonWidth, buttonHeight)
+            .build());
     }
 
     private void renderWindowFramePixelPerfect(GuiGraphics guiGraphics) {
@@ -341,8 +306,8 @@ public class CultivationStatsScreen extends Screen {
         guiGraphics.fill(windowX - 1, windowY, windowX, windowY + windowHeight, borderColor);
         guiGraphics.fill(windowX + windowWidth, windowY, windowX + windowWidth + 1, windowY + windowHeight, borderColor);
 
-        String focusIndicator = focusAttachment != null ?
-            " [" + focusAttachment.getCurrentFocus().getDisplayName() + " Focused]" : "";
+        String focusIndicator = cultivationAttachment != null ?
+            " [" + cultivationAttachment.getCurrentFocus().getDisplayName() + " Focused]" : "";
         Component title = Component.literal("Cultivation Overview" + focusIndicator)
             .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
 
@@ -352,29 +317,35 @@ public class CultivationStatsScreen extends Screen {
         drawStringAligned(guiGraphics, title, titleX, titleY, 0xFFFFFFFF);
     }
 
+    /**
+     * UPDATED: Render cultivation overview using unified attachments
+     */
     private void renderCultivationOverview(GuiGraphics guiGraphics) {
-        if (realmAttachment == null) {
+        if (cultivationAttachment == null) {
             renderErrorState(guiGraphics);
             return;
         }
 
         int currentY = alignToPixel(windowY + margin * 2 + lineHeight);
 
-        // New section: Player traits (spiritual roots and physique)
+        // Player traits section
         currentY = renderPlayerTraits(guiGraphics, currentY);
         currentY = alignToPixel(currentY + sectionSpacing);
 
+        // Strategic overview
         currentY = renderStrategicOverview(guiGraphics, currentY);
         currentY = alignToPixel(currentY + sectionSpacing);
 
+        // Cultivation progress
         currentY = renderCultivationProgress(guiGraphics, currentY);
         currentY = alignToPixel(currentY + sectionSpacing);
 
+        // Resource status
         currentY = renderResourceStatus(guiGraphics, currentY);
     }
 
     /**
-     * NEW: Render player traits section at the top
+     * UPDATED: Render player traits using unified talent attachment
      */
     private int renderPlayerTraits(GuiGraphics guiGraphics, int startY) {
         int currentY = alignToPixel(startY);
@@ -383,20 +354,20 @@ public class CultivationStatsScreen extends Screen {
         currentY = alignToPixel(currentY + lineHeight + 5);
 
         // Display spiritual roots
-        if (spiritualRoots != null) {
+        if (talentAttachment != null && talentAttachment.hasSpiritualRootAssigned()) {
             Component rootsLabel = Component.literal("Spiritual Roots: ")
                 .withStyle(ChatFormatting.WHITE);
-            Component rootsValue = Component.literal(spiritualRoots.getRootType().getDisplayName())
+            Component rootsValue = Component.literal(talentAttachment.getSpiritualRootDisplayName())
                 .withStyle(ChatFormatting.BOLD);
 
             drawStringAligned(guiGraphics, rootsLabel, windowX + margin, currentY, 0xFFFFFFFF);
             int labelWidth = font.width(rootsLabel);
             drawStringAligned(guiGraphics, rootsValue, windowX + margin + labelWidth, currentY,
-                spiritualRoots.getRootType().getColor());
+                talentAttachment.getSpiritualRootColor());
 
             // Show multiplier
             String multiplierText = String.format(" (×%.1f Qi rates)",
-                spiritualRoots.getCultivationMultiplier());
+                talentAttachment.getSpiritualRootMultiplier());
             drawStringAligned(guiGraphics, multiplierText,
                 windowX + margin + labelWidth + font.width(rootsValue), currentY, QI_COLOR);
 
@@ -404,56 +375,80 @@ public class CultivationStatsScreen extends Screen {
         }
 
         // Display physique
-        if (physique != null) {
+        if (talentAttachment != null && talentAttachment.hasPhysiqueAssigned()) {
             Component physiqueLabel = Component.literal("Physique: ")
                 .withStyle(ChatFormatting.WHITE);
-            Component physiqueValue = Component.literal(physique.getRootType().getDisplayName())
+            Component physiqueValue = Component.literal(talentAttachment.getPhysiqueDisplayName())
                 .withStyle(ChatFormatting.BOLD);
 
             drawStringAligned(guiGraphics, physiqueLabel, windowX + margin, currentY, 0xFFFFFFFF);
             int labelWidth = font.width(physiqueLabel);
             drawStringAligned(guiGraphics, physiqueValue, windowX + margin + labelWidth, currentY,
-                physique.getRootType().getColor());
+                talentAttachment.getPhysiqueColor());
 
             // Show multiplier
             String multiplierText = String.format(" (×%.1f Body rates)",
-                physique.getCultivationMultiplier());
+                talentAttachment.getPhysiqueMultiplier());
             drawStringAligned(guiGraphics, multiplierText,
                 windowX + margin + labelWidth + font.width(physiqueValue), currentY, BODY_COLOR);
 
             currentY = alignToPixel(currentY + lineHeight);
         }
 
+        // Combined talent status
+        if (talentAttachment != null && talentAttachment.hasSpiritualRootAssigned() && talentAttachment.hasPhysiqueAssigned()) {
+            String combinedDesc = talentAttachment.getCombinedTalentDescription();
+            float overallMultiplier = talentAttachment.getOverallCultivationMultiplier();
+
+            String combinedText = String.format("%s (Overall: %.2fx)", combinedDesc, overallMultiplier);
+            drawStringAligned(guiGraphics, combinedText, windowX + margin, currentY, 0xFFDDA0DD);
+            currentY = alignToPixel(currentY + lineHeight);
+
+            if (talentAttachment.hasDivineDaoDestiny()) {
+                drawStringAligned(guiGraphics, "🌟 DIVINE DAO DESTINY 🌟", windowX + margin, currentY, 0xFFFFD700);
+                currentY = alignToPixel(currentY + lineHeight);
+            }
+        }
+
         return currentY;
     }
 
+    /**
+     * UPDATED: Render strategic overview using unified cultivation attachment
+     */
     private int renderStrategicOverview(GuiGraphics guiGraphics, int startY) {
         int currentY = alignToPixel(startY);
 
         renderSectionHeaderPixelPerfect(guiGraphics, "Strategic Overview", currentY);
         currentY = alignToPixel(currentY + lineHeight + 5);
 
-        if (focusAttachment != null) {
-            String focusText = "Cultivation Focus: " + focusAttachment.getCurrentFocus().getDisplayName() +
+        if (cultivationAttachment != null) {
+            String focusText = "Cultivation Focus: " + cultivationAttachment.getCurrentFocus().getDisplayName() +
                 " (2× advancement rate)";
-            int focusColor = focusAttachment.isFocusedOnQi() ? QI_COLOR : BODY_COLOR;
+            int focusColor = cultivationAttachment.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
             drawStringAligned(guiGraphics, focusText, windowX + margin, currentY, focusColor);
             currentY = alignToPixel(currentY + lineHeight);
 
-            long focusTime = focusAttachment.getTicksInCurrentFocus() / 20;
-            String efficiencyText = "Time in Focus: " + focusTime + "s";
-            drawStringAligned(guiGraphics, efficiencyText, windowX + margin, currentY, 0xFFCCCCCC);
+            // Show effective rates
+            double qiRate = cultivationAttachment.getEffectiveQiCultivationRate();
+            double bodyRate = cultivationAttachment.getEffectiveBodyCultivationRate();
+            String ratesText = String.format("Rates: Qi %.2f/s | Body %.2f/s", qiRate, bodyRate);
+            drawStringAligned(guiGraphics, ratesText, windowX + margin, currentY, 0xFFCCCCCC);
             currentY = alignToPixel(currentY + lineHeight);
         }
 
-        CultivationRealm highestRealm = realmAttachment.getHighestRealm();
-        String overallLevel = "Highest Realm: " + highestRealm.getDisplayName();
+        CultivationRealm qiRealm = cultivationAttachment.getCurrentQiRealm();
+        CultivationRealm bodyRealm = cultivationAttachment.getCurrentBodyRealm();
+        String overallLevel = String.format("Realms: Qi %s | Body %s", qiRealm.getDisplayName(), bodyRealm.getDisplayName());
         drawStringAligned(guiGraphics, overallLevel, windowX + margin, currentY, 0xFFFFFFFF);
         currentY = alignToPixel(currentY + lineHeight);
 
         return currentY;
     }
 
+    /**
+     * UPDATED: Render cultivation progress using unified cultivation attachment
+     */
     private int renderCultivationProgress(GuiGraphics guiGraphics, int startY) {
         int currentY = alignToPixel(startY);
 
@@ -463,49 +458,50 @@ public class CultivationStatsScreen extends Screen {
         int leftColumnX = alignToPixel(windowX + margin);
         int rightColumnX = alignToPixel(windowX + margin + columnWidth);
 
-        renderCultivationColumnPixelPerfect(guiGraphics, leftColumnX, currentY, PlayerRealmAttachment.CultivationType.QI);
-        renderCultivationColumnPixelPerfect(guiGraphics, rightColumnX, currentY, PlayerRealmAttachment.CultivationType.BODY);
+        renderCultivationColumnPixelPerfect(guiGraphics, leftColumnX, currentY, PlayerCultivationAttachment.CultivationType.QI);
+        renderCultivationColumnPixelPerfect(guiGraphics, rightColumnX, currentY, PlayerCultivationAttachment.CultivationType.BODY);
 
         return alignToPixel(currentY + Math.max(140, windowHeight / 4));
     }
 
     /**
-     * ENHANCED: Show effective rates with breakdown
+     * UPDATED: Render cultivation column using unified cultivation attachment
      */
-    private void renderCultivationColumnPixelPerfect(GuiGraphics guiGraphics, int x, int y, PlayerRealmAttachment.CultivationType type) {
+    private void renderCultivationColumnPixelPerfect(GuiGraphics guiGraphics, int x, int y, PlayerCultivationAttachment.CultivationType type) {
         int alignedX = alignToPixel(x);
         int currentY = alignToPixel(y);
 
-        int typeColor = type == PlayerRealmAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
+        int typeColor = type == PlayerCultivationAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
         String typeName = type.getDisplayName();
 
         drawStringAligned(guiGraphics, typeName + " Cultivation", alignedX, currentY, typeColor);
         currentY = alignToPixel(currentY + lineHeight + 3);
 
-        CultivationRealm currentRealm = realmAttachment.getCurrentRealm(type);
+        CultivationRealm currentRealm = type == PlayerCultivationAttachment.CultivationType.QI ?
+            cultivationAttachment.getCurrentQiRealm() : cultivationAttachment.getCurrentBodyRealm();
         drawStringAligned(guiGraphics, "Realm: " + currentRealm.getDisplayName(), alignedX, currentY, 0xFFFFFFFF);
         currentY = alignToPixel(currentY + lineHeight);
 
         long current, max;
         double baseRate, effectiveRate, meditationRate;
+        double percentage;
 
-        if (type == PlayerRealmAttachment.CultivationType.QI && qiCultivationAttachment != null) {
-            current = qiCultivationAttachment.getCurrentQiCultivation();
-            max = qiCultivationAttachment.getMaxQiCultivation();
-            baseRate = qiCultivationAttachment.getBaseQiCultivationRate();
-            effectiveRate = qiCultivationAttachment.getEffectiveQiCultivationRate();
-            meditationRate = qiCultivationAttachment.getEffectiveCirculatingQiCultivationRate();
-        } else if (type == PlayerRealmAttachment.CultivationType.BODY && bodyCultivationAttachment != null) {
-            current = bodyCultivationAttachment.getCurrentBodyCultivation();
-            max = bodyCultivationAttachment.getMaxBodyCultivation();
-            baseRate = bodyCultivationAttachment.getBaseBodyCultivationRate();
-            effectiveRate = bodyCultivationAttachment.getEffectiveBodyCultivationRate();
-            meditationRate = bodyCultivationAttachment.getEffectiveCirculatingBodyCultivationRate();
+        if (type == PlayerCultivationAttachment.CultivationType.QI) {
+            current = cultivationAttachment.getCurrentQiCultivation();
+            max = cultivationAttachment.getMaxQiCultivation();
+            baseRate = cultivationAttachment.getBaseQiCultivationRate();
+            effectiveRate = cultivationAttachment.getEffectiveQiCultivationRate();
+            meditationRate = cultivationAttachment.getEffectiveCirculatingQiCultivationRate();
+            percentage = cultivationAttachment.getQiProgress();
         } else {
-            return;
+            current = cultivationAttachment.getCurrentBodyCultivation();
+            max = cultivationAttachment.getMaxBodyCultivation();
+            baseRate = cultivationAttachment.getBaseBodyCultivationRate();
+            effectiveRate = cultivationAttachment.getEffectiveBodyCultivationRate();
+            meditationRate = cultivationAttachment.getEffectiveCirculatingBodyCultivationRate();
+            percentage = cultivationAttachment.getBodyProgress();
         }
 
-        double percentage = max > 0 ? (double) current / max : 0;
         String progressText = String.format("%.1f%% (%d/%d)", percentage * 100, current, max);
         drawStringAligned(guiGraphics, progressText, alignedX, currentY, 0xFFCCCCCC);
         currentY = alignToPixel(currentY + lineHeight + 2);
@@ -522,7 +518,7 @@ public class CultivationStatsScreen extends Screen {
         currentY = alignToPixel(currentY + lineHeight);
 
         // Show effective rate with indicator of multipliers applied
-        boolean isFocused = focusAttachment != null && focusAttachment.getCurrentFocus() == type;
+        boolean isFocused = cultivationAttachment.getCurrentFocus() == type;
 
         // Calculate total multiplier
         double totalMultiplier = effectiveRate / baseRate;
@@ -545,36 +541,51 @@ public class CultivationStatsScreen extends Screen {
         drawStringAligned(guiGraphics, meditationText, alignedX, currentY, 0xFFCCCCCC);
         currentY = alignToPixel(currentY + lineHeight);
 
-        long threshold = currentRealm.getBreakthroughCultivationThreshold();
-        boolean ready = current >= threshold && !realmAttachment.isOnBreakthroughCooldown(type);
+        // Show bonuses if any
+        double additiveBonus = type == PlayerCultivationAttachment.CultivationType.QI ?
+            cultivationAttachment.getQiAdditiveBonus() : cultivationAttachment.getBodyAdditiveBonus();
 
+        if (additiveBonus > 0) {
+            String bonusText = String.format("Pills: +%.3f/s", additiveBonus);
+            drawStringAligned(guiGraphics, bonusText, alignedX, currentY, 0xFFDDA0DD);
+            currentY = alignToPixel(currentY + lineHeight);
+        }
+
+        // Breakthrough readiness
+        boolean ready = current >= max;
         String readinessText = ready ? "✓ Ready" : "Not Ready";
         int readinessColor = ready ? READY_COLOR : NOT_READY_COLOR;
         drawStringAligned(guiGraphics, "Breakthrough: " + readinessText, alignedX, currentY, readinessColor);
     }
 
+    /**
+     * UPDATED: Render resource status using unified resource attachment
+     */
     private int renderResourceStatus(GuiGraphics guiGraphics, int startY) {
         int currentY = alignToPixel(startY);
 
         renderSectionHeaderPixelPerfect(guiGraphics, "Current Resources", currentY);
         currentY = alignToPixel(currentY + lineHeight + 8);
 
-        if (healthAttachment != null) {
+        if (resourceAttachment != null) {
             currentY = renderResourceLinePixelPerfect(guiGraphics, currentY, "Health",
-                healthAttachment.getCurrentHealth(), healthAttachment.getMaxHealth(),
-                healthAttachment.getEffectiveHealthRegenerationRate(), HEALTH_COLOR);
-        }
+                resourceAttachment.getCurrentHealth(), resourceAttachment.getMaxHealth(),
+                resourceAttachment.getEffectiveHealthRegenerationRate(), HEALTH_COLOR);
 
-        if (qiAttachment != null) {
             currentY = renderResourceLinePixelPerfect(guiGraphics, currentY, "Qi Energy",
-                qiAttachment.getCurrentQi(), qiAttachment.getMaxQi(),
-                qiAttachment.getEffectiveQiRegenerationRate(), QI_COLOR);
-        }
+                resourceAttachment.getCurrentQi(), resourceAttachment.getMaxQi(),
+                resourceAttachment.getEffectiveQiRegenerationRate(), QI_COLOR);
 
-        if (bodyAttachment != null) {
             currentY = renderResourceLinePixelPerfect(guiGraphics, currentY, "Body Energy",
-                bodyAttachment.getCurrentBody(), bodyAttachment.getMaxBody(),
-                bodyAttachment.getEffectiveBodyRegenerationRate(), BODY_COLOR);
+                resourceAttachment.getCurrentBody(), resourceAttachment.getMaxBody(),
+                resourceAttachment.getEffectiveBodyRegenerationRate(), BODY_COLOR);
+
+            // Show meditation status
+            boolean meditating = resourceAttachment.isPlayerMeditating();
+            String meditationStatus = "Meditation: " + (meditating ? "Active (10x rates)" : "Inactive");
+            int meditationColor = meditating ? 0xFF90EE90 : 0xFFCCCCCC;
+            drawStringAligned(guiGraphics, meditationStatus, windowX + margin, currentY, meditationColor);
+            currentY = alignToPixel(currentY + lineHeight + 3);
         }
 
         return currentY;
@@ -643,22 +654,21 @@ public class CultivationStatsScreen extends Screen {
         return false;
     }
 
-    // === ACTION METHODS (unchanged) ===
+    // === ACTION METHODS ===
 
+    /**
+     * UPDATED: Switch cultivation focus using unified cultivation attachment
+     */
     private void switchCultivationFocus() {
-        if (focusAttachment != null && focusAttachment.canSwitchFocus()) {
+        if (cultivationAttachment != null) {
             ImmortalCultivation.LOGGER.info("Client requesting focus toggle from {} to {} cultivation",
-                focusAttachment.getCurrentFocus().getDisplayName(),
-                focusAttachment.isFocusedOnQi() ? "Body" : "Qi");
+                cultivationAttachment.getCurrentFocus().getDisplayName(),
+                cultivationAttachment.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ? "Body" : "Qi");
 
-            // CRITICAL FIX: Send packet to server instead of changing client-side focus
+            // Send packet to server to toggle focus
             ICModNetwork.sendToServer(new CultivationFocusTogglePacket());
-
-            // Don't call init() immediately - wait for server to sync back the change
-            // The server will sync the new focus state back to client via CultivationFocusSyncPacket
-            // which will trigger a GUI refresh when received
         } else {
-            ImmortalCultivation.LOGGER.info("Cannot switch focus - cooldown active or focus attachment missing");
+            ImmortalCultivation.LOGGER.info("Cannot switch focus - cultivation attachment missing");
         }
     }
 
@@ -666,13 +676,14 @@ public class CultivationStatsScreen extends Screen {
         minecraft.setScreen(new CultivationBreakthroughScreen());
     }
 
+    /**
+     * UPDATED: Refresh stats using unified attachments
+     */
     private void refreshStats() {
-        if (qiCultivationAttachment != null) qiCultivationAttachment.forceSync();
-        if (bodyCultivationAttachment != null) bodyCultivationAttachment.forceSync();
-        if (healthAttachment != null) healthAttachment.forceSync();
-        if (qiAttachment != null) qiAttachment.forceSync();
-        if (bodyAttachment != null) bodyAttachment.forceSync();
-        if (focusAttachment != null) focusAttachment.forceSync();
+        if (cultivationAttachment != null) cultivationAttachment.forceSync();
+        if (resourceAttachment != null) resourceAttachment.forceSync();
+        if (talentAttachment != null) talentAttachment.forceSync();
+        if (combatStatsAttachment != null) combatStatsAttachment.forceSync();
 
         init();
     }

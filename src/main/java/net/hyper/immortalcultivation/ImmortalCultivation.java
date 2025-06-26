@@ -4,6 +4,8 @@ import net.hyper.immortalcultivation.handler.CultivationTickHandler;
 import net.hyper.immortalcultivation.handler.ICModHealthHandler;
 import net.hyper.immortalcultivation.handler.ICModImmunityHandler;
 import net.hyper.immortalcultivation.registry.*;
+import net.hyper.immortalcultivation.ui.menus.PillFurnaceMenu;
+import net.hyper.immortalcultivation.ui.screens.PillFurnaceScreen;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -17,6 +19,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 
@@ -29,8 +32,6 @@ public class ImmortalCultivation
 
     public ImmortalCultivation(IEventBus modEventBus, ModContainer modContainer) {
         LOGGER.info("Initializing Immortal Cultivation mod...");
-
-
 
         NeoForge.EVENT_BUS.register(this);
 
@@ -50,15 +51,15 @@ public class ImmortalCultivation
 
         NeoForge.EVENT_BUS.register(ICModImmunityHandler.class);
         NeoForge.EVENT_BUS.register(ICModHealthHandler.class);
+        NeoForge.EVENT_BUS.register(CultivationTickHandler.class);
 
         LOGGER.info("Handlers registered successfully!");
-        LOGGER.info("Immortal Cultivation mod initialization complete.");
 
-        NeoForge.EVENT_BUS.register(CultivationTickHandler.class);
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, ImmortalCultivationConfig.SPEC);
-    }
 
+        LOGGER.info("Immortal Cultivation mod initialization complete.");
+    }
 
     // You can use SubscribeEvent and let the Event Bus discover methods to call
     @SubscribeEvent
@@ -78,6 +79,15 @@ public class ImmortalCultivation
             // Some client setup code
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+        }
+
+        @SubscribeEvent
+        public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
+            LOGGER.info("Registering menu screens...");
+
+            event.register(ICModMenuTypes.PILL_FURNACE_MENU.get(), PillFurnaceScreen::new);
+
+            LOGGER.info("Menu screens registered successfully!");
         }
     }
 }

@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.handler;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.attachment.PlayerHealthAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerResourceAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.EventPriority;
@@ -61,7 +61,7 @@ public class ICModHealthHandler {
             return;
         }
 
-        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+        PlayerResourceAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
         if (healthAttachment == null) {
             ImmortalCultivation.LOGGER.warn("No health attachment found for player {} - allowing vanilla damage as fallback",
                 player.getName().getString());
@@ -122,7 +122,7 @@ public class ICModHealthHandler {
             return;
         }
 
-        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+        PlayerResourceAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
         if (healthAttachment == null) {
             return;
         }
@@ -163,7 +163,7 @@ public class ICModHealthHandler {
             return;
         }
 
-        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+        PlayerResourceAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
         if (healthAttachment == null) {
             return;
         }
@@ -242,7 +242,7 @@ public class ICModHealthHandler {
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            PlayerHealthAttachment healthAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+            PlayerResourceAttachment healthAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
             if (healthAttachment != null) {
                 // Immediately sync vanilla health to custom health
                 updateVanillaHealthFromCustom(serverPlayer, healthAttachment);
@@ -261,7 +261,7 @@ public class ICModHealthHandler {
     @SubscribeEvent
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer serverPlayer) {
-            PlayerHealthAttachment healthAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+            PlayerResourceAttachment healthAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
             if (healthAttachment != null) {
                 // Respawn should restore custom health to full
                 healthAttachment.setCurrentHealth(healthAttachment.getMaxHealth());
@@ -297,7 +297,7 @@ public class ICModHealthHandler {
     /**
      * Update vanilla health to properly reflect custom health percentage
      */
-    private static void updateVanillaHealthFromCustom(Player player, PlayerHealthAttachment healthAttachment) {
+    private static void updateVanillaHealthFromCustom(Player player, PlayerResourceAttachment healthAttachment) {
         long customHealth = healthAttachment.getCurrentHealth();
         long maxCustomHealth = healthAttachment.getMaxHealth();
 
@@ -329,7 +329,7 @@ public class ICModHealthHandler {
     /**
      * Calculate what vanilla health should be based on custom health
      */
-    private static float calculateVanillaHealthFromCustom(PlayerHealthAttachment healthAttachment, Player player) {
+    private static float calculateVanillaHealthFromCustom(PlayerResourceAttachment healthAttachment, Player player) {
         long customHealth = healthAttachment.getCurrentHealth();
         long maxCustomHealth = healthAttachment.getMaxHealth();
 
@@ -461,7 +461,7 @@ public class ICModHealthHandler {
      * Emergency method to force correct vanilla health for a player
      */
     public static void emergencyHealthCorrection(Player player) {
-        PlayerHealthAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_HEALTH.get());
+        PlayerResourceAttachment healthAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
         if (healthAttachment != null) {
             updateVanillaHealthFromCustom(player, healthAttachment);
             emergencyProtectionActive.put(player.getUUID(), false);

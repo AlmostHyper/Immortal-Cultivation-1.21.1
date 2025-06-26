@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
+import net.hyper.immortalcultivation.attachment.PlayerTalentAttachment;
 import net.hyper.immortalcultivation.cultivation.PhysiqueType;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.commands.CommandSourceStack;
@@ -47,26 +48,52 @@ public class SetPhysiqueCommand {
         try {
             PhysiqueType physiqueType = PhysiqueType.valueOf(physiqueString);
 
-            // Get the player's physique attachment
-            var physiqueAttachment = player.getData(ICModAttachmentTypes.PLAYER_PHYSIQUE.get());
-
-            if (physiqueAttachment == null) {
-                context.getSource().sendFailure(Component.literal("Failed to get physique data for player"));
+            // Get the unified talent attachment
+            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            if (talentAttachment == null) {
+                context.getSource().sendFailure(Component.literal("Failed to get talent data for player"));
                 return 0;
             }
 
-            // Set the physique type
-            physiqueAttachment.assignRootType(physiqueType);
-
-            // Send success message
-            context.getSource().sendSuccess(() ->
-                Component.literal("Set physique of " + player.getName().getString() +
-                    " to " + physiqueType.getDisplayName()), true);
+            // Set the physique using the unified system
+            if (talentAttachment.hasPhysiqueAssigned()) {
+                // Force reassignment (admin override)
+                talentAttachment.forceReassignPhysique(physiqueType);
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Forcibly reassigned physique of " + player.getName().getString() +
+                        " to " + physiqueType.getDisplayName() + " (" +
+                        String.format("%.1fx", physiqueType.getCultivationMultiplier()) + " multiplier)"), true);
+            } else {
+                // Normal assignment
+                talentAttachment.assignPhysique(physiqueType);
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Set physique of " + player.getName().getString() +
+                        " to " + physiqueType.getDisplayName() + " (" +
+                        String.format("%.1fx", physiqueType.getCultivationMultiplier()) + " multiplier)"), true);
+            }
 
             // Send message to the target player if different from command source
             if (!context.getSource().getEntity().equals(player)) {
                 player.sendSystemMessage(Component.literal("Your physique has been set to " +
-                    physiqueType.getDisplayName()));
+                    physiqueType.getDisplayName() + " (" +
+                    String.format("%.1fx", physiqueType.getCultivationMultiplier()) + " cultivation multiplier)"));
+            }
+
+            // Show combined talent status if both talents are assigned
+            if (talentAttachment.hasSpiritualRootAssigned() && talentAttachment.hasPhysiqueAssigned()) {
+                String combinedDesc = talentAttachment.getCombinedTalentDescription();
+                float overallMultiplier = talentAttachment.getOverallCultivationMultiplier();
+
+                context.getSource().sendSuccess(() ->
+                    Component.literal("Combined Talent Status: " + combinedDesc +
+                        " (Overall: " + String.format("%.2fx", overallMultiplier) + " multiplier)"), false);
+
+                // Check for Divine Dao Destiny
+                if (talentAttachment.hasDivineDaoDestiny()) {
+                    context.getSource().sendSuccess(() ->
+                        Component.literal("🌟 DIVINE DAO DESTINY ACHIEVED! 🌟")
+                            .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE, net.minecraft.ChatFormatting.BOLD), false);
+                }
             }
 
             return 1;

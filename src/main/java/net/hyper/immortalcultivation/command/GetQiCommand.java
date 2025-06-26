@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
-import net.hyper.immortalcultivation.attachment.PlayerQiAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerResourceAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -16,13 +16,29 @@ public class GetQiCommand {
     }
 
     private int execute(CommandContext<CommandSourceStack> commandSourceStackCommandContext) {
-        ServerPlayer player = commandSourceStackCommandContext.getSource().getPlayer();
+        try {
+            ServerPlayer player = commandSourceStackCommandContext.getSource().getPlayer();
+            if (player == null) {
+                commandSourceStackCommandContext.getSource().sendFailure(Component.literal("This command can only be used by players"));
+                return 0;
+            }
 
-        PlayerQiAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_QI);
-        long currentQi = attachment.getCurrentQi();
+            PlayerResourceAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            if (attachment == null) {
+                commandSourceStackCommandContext.getSource().sendFailure(Component.literal("Failed to get resource data"));
+                return 0;
+            }
 
-        commandSourceStackCommandContext.getSource().sendSuccess(() ->
-            Component.literal("Your current Qi is: " + currentQi), true);
-        return 1;
+            long currentQi = attachment.getCurrentQi();
+            long maxQi = attachment.getMaxQi();
+
+            commandSourceStackCommandContext.getSource().sendSuccess(() ->
+                Component.literal("Your current Qi Energy is: " + currentQi + "/" + maxQi +
+                    " (" + String.format("%.1f", attachment.getQiProgress() * 100) + "%)"), true);
+            return 1;
+        } catch (Exception e) {
+            commandSourceStackCommandContext.getSource().sendFailure(Component.literal("Error retrieving Qi: " + e.getMessage()));
+            return 0;
+        }
     }
 }
