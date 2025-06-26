@@ -18,6 +18,7 @@ import javax.annotation.Nullable;
 /**
  * Unified resource data attachment.
  * Merges: PlayerHealthAttachment, PlayerQiAttachment, and PlayerBodyAttachment
+ * Enhanced with automatic regeneration and meditation system integration.
  */
 public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData {
 
@@ -515,24 +516,158 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
-    // === Regeneration Methods ===
+    public void startMeditation() {
+        // Called when player meets meditation conditions (crouching + stationary)
+        // Uses threshold system to prevent instant meditation
+        updateMeditationState(true);
+
+        // Log meditation progress for debugging
+        if (!isPlayerMeditating && meditationTicks > 0) {
+            ImmortalCultivation.LOGGER.debug("Player building meditation focus: {}/{} ticks",
+                meditationTicks, MEDITATION_THRESHOLD);
+        }
+    }
+
+    public void stopMeditation() {
+        // Called when player no longer meets meditation conditions
+        // Immediately stops meditation and resets progress
+        updateMeditationState(false);
+
+        if (isPlayerMeditating) {
+            ImmortalCultivation.LOGGER.debug("Player stopped meditating");
+        }
+    }
+
+    /**
+     * Get meditation progress as a percentage (0.0 to 1.0)
+     */
+    public double getMeditationProgress() {
+        if (isPlayerMeditating) return 1.0;
+        return Math.min(1.0, (double) meditationTicks / MEDITATION_THRESHOLD);
+    }
+
+    /**
+     * Get ticks remaining until meditation starts
+     */
+    public int getTicksUntilMeditation() {
+        if (isPlayerMeditating) return 0;
+        return Math.max(0, MEDITATION_THRESHOLD - meditationTicks);
+    }
+
+    /**
+     * Check if player is building up to meditation
+     */
+    public boolean isBuildingMeditation() {
+        return !isPlayerMeditating && meditationTicks > 0;
+    }
+
+    // === Enhanced Tick Processing ===
+
+    public void tick() {
+        if (player == null) return;
+
+        // Update max values based on current cultivation realms
+        updateMaxValues();
+
+        // Process regeneration based on meditation state
+        processRegeneration();
+
+        // Handle sync
+        tickCounter++;
+        if (tickCounter >= SYNC_INTERVAL) {
+            tickCounter = 0;
+            syncIfNeeded();
+        }
+    }
+
+    /**
+     * Updates max values from cultivation realms
+     */
+    private void updateMaxValues() {
+        try {
+            long newMaxHealth = getMaxHealth();
+            long newMaxQi = getBaseMaxQi();
+            long newMaxBody = getBaseMaxBody();
+
+            // Update max values if they changed
+            if (newMaxHealth != maxHealth) {
+                setMaxHealth(newMaxHealth);
+            }
+            if (newMaxQi != maxQi) {
+                setMaxQi(newMaxQi);
+            }
+            if (newMaxBody != maxBody) {
+                setMaxBody(newMaxBody);
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error updating max values for player {}",
+                player != null ? player.getName().getString() : "null", e);
+        }
+    }
+
+    /**
+     * Process regeneration for all resource types based on meditation state
+     */
+    private void processRegeneration() {
+        if (player == null) return;
+
+        try {
+            // Convert per-second rates to per-tick rates
+            double healthRate = isPlayerMeditating ?
+                getEffectiveCirculatingHealthRegenerationRate() / 20.0 :
+                getEffectiveHealthRegenerationRate() / 20.0;
+
+            double qiRate = isPlayerMeditating ?
+                getEffectiveCirculatingQiRegenerationRate() / 20.0 :
+                getEffectiveQiRegenerationRate() / 20.0;
+
+            double bodyRate = isPlayerMeditating ?
+                getEffectiveCirculatingBodyRegenerationRate() / 20.0 :
+                getEffectiveBodyRegenerationRate() / 20.0;
+
+            // Apply regeneration
+            if (healthRate > 0 && getCurrentHealth() < getMaxHealth()) {
+                regenerateHealth(healthRate, isPlayerMeditating);
+            }
+
+            if (qiRate > 0 && getCurrentQi() < getMaxQi()) {
+                regenerateQi(qiRate, isPlayerMeditating);
+            }
+
+            if (bodyRate > 0 && getCurrentBody() < getMaxBody()) {
+                regenerateBody(bodyRate, isPlayerMeditating);
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error processing regeneration for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
+    // === Enhanced Regeneration Methods ===
 
     public void regenerateHealth(double rate, boolean circulating) {
-        double effectiveRate = circulating ? getEffectiveCirculatingHealthRegenerationRate() : getEffectiveHealthRegenerationRate();
-        healthRegenFraction += effectiveRate;
+        if (getCurrentHealth() >= getMaxHealth()) return;
 
+        healthRegenFraction += rate;
         long wholePoints = (long) healthRegenFraction;
         healthRegenFraction -= wholePoints;
 
         if (wholePoints > 0) {
             healHealth(wholePoints);
+
+            // Debug logging for significant healing
+            if (wholePoints >= 5) {
+                ImmortalCultivation.LOGGER.debug("Player healed {} health ({})",
+                    wholePoints, circulating ? "meditating" : "normal");
+            }
         }
     }
 
     public void regenerateQi(double rate, boolean circulating) {
-        double effectiveRate = circulating ? getEffectiveCirculatingQiRegenerationRate() : getEffectiveQiRegenerationRate();
-        qiRegenFraction += effectiveRate;
+        if (getCurrentQi() >= getMaxQi()) return;
 
+        qiRegenFraction += rate;
         long wholePoints = (long) qiRegenFraction;
         qiRegenFraction -= wholePoints;
 
@@ -542,9 +677,9 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     }
 
     public void regenerateBody(double rate, boolean circulating) {
-        double effectiveRate = circulating ? getEffectiveCirculatingBodyRegenerationRate() : getEffectiveBodyRegenerationRate();
-        bodyRegenFraction += effectiveRate;
+        if (getCurrentBody() >= getMaxBody()) return;
 
+        bodyRegenFraction += rate;
         long wholePoints = (long) bodyRegenFraction;
         bodyRegenFraction -= wholePoints;
 
@@ -553,15 +688,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
-    // === Tick Processing ===
-
-    public void tick() {
-        tickCounter++;
-        if (tickCounter >= SYNC_INTERVAL) {
-            tickCounter = 0;
-            syncIfNeeded();
-        }
-    }
+    // === Utility Methods ===
 
     @Override
     public void deserializeNBT(CompoundTag tag) {
@@ -573,8 +700,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         // Not needed with Codec
         return new CompoundTag();
     }
-
-    // === Utility Methods ===
 
     private void updateVanillaHealthBar() {
         Player player = getPlayerSafe();

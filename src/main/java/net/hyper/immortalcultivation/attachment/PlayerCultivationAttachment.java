@@ -1,7 +1,5 @@
 package net.hyper.immortalcultivation.attachment;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
@@ -10,19 +8,23 @@ import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.network.server.CultivationSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.neoforge.network.PacketDistributor;
+import org.jetbrains.annotations.Nullable;
 
-import javax.annotation.Nullable;
-import java.util.*;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.List;
+import java.util.Objects;
 
 /**
  * Unified cultivation data attachment.
  * Merges: PlayerRealmAttachment, PlayerQiCultivationAttachment,
  * PlayerBodyCultivationAttachment, PlayerCultivationFocusAttachment,
  * and PlayerCultivationBonusAttachment
+ * Enhanced with comprehensive pill system integration.
  */
 public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCultivationData {
 
@@ -42,13 +44,13 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     private long currentQiCultivation = 0;
     private long maxQiCultivation = 1000; // Start with default max
     private double qiCultivationFraction = 0.0;
-    private double qiAccumulationRate = 0.0;
+    private double qiAccumulationRate = 0.0; // CRITICAL: This needs to be updated each tick
 
     // === Body Cultivation Data (from PlayerBodyCultivationAttachment) ===
     private long currentBodyCultivation = 0;
     private long maxBodyCultivation = 1000; // Start with default max
     private double bodyCultivationFraction = 0.0;
-    private double bodyAccumulationRate = 0.0;
+    private double bodyAccumulationRate = 0.0; // CRITICAL: This needs to be updated each tick
 
     public void startMeditation() {
 
@@ -72,7 +74,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     }
 
     private CultivationType currentFocus = CultivationType.QI;
-    private long lastFocusChangeTime = 0;
+    private long lastFocusChangeTime = -72000; // CRITICAL FIX: Initialize to allow immediate first switch
     private static final long FOCUS_CHANGE_COOLDOWN = 72000; // 1 hour in ticks
 
     // === Breakthrough Tracking ===
@@ -99,6 +101,66 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     private long lastSyncedHash = 0;
     private int tickCounter = 0;
     private static final int SYNC_INTERVAL = 20;
+
+    // === Pill System ===
+    public enum PillTier {
+        LOW_QUALITY(0.005, 0.005, "Low Quality"),
+        MEDIUM_QUALITY(0.02, 0.02, "Medium Quality"),
+        HIGH_QUALITY(0.1, 0.1, "High Quality"),
+        TOP_QUALITY(1.0, 1.0, "Top Quality");
+
+        private final double qiAdditiveBonus;
+        private final double bodyAdditiveBonus;
+        private final String displayName;
+
+        PillTier(double qiAdditiveBonus, double bodyAdditiveBonus, String displayName) {
+            this.qiAdditiveBonus = qiAdditiveBonus;
+            this.bodyAdditiveBonus = bodyAdditiveBonus;
+            this.displayName = displayName;
+        }
+
+        public double getQiAdditiveBonus() {
+            return qiAdditiveBonus;
+        }
+
+        public double getBodyAdditiveBonus() {
+            return bodyAdditiveBonus;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+
+        /**
+         * Get a user-friendly description of the Qi bonus amount
+         */
+        public String getQiBonusDescription() {
+            if (qiAdditiveBonus >= 1.0) {
+                return "+" + String.format("%.1f", qiAdditiveBonus) + "/sec";
+            } else if (qiAdditiveBonus >= 0.1) {
+                return "+" + String.format("%.1f", qiAdditiveBonus) + "/sec";
+            } else if (qiAdditiveBonus >= 0.01) {
+                return "+" + String.format("%.2f", qiAdditiveBonus) + "/sec";
+            } else {
+                return "+" + String.format("%.3f", qiAdditiveBonus) + "/sec";
+            }
+        }
+
+        /**
+         * Get a user-friendly description of the Body bonus amount
+         */
+        public String getBodyBonusDescription() {
+            if (bodyAdditiveBonus >= 1.0) {
+                return "+" + String.format("%.1f", bodyAdditiveBonus) + "/sec";
+            } else if (bodyAdditiveBonus >= 0.1) {
+                return "+" + String.format("%.1f", bodyAdditiveBonus) + "/sec";
+            } else if (bodyAdditiveBonus >= 0.01) {
+                return "+" + String.format("%.2f", bodyAdditiveBonus) + "/sec";
+            } else {
+                return "+" + String.format("%.3f", bodyAdditiveBonus) + "/sec";
+            }
+        }
+    }
 
     // === Constructor (FIXED - removed void) ===
     public PlayerCultivationAttachment() {
@@ -180,12 +242,12 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
 
         // Apply spiritual root multiplier
         try {
-            PlayerTalentAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            if (roots != null) {
-                baseRate *= roots.getSpiritualRootMultiplier();
+            PlayerTalentAttachment spiritualRoot = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            if (spiritualRoot != null) {
+                baseRate *= spiritualRoot.getSpiritualRootMultiplier();
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying spiritual roots", e);
+            ImmortalCultivation.LOGGER.error("Error applying spiritual root", e);
         }
 
         // Apply bonuses
@@ -208,12 +270,12 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
 
         // Apply same multipliers as normal cultivation
         try {
-            PlayerTalentAttachment roots = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            if (roots != null) {
-                baseCirculatingRate *= roots.getSpiritualRootMultiplier();
+            PlayerTalentAttachment spiritualRoot = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            if (spiritualRoot != null) {
+                baseCirculatingRate *= spiritualRoot.getSpiritualRootMultiplier();
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying spiritual roots", e);
+            ImmortalCultivation.LOGGER.error("Error applying spiritual root", e);
         }
 
         baseCirculatingRate = applyQiCultivationBonuses(baseCirculatingRate);
@@ -223,6 +285,11 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         }
 
         return baseCirculatingRate;
+    }
+
+    @Override
+    public long getBaseQiCultivation() {
+        return currentQiRealm.getBaseMaxCultivation();
     }
 
     @Override
@@ -237,12 +304,8 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
 
     @Override
     public void addRegenFraction(double amount) {
-        this.qiCultivationFraction += amount;
-    }
-
-    @Override
-    public long getBaseQiCultivation() {
-        return currentQiRealm.getBaseMaxCultivation();
+        IQiCultivationData.super.addRegenFraction(amount);
+        IBodyCultivationData.super.addRegenFraction(amount);
     }
 
     // === Body Cultivation Implementation ===
@@ -396,16 +459,30 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         return currentFocus;
     }
 
+    public long getLastFocusChangeTime() {
+        return lastFocusChangeTime;
+    }
+
     public boolean toggleFocus() {
         if (player == null) return false;
 
         long currentTime = player.level().getGameTime();
-        if (currentTime - lastFocusChangeTime < FOCUS_CHANGE_COOLDOWN) {
+
+        // CRITICAL FIX: Better cooldown logic with proper logging
+        long timeSinceLastChange = currentTime - lastFocusChangeTime;
+        if (timeSinceLastChange < FOCUS_CHANGE_COOLDOWN) {
+            ImmortalCultivation.LOGGER.debug("Focus change rejected - cooldown active. Time since last: {}, Required: {}",
+                timeSinceLastChange, FOCUS_CHANGE_COOLDOWN);
             return false;
         }
 
+        CultivationType oldFocus = currentFocus;
         currentFocus = (currentFocus == CultivationType.QI) ? CultivationType.BODY : CultivationType.QI;
         lastFocusChangeTime = currentTime;
+
+        ImmortalCultivation.LOGGER.info("Focus changed from {} to {} for player {}",
+            oldFocus.getDisplayName(), currentFocus.getDisplayName(),
+            player.getName().getString());
 
         forceSync();
         return true;
@@ -447,119 +524,122 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         this.bodyCultivationMultiplicativeBonus += multiplicative;
     }
 
-    // === Breakthrough System ===
-
-    public record BreakthroughResult(boolean success, String message, @Nullable CultivationRealm newRealm) {}
-
-    public BreakthroughResult attemptQiBreakthrough() {
-        if (currentQiCultivation < maxQiCultivation) {
-            return new BreakthroughResult(false, "Qi cultivation not at maximum", null);
-        }
-
-        if (qiBreakthroughCooldown) {
-            return new BreakthroughResult(false, "Breakthrough on cooldown", null);
-        }
-
-        List<CultivationRealm> nextRealms = currentQiRealm.getNextCultivationRealms();
-        if (nextRealms.isEmpty()) {
-            return new BreakthroughResult(false, "No higher realm available", null);
-        }
-
-        double chance = 0.1 + (qiBreakthroughAttempts * 0.05);
-        chance = Math.min(chance, 0.95);
-
-        qiBreakthroughAttempts++;
-        lastQiBreakthroughAttempt = player.level().getGameTime();
-
-        if (player.getRandom().nextDouble() < chance) {
-            CultivationRealm newRealm = nextRealms.get(0);
-            setCurrentQiRealm(newRealm);
-            return new BreakthroughResult(true, "Qi breakthrough successful!", newRealm);
-        } else {
-            qiBreakthroughCooldown = true;
-            return new BreakthroughResult(false, "Qi breakthrough failed", null);
-        }
-    }
-
-    public BreakthroughResult attemptBodyBreakthrough() {
-        if (currentBodyCultivation < maxBodyCultivation) {
-            return new BreakthroughResult(false, "Body cultivation not at maximum", null);
-        }
-
-        if (bodyBreakthroughCooldown) {
-            return new BreakthroughResult(false, "Breakthrough on cooldown", null);
-        }
-
-        List<CultivationRealm> nextRealms = currentBodyRealm.getNextCultivationRealms();
-        if (nextRealms.isEmpty()) {
-            return new BreakthroughResult(false, "No higher realm available", null);
-        }
-
-        double chance = 0.1 + (bodyBreakthroughAttempts * 0.05);
-        chance = Math.min(chance, 0.95);
-
-        bodyBreakthroughAttempts++;
-        lastBodyBreakthroughAttempt = player.level().getGameTime();
-
-        if (player.getRandom().nextDouble() < chance) {
-            CultivationRealm newRealm = nextRealms.get(0);
-            setCurrentBodyRealm(newRealm);
-            return new BreakthroughResult(true, "Body breakthrough successful!", newRealm);
-        } else {
-            bodyBreakthroughCooldown = true;
-            return new BreakthroughResult(false, "Body breakthrough failed", null);
-        }
-    }
-
-    // === Pill System ===
+    // === Pill System Implementation ===
 
     /**
-     * Attempt to consume a Qi cultivation pill
-     * @param tier The tier of pill being consumed
+     * Consume a Qi cultivation pill of the specified tier (called by QiCultivationPillItem)
+     * @param tier The quality tier of the pill
      * @return true if successful, false if failed
      */
-    public boolean consumeQiCultivationPill(PillTier tier) {
-        // Add the pill's additive bonus
-        double bonusToAdd = tier.getQiAdditiveBonus();
-        qiCultivationAdditiveBonus += bonusToAdd;
+    public boolean consumeQiCultivationPill(PlayerCultivationAttachment.PillTier tier) {
+        return consumeQiPill(tier, tier.getDisplayName() + " Qi Cultivation Pill");
+    }
 
-        // Log and sync
-        Player player = getPlayerSafe();
-        if (player != null) {
-            ImmortalCultivation.LOGGER.info("Player {} consumed {} Qi cultivation pill. Added: {} rate/sec (Total additive: {})",
-                player.getName().getString(), tier.name(),
+    /**
+     * Consume a Body cultivation pill of the specified tier (called by BodyCultivationPillItem)
+     * @param tier The quality tier of the pill
+     * @return true if successful, false if failed
+     */
+    public boolean consumeBodyCultivationPill(PlayerCultivationAttachment.PillTier tier) {
+        return consumeBodyPill(tier, tier.getDisplayName() + " Body Cultivation Pill");
+    }
+
+    /**
+     * Consume a Qi cultivation pill of the specified tier
+     * @param tier The quality tier of the pill
+     * @param pillName The name of the pill for logging
+     * @return true if successful, false if failed
+     */
+    public boolean consumeQiPill(PillTier tier, String pillName) {
+        if (player == null) return false;
+
+        try {
+            double bonusToAdd = tier.getQiAdditiveBonus();
+
+            // Apply the bonus
+            this.qiCultivationAdditiveBonus += bonusToAdd;
+
+            ImmortalCultivation.LOGGER.info("Player {} consumed {} Qi pill ({}). Added: {} rate/sec (Total additive: {})",
+                player.getName().getString(), tier.name(), pillName,
                 String.format("%.3f", bonusToAdd),
                 String.format("%.3f", qiCultivationAdditiveBonus));
 
+            // Force sync to update client
             if (!player.level().isClientSide()) {
                 forceSync();
             }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error consuming Qi pill for player {}",
+                player.getName().getString(), e);
+            return false;
         }
 
         return true;
     }
 
     /**
-     * Attempt to consume a Body cultivation pill
-     * @param tier The tier of pill being consumed
+     * Consume a Body cultivation pill of the specified tier
+     * @param tier The quality tier of the pill
+     * @param pillName The name of the pill for logging
      * @return true if successful, false if failed
      */
-    public boolean consumeBodyCultivationPill(PillTier tier) {
-        // Add the pill's additive bonus
-        double bonusToAdd = tier.getBodyAdditiveBonus();
-        bodyCultivationAdditiveBonus += bonusToAdd;
+    public boolean consumeBodyPill(PillTier tier, String pillName) {
+        if (player == null) return false;
 
-        // Log and sync
-        Player player = getPlayerSafe();
-        if (player != null) {
-            ImmortalCultivation.LOGGER.info("Player {} consumed {} Body cultivation pill. Added: {} rate/sec (Total additive: {})",
-                player.getName().getString(), tier.name(),
+        try {
+            double bonusToAdd = tier.getBodyAdditiveBonus();
+
+            // Apply the bonus
+            this.bodyCultivationAdditiveBonus += bonusToAdd;
+
+            ImmortalCultivation.LOGGER.info("Player {} consumed {} Body pill ({}). Added: {} rate/sec (Total additive: {})",
+                player.getName().getString(), tier.name(), pillName,
                 String.format("%.3f", bonusToAdd),
                 String.format("%.3f", bodyCultivationAdditiveBonus));
 
+            // Force sync to update client
             if (!player.level().isClientSide()) {
                 forceSync();
             }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error consuming Body pill for player {}",
+                player.getName().getString(), e);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Consume a dual cultivation pill that affects both Qi and Body
+     * @param tier The quality tier of the pill
+     * @param pillName The name of the pill for logging
+     * @return true if successful, false if failed
+     */
+    public boolean consumeDualPill(PillTier tier, String pillName) {
+        if (player == null) return false;
+
+        try {
+            double qiBonusToAdd = tier.getQiAdditiveBonus();
+            double bodyBonusToAdd = tier.getBodyAdditiveBonus();
+
+            // Apply both bonuses
+            this.qiCultivationAdditiveBonus += qiBonusToAdd;
+            this.bodyCultivationAdditiveBonus += bodyBonusToAdd;
+
+            ImmortalCultivation.LOGGER.info("Player {} consumed {} Dual pill ({}). Added: Qi {} + Body {} rate/sec",
+                player.getName().getString(), tier.name(), pillName,
+                String.format("%.3f", qiBonusToAdd),
+                String.format("%.3f", bodyBonusToAdd));
+
+            // Force sync to update client
+            if (!player.level().isClientSide()) {
+                forceSync();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error consuming Dual pill for player {}",
+                player.getName().getString(), e);
+            return false;
         }
 
         return true;
@@ -593,68 +673,13 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         return bodyCultivationMultiplicativeBonus;
     }
 
-    // === Pill Tier Enum ===
+    // === Getters for GUI display ===
+    public double getQiAdditiveBonus() {
+        return qiCultivationAdditiveBonus;
+    }
 
-    public enum PillTier {
-        LOW_QUALITY(0.005, 0.005),
-        MEDIUM_QUALITY(0.02, 0.02),
-        HIGH_QUALITY(0.1, 0.1),
-        TOP_QUALITY(1.0, 1.0);
-
-        private final double qiAdditiveBonus;
-        private final double bodyAdditiveBonus;
-
-        PillTier(double qiAdditiveBonus, double bodyAdditiveBonus) {
-            this.qiAdditiveBonus = qiAdditiveBonus;
-            this.bodyAdditiveBonus = bodyAdditiveBonus;
-        }
-
-        public double getQiAdditiveBonus() {
-            return qiAdditiveBonus;
-        }
-
-        public double getBodyAdditiveBonus() {
-            return bodyAdditiveBonus;
-        }
-
-        public String getDisplayName() {
-            return switch (this) {
-                case LOW_QUALITY -> "Low Quality";
-                case MEDIUM_QUALITY -> "Medium Quality";
-                case HIGH_QUALITY -> "High Quality";
-                case TOP_QUALITY -> "Top Quality";
-            };
-        }
-
-        /**
-         * Get a user-friendly description of the Qi bonus amount
-         */
-        public String getQiBonusDescription() {
-            if (qiAdditiveBonus >= 1.0) {
-                return "+" + String.format("%.1f", qiAdditiveBonus) + "/sec";
-            } else if (qiAdditiveBonus >= 0.1) {
-                return "+" + String.format("%.1f", qiAdditiveBonus) + "/sec";
-            } else if (qiAdditiveBonus >= 0.01) {
-                return "+" + String.format("%.2f", qiAdditiveBonus) + "/sec";
-            } else {
-                return "+" + String.format("%.3f", qiAdditiveBonus) + "/sec";
-            }
-        }
-
-        /**
-         * Get a user-friendly description of the Body bonus amount
-         */
-        public String getBodyBonusDescription() {
-            if (bodyAdditiveBonus >= 1.0) {
-                return "+" + String.format("%.1f", bodyAdditiveBonus) + "/sec";
-            } else if (bodyAdditiveBonus >= 0.1) {
-                return "+" + String.format("%.1f", bodyAdditiveBonus) + "/sec";
-            } else if (bodyAdditiveBonus >= 0.01) {
-                return "+" + String.format("%.2f", bodyAdditiveBonus) + "/sec";
-            } else {
-                return "+" + String.format("%.3f", bodyAdditiveBonus) + "/sec";
-            }
-        }
+    public double getBodyAdditiveBonus() {
+        return bodyCultivationAdditiveBonus;
     }
 
     // === Tick Processing ===
@@ -668,11 +693,15 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         totalQiCultivationTime++;
         totalBodyCultivationTime++;
 
-        // Accumulate cultivation
-        if (qiAccumulationRate > 0) {
+        // CRITICAL FIX: Update accumulation rates from effective rates each tick
+        this.qiAccumulationRate = getEffectiveQiCultivationRate() / 20.0; // Convert per-second to per-tick
+        this.bodyAccumulationRate = getEffectiveBodyCultivationRate() / 20.0; // Convert per-second to per-tick
+
+        // Accumulate cultivation using the updated rates
+        if (qiAccumulationRate > 0 && getCurrentQiCultivation() < getMaxQiCultivation()) {
             addQiCultivation(qiAccumulationRate);
         }
-        if (bodyAccumulationRate > 0) {
+        if (bodyAccumulationRate > 0 && getCurrentBodyCultivation() < getMaxBodyCultivation()) {
             addBodyCultivation(bodyAccumulationRate);
         }
 
@@ -742,43 +771,31 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                 bodyCultivationAdditiveBonus,
                 bodyCultivationMultiplicativeBonus
             );
-            PacketDistributor.sendToPlayer(serverPlayer, packet);
+            ICModNetwork.sendToPlayer(packet, serverPlayer);
         }
     }
 
     public void forceSync() {
-        lastSyncedHash = 0;
+        lastSyncedHash = 0; // Force sync on next check
         syncToClient();
     }
 
-    // === Additional Getters for Network/UI ===
+    // === Utility Methods ===
 
-    public long getLastFocusChangeTime() {
-        return lastFocusChangeTime;
+    public void setQiAccumulationRate(double rate) {
+        this.qiAccumulationRate = rate;
     }
 
-    public long getQiBreakthroughAttempts() {
-        return qiBreakthroughAttempts;
+    public void setBodyAccumulationRate(double rate) {
+        this.bodyAccumulationRate = rate;
     }
 
-    public long getBodyBreakthroughAttempts() {
-        return bodyBreakthroughAttempts;
+    public double getQiAccumulationRate() {
+        return qiAccumulationRate;
     }
 
-    public double getQiAdditiveBonus() {
-        return qiCultivationAdditiveBonus;
-    }
-
-    public double getBodyAdditiveBonus() {
-        return bodyCultivationAdditiveBonus;
-    }
-
-    public double getQiCultivationFraction() {
-        return qiCultivationFraction;
-    }
-
-    public double getBodyCultivationFraction() {
-        return bodyCultivationFraction;
+    public double getBodyAccumulationRate() {
+        return bodyAccumulationRate;
     }
 
     // === Sync Application Method ===
@@ -808,53 +825,75 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         this.bodyCultivationAdditiveBonus = bodyAdd;
         this.bodyCultivationMultiplicativeBonus = bodyMult;
 
-        // Update last synced hash to prevent immediate re-sync
-        this.lastSyncedHash = calculateStateHash();
+        ImmortalCultivation.LOGGER.debug("Applied cultivation sync - Qi: {}/{}, Body: {}/{}, Focus: {}",
+            qiCurrent, qiMax, bodyCurrent, bodyMax, focus.getDisplayName());
     }
 
-    // === Fixed Serialization (Split into sub-codecs due to 16 parameter limit) ===
+    // === Additional Getters for Network/UI ===
+
+    public double getQiMultiplicativeBonus() {
+        return qiCultivationMultiplicativeBonus;
+    }
+
+    public double getBodyMultiplicativeBonus() {
+        return bodyCultivationMultiplicativeBonus;
+    }
+
+    // === Serialization with Codec ===
 
     // Sub-codec for realm data
+    private record RealmData(String currentQiRealmId, String previousQiRealmId,
+                             String currentBodyRealmId, String previousBodyRealmId) {}
+
     private static final Codec<RealmData> REALM_DATA_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            Codec.STRING.fieldOf("current_qi_realm").forGetter(d -> d.currentQiRealmId),
-            Codec.STRING.optionalFieldOf("previous_qi_realm", "").forGetter(d -> d.previousQiRealmId),
-            Codec.STRING.fieldOf("current_body_realm").forGetter(d -> d.currentBodyRealmId),
-            Codec.STRING.optionalFieldOf("previous_body_realm", "").forGetter(d -> d.previousBodyRealmId)
+            Codec.STRING.fieldOf("current_qi_realm").forGetter(RealmData::currentQiRealmId),
+            Codec.STRING.optionalFieldOf("previous_qi_realm", "").forGetter(RealmData::previousQiRealmId),
+            Codec.STRING.fieldOf("current_body_realm").forGetter(RealmData::currentBodyRealmId),
+            Codec.STRING.optionalFieldOf("previous_body_realm", "").forGetter(RealmData::previousBodyRealmId)
         ).apply(instance, RealmData::new)
     );
 
     // Sub-codec for cultivation progress
+    private record CultivationProgress(long currentQi, long maxQi, double qiFraction,
+                                       long currentBody, long maxBody, double bodyFraction) {}
+
     private static final Codec<CultivationProgress> CULTIVATION_PROGRESS_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            Codec.LONG.optionalFieldOf("current_qi", 0L).forGetter(d -> d.currentQi),
-            Codec.LONG.optionalFieldOf("max_qi", 1000L).forGetter(d -> d.maxQi),
-            Codec.DOUBLE.optionalFieldOf("qi_fraction", 0.0).forGetter(d -> d.qiFraction),
-            Codec.LONG.optionalFieldOf("current_body", 0L).forGetter(d -> d.currentBody),
-            Codec.LONG.optionalFieldOf("max_body", 1000L).forGetter(d -> d.maxBody),
-            Codec.DOUBLE.optionalFieldOf("body_fraction", 0.0).forGetter(d -> d.bodyFraction)
+            Codec.LONG.optionalFieldOf("current_qi", 0L).forGetter(CultivationProgress::currentQi),
+            Codec.LONG.optionalFieldOf("max_qi", 1000L).forGetter(CultivationProgress::maxQi),
+            Codec.DOUBLE.optionalFieldOf("qi_fraction", 0.0).forGetter(CultivationProgress::qiFraction),
+            Codec.LONG.optionalFieldOf("current_body", 0L).forGetter(CultivationProgress::currentBody),
+            Codec.LONG.optionalFieldOf("max_body", 1000L).forGetter(CultivationProgress::maxBody),
+            Codec.DOUBLE.optionalFieldOf("body_fraction", 0.0).forGetter(CultivationProgress::bodyFraction)
         ).apply(instance, CultivationProgress::new)
     );
 
     // Sub-codec for breakthrough data
+    private record BreakthroughData(long qiAttempts, long bodyAttempts, long lastQiAttempt,
+                                    long lastBodyAttempt, boolean qiCooldown, boolean bodyCooldown) {}
+
     private static final Codec<BreakthroughData> BREAKTHROUGH_DATA_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            Codec.LONG.optionalFieldOf("qi_attempts", 0L).forGetter(d -> d.qiAttempts),
-            Codec.LONG.optionalFieldOf("body_attempts", 0L).forGetter(d -> d.bodyAttempts),
-            Codec.LONG.optionalFieldOf("last_qi_attempt", 0L).forGetter(d -> d.lastQiAttempt),
-            Codec.LONG.optionalFieldOf("last_body_attempt", 0L).forGetter(d -> d.lastBodyAttempt),
-            Codec.BOOL.optionalFieldOf("qi_cooldown", false).forGetter(d -> d.qiCooldown),
-            Codec.BOOL.optionalFieldOf("body_cooldown", false).forGetter(d -> d.bodyCooldown)
+            Codec.LONG.optionalFieldOf("qi_attempts", 0L).forGetter(BreakthroughData::qiAttempts),
+            Codec.LONG.optionalFieldOf("body_attempts", 0L).forGetter(BreakthroughData::bodyAttempts),
+            Codec.LONG.optionalFieldOf("last_qi_attempt", 0L).forGetter(BreakthroughData::lastQiAttempt),
+            Codec.LONG.optionalFieldOf("last_body_attempt", 0L).forGetter(BreakthroughData::lastBodyAttempt),
+            Codec.BOOL.optionalFieldOf("qi_cooldown", false).forGetter(BreakthroughData::qiCooldown),
+            Codec.BOOL.optionalFieldOf("body_cooldown", false).forGetter(BreakthroughData::bodyCooldown)
         ).apply(instance, BreakthroughData::new)
     );
 
     // Sub-codec for bonus data
+    private record BonusData(double qiAdditive, double qiMultiplicative,
+                             double bodyAdditive, double bodyMultiplicative) {}
+
     private static final Codec<BonusData> BONUS_DATA_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            Codec.DOUBLE.optionalFieldOf("qi_additive", 0.0).forGetter(d -> d.qiAdditive),
-            Codec.DOUBLE.optionalFieldOf("qi_multiplicative", 0.0).forGetter(d -> d.qiMultiplicative),
-            Codec.DOUBLE.optionalFieldOf("body_additive", 0.0).forGetter(d -> d.bodyAdditive),
-            Codec.DOUBLE.optionalFieldOf("body_multiplicative", 0.0).forGetter(d -> d.bodyMultiplicative)
+            Codec.DOUBLE.optionalFieldOf("qi_additive", 0.0).forGetter(BonusData::qiAdditive),
+            Codec.DOUBLE.optionalFieldOf("qi_multiplicative", 0.0).forGetter(BonusData::qiMultiplicative),
+            Codec.DOUBLE.optionalFieldOf("body_additive", 0.0).forGetter(BonusData::bodyAdditive),
+            Codec.DOUBLE.optionalFieldOf("body_multiplicative", 0.0).forGetter(BonusData::bodyMultiplicative)
         ).apply(instance, BonusData::new)
     );
 
@@ -862,33 +901,19 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     public static final Codec<PlayerCultivationAttachment> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
             REALM_DATA_CODEC.fieldOf("realms").forGetter(PlayerCultivationAttachment::getRealmData),
-            CULTIVATION_PROGRESS_CODEC.fieldOf("progress").forGetter(PlayerCultivationAttachment::getCultivationProgress),
-            Codec.STRING.optionalFieldOf("focus", "QI").forGetter(d -> d.currentFocus.name()),
-            Codec.LONG.optionalFieldOf("focus_change_time", 0L).forGetter(d -> d.lastFocusChangeTime),
+            CULTIVATION_PROGRESS_CODEC.fieldOf("cultivation").forGetter(PlayerCultivationAttachment::getCultivationProgress),
+            Codec.STRING.optionalFieldOf("focus", "QI").forGetter(attachment -> attachment.currentFocus.name()),
+            Codec.LONG.optionalFieldOf("focus_change_time", -72000L).forGetter(attachment -> attachment.lastFocusChangeTime),
             BREAKTHROUGH_DATA_CODEC.fieldOf("breakthrough").forGetter(PlayerCultivationAttachment::getBreakthroughData),
-            Codec.LONG.optionalFieldOf("time_qi_realm", 0L).forGetter(d -> d.timeInCurrentQiRealm),
-            Codec.LONG.optionalFieldOf("time_body_realm", 0L).forGetter(d -> d.timeInCurrentBodyRealm),
-            Codec.LONG.optionalFieldOf("total_qi_time", 0L).forGetter(d -> d.totalQiCultivationTime),
-            Codec.LONG.optionalFieldOf("total_body_time", 0L).forGetter(d -> d.totalBodyCultivationTime),
+            Codec.LONG.optionalFieldOf("time_qi_realm", 0L).forGetter(attachment -> attachment.timeInCurrentQiRealm),
+            Codec.LONG.optionalFieldOf("time_body_realm", 0L).forGetter(attachment -> attachment.timeInCurrentBodyRealm),
+            Codec.LONG.optionalFieldOf("total_qi_time", 0L).forGetter(attachment -> attachment.totalQiCultivationTime),
+            Codec.LONG.optionalFieldOf("total_body_time", 0L).forGetter(attachment -> attachment.totalBodyCultivationTime),
             BONUS_DATA_CODEC.fieldOf("bonuses").forGetter(PlayerCultivationAttachment::getBonusData)
         ).apply(instance, PlayerCultivationAttachment::decode)
     );
 
-    // Helper records for codec structure
-    private record RealmData(String currentQiRealmId, String previousQiRealmId,
-                             String currentBodyRealmId, String previousBodyRealmId) {}
-
-    private record CultivationProgress(long currentQi, long maxQi, double qiFraction,
-                                       long currentBody, long maxBody, double bodyFraction) {}
-
-    private record BreakthroughData(long qiAttempts, long bodyAttempts,
-                                    long lastQiAttempt, long lastBodyAttempt,
-                                    boolean qiCooldown, boolean bodyCooldown) {}
-
-    private record BonusData(double qiAdditive, double qiMultiplicative,
-                             double bodyAdditive, double bodyMultiplicative) {}
-
-    // Getter methods for codec
+    // Helper methods for codec
     private RealmData getRealmData() {
         return new RealmData(
             currentQiRealm.getId(),
@@ -920,7 +945,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         );
     }
 
-    // Decode method
+    // Decode method for creating instances from saved data
     private static PlayerCultivationAttachment decode(
         RealmData realms, CultivationProgress progress, String focus, long focusTime,
         BreakthroughData breakthrough, long timeQi, long timeBody,
@@ -977,21 +1002,65 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         return data;
     }
 
-    // === Utility Methods ===
+    public record BreakthroughResult(boolean success, String message, @Nullable CultivationRealm newRealm) {}
 
-    public void setQiAccumulationRate(double rate) {
-        this.qiAccumulationRate = rate;
+    public BreakthroughResult attemptQiBreakthrough() {
+        if (currentQiCultivation < maxQiCultivation) {
+            return new BreakthroughResult(false, "Qi cultivation not at maximum", null);
+        }
+
+        if (qiBreakthroughCooldown) {
+            return new BreakthroughResult(false, "Breakthrough on cooldown", null);
+        }
+
+        List<CultivationRealm> nextRealms = currentQiRealm.getNextCultivationRealms();
+        if (nextRealms.isEmpty()) {
+            return new BreakthroughResult(false, "No higher realm available", null);
+        }
+
+        double chance = 0.1 + (qiBreakthroughAttempts * 0.05);
+        chance = Math.min(chance, 0.95);
+
+        qiBreakthroughAttempts++;
+        lastQiBreakthroughAttempt = player.level().getGameTime();
+
+        if (player.getRandom().nextDouble() < chance) {
+            CultivationRealm newRealm = nextRealms.get(0);
+            setCurrentQiRealm(newRealm);
+            return new BreakthroughResult(true, "Qi breakthrough successful!", newRealm);
+        } else {
+            qiBreakthroughCooldown = true;
+            return new BreakthroughResult(false, "Breakthrough failed", null);
+        }
     }
 
-    public void setBodyAccumulationRate(double rate) {
-        this.bodyAccumulationRate = rate;
-    }
+    public BreakthroughResult attemptBodyBreakthrough() {
+        if (currentBodyCultivation < maxBodyCultivation) {
+            return new BreakthroughResult(false, "Body cultivation not at maximum", null);
+        }
 
-    public double getQiAccumulationRate() {
-        return qiAccumulationRate;
-    }
+        if (bodyBreakthroughCooldown) {
+            return new BreakthroughResult(false, "Breakthrough on cooldown", null);
+        }
 
-    public double getBodyAccumulationRate() {
-        return bodyAccumulationRate;
+        List<CultivationRealm> nextRealms = currentBodyRealm.getNextCultivationRealms();
+        if (nextRealms.isEmpty()) {
+            return new BreakthroughResult(false, "No higher realm available", null);
+        }
+
+        double chance = 0.1 + (bodyBreakthroughAttempts * 0.05);
+        chance = Math.min(chance, 0.95);
+
+        bodyBreakthroughAttempts++;
+        lastBodyBreakthroughAttempt = player.level().getGameTime();
+
+        if (player.getRandom().nextDouble() < chance) {
+            CultivationRealm newRealm = nextRealms.get(0);
+            setCurrentBodyRealm(newRealm);
+            return new BreakthroughResult(true, "Body breakthrough successful!", newRealm);
+        } else {
+            bodyBreakthroughCooldown = true;
+            return new BreakthroughResult(false, "Breakthrough failed", null);
+        }
     }
 }

@@ -26,59 +26,29 @@ public class CultivationTickHandler {
         // Process all cultivation attachments - they handle their own logic now
         tickCultivationAttachments(serverPlayer);
 
-        // Process cultivation bonus attachment for sync management
-        tickCultivationBonus(serverPlayer);
-
         // Process meditation detection for both cultivation types
         processMeditationDetection(serverPlayer);
 
         // Process resource regeneration (Qi, Body energy, AND Health - FIXED!)
         processResourceRegeneration(serverPlayer);
 
-        // Tick the realm attachment for time tracking and periodic effects
-        tickRealmAttachment(serverPlayer);
-
-        // Tick the cultivation focus attachment
-        tickCultivationFocus(serverPlayer);
-
         // Tick combat stats attachment
         tickCombatStats(serverPlayer);
     }
 
     /**
-     * Tick all cultivation attachments. Each attachment has its own tick method
-     * that handles accumulation, syncing, and other cultivation-specific logic.
+     * CRITICAL FIX: Tick cultivation attachment and ensure player reference is set
      */
     private static void tickCultivationAttachments(ServerPlayer player) {
         try {
-            // Tick Qi Cultivation attachment - handles Qi cultivation accumulation
-            PlayerCultivationAttachment qiCultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (qiCultivation != null) {
-                qiCultivation.tick();
-            }
-
-            // Tick Body Cultivation attachment - handles Body cultivation accumulation
-            PlayerCultivationAttachment bodyCultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (bodyCultivation != null) {
-                bodyCultivation.tick();
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation != null) {
+                // CRITICAL: Ensure player reference is set before ticking
+                cultivation.setPlayer(player);
+                cultivation.tick();
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error ticking cultivation attachments for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Tick cultivation bonus attachment for periodic sync management and internal logic.
-     */
-    private static void tickCultivationBonus(ServerPlayer player) {
-        try {
-            PlayerCultivationAttachment bonusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (bonusAttachment != null) {
-                bonusAttachment.tick();
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error ticking cultivation bonus for player {}",
                 player.getName().getString(), e);
         }
     }
@@ -89,56 +59,13 @@ public class CultivationTickHandler {
      */
     private static void processResourceRegeneration(ServerPlayer player) {
         try {
-            // CRITICAL FIX: Tick Health attachment - handles Health regeneration from realms
-            PlayerResourceAttachment healthResource = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (healthResource != null) {
-                healthResource.tick();
-            }
-
-            // Tick Qi resource attachment - handles Qi energy regeneration
-            PlayerResourceAttachment qiResource = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (qiResource != null) {
-                qiResource.tick();
-            }
-
-            // Tick Body resource attachment - handles Body energy regeneration
-            PlayerResourceAttachment bodyResource = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (bodyResource != null) {
-                bodyResource.tick();
+            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            if (resources != null) {
+                resources.setPlayer(player); // Ensure player reference is set
+                resources.tick();
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error processing resource regeneration for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Tick the realm attachment for time tracking and periodic realm effects.
-     * This handles things like realm-based attribute bonuses and breakthrough cooldowns.
-     */
-    private static void tickRealmAttachment(ServerPlayer player) {
-        try {
-            PlayerCultivationAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (realmAttachment != null) {
-                realmAttachment.tick();
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error ticking realm attachment for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Tick the cultivation focus attachment for cooldown management and time tracking.
-     */
-    private static void tickCultivationFocus(ServerPlayer player) {
-        try {
-            PlayerCultivationAttachment focusAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (focusAttachment != null) {
-                focusAttachment.tick();
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error ticking cultivation focus for player {}",
                 player.getName().getString(), e);
         }
     }
@@ -184,30 +111,30 @@ public class CultivationTickHandler {
      * when players are in the proper meditation posture.
      */
     private static void processMeditationDetection(ServerPlayer player) {
-        boolean isMeditating = isPlayerMeditating(player);
-
         try {
-            // Update Qi cultivation meditation state
-            PlayerCultivationAttachment qiCultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (qiCultivation != null) {
-                if (isMeditating) {
-                    qiCultivation.startMeditation();
+            boolean isCurrentlyMeditating = isPlayerMeditating(player);
+
+            // Update resource attachment with meditation state
+            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            if (resources != null) {
+                if (isCurrentlyMeditating) {
+                    resources.startMeditation();
                 } else {
-                    qiCultivation.stopMeditation();
+                    resources.stopMeditation();
                 }
             }
 
-            // Update Body cultivation meditation state
-            PlayerCultivationAttachment bodyCultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (bodyCultivation != null) {
-                if (isMeditating) {
-                    bodyCultivation.startMeditation();
+            // Update cultivation attachment with meditation state for potential future use
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation != null) {
+                if (isCurrentlyMeditating) {
+                    cultivation.startMeditation();
                 } else {
-                    bodyCultivation.stopMeditation();
+                    cultivation.stopMeditation();
                 }
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error processing meditation for player {}",
+            ImmortalCultivation.LOGGER.error("Error processing meditation detection for player {}",
                 player.getName().getString(), e);
         }
     }
