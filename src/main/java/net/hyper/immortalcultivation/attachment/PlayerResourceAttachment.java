@@ -113,7 +113,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public long getMaxHealth() {
-        // FIXED: Calculate max health properly, avoiding circular calls
         long baseMaxHealth = getBaseMaxHealth();
 
         Player player = getPlayerSafe();

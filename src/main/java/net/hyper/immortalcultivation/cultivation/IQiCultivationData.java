@@ -127,7 +127,7 @@ public interface IQiCultivationData {
     /**
      * Adds to fractional rate
      */
-    default void addRegenFraction(double amount) {
+    default void addQiRegenFraction(double amount) {
         setRegenFraction(getRegenFraction() + amount);
     }
 
@@ -177,7 +177,7 @@ public interface IQiCultivationData {
     // === Tick === //
 
     /**
-     * Called every tick to update Body state
+     * Called every tick to update Qi Cultivation state
      */
     default void tick() {
         // Only cultivate if not at max capacity
@@ -186,7 +186,7 @@ public interface IQiCultivationData {
 
             if (regenRate > 0) {
                 // Use the built-in regen fraction methods
-                addRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
+                addQiRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
 
                 if (getRegenFraction() >= 1.0) {
                     long cultivationToAdd = (long) getRegenFraction();

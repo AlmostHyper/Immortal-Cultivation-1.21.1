@@ -127,7 +127,7 @@ public interface IBodyCultivationData {
     /**
      * Adds to fractional rate
      */
-    default void addRegenFraction(double amount) {
+    default void addBodyRegenFraction(double amount) {
         setRegenFraction(getRegenFraction() + amount);
     }
 
@@ -186,7 +186,7 @@ public interface IBodyCultivationData {
 
             if (regenRate > 0) {
                 // Use the built-in regen fraction methods
-                addRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
+                addBodyRegenFraction(regenRate / 20.0); // Convert per-second to per-tick
 
                 if (getRegenFraction() >= 1.0) {
                     long cultivationToAdd = (long) getRegenFraction();

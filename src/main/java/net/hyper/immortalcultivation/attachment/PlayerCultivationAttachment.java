@@ -74,8 +74,8 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     }
 
     private CultivationType currentFocus = CultivationType.QI;
-    private long lastFocusChangeTime = -72000; // CRITICAL FIX: Initialize to allow immediate first switch
-    private static final long FOCUS_CHANGE_COOLDOWN = 72000; // 1 hour in ticks
+    private long lastFocusChangeTime = -24000;
+    private static final long FOCUS_CHANGE_COOLDOWN = 24000;
 
     // === Breakthrough Tracking ===
     private long qiBreakthroughAttempts = 0;
@@ -294,18 +294,28 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
 
     @Override
     public double getRegenFraction() {
-        return qiCultivationFraction;
+        // Return the appropriate fraction based on current focus
+        return currentFocus == CultivationType.QI ? qiCultivationFraction : bodyCultivationFraction;
     }
 
     @Override
     public void setRegenFraction(double fraction) {
-        this.qiCultivationFraction = fraction;
+        // Set the appropriate fraction based on current focus
+        if (currentFocus == CultivationType.QI) {
+            this.qiCultivationFraction = fraction;
+        } else {
+            this.bodyCultivationFraction = fraction;
+        }
     }
 
     @Override
-    public void addRegenFraction(double amount) {
-        IQiCultivationData.super.addRegenFraction(amount);
-        IBodyCultivationData.super.addRegenFraction(amount);
+    public void addQiRegenFraction(double amount) {
+        IQiCultivationData.super.addQiRegenFraction(amount);
+    }
+
+    @Override
+    public void addBodyRegenFraction(double amount) {
+        IBodyCultivationData.super.addBodyRegenFraction(amount);
     }
 
     // === Body Cultivation Implementation ===
