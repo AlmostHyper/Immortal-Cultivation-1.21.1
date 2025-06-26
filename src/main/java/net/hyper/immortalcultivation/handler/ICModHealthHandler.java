@@ -43,6 +43,9 @@ public class ICModHealthHandler {
     // Emergency protection flags
     private static final Map<UUID, Boolean> emergencyProtectionActive = new ConcurrentHashMap<>();
 
+    // Track when we've legitimately processed damage to avoid false positives
+    private static final Map<UUID, Long> lastProcessedDamageTime = new ConcurrentHashMap<>();
+
     private static final float MINIMUM_VANILLA_HEALTH = 0.1f; // Never let vanilla health go below this when alive
     private static final int HEALTH_CHECK_INTERVAL = 5; // Check every 5 ticks for unauthorized changes
 
@@ -91,6 +94,9 @@ public class ICModHealthHandler {
             long actualDamage = healthBefore - healthAfter;
 
             if (actualDamage > 0) {
+                // Mark that we've legitimately processed damage
+                lastProcessedDamageTime.put(player.getUUID(), player.level().getGameTime());
+
                 // Set minimal vanilla immunity for visual feedback only
                 // ICModImmunityHandler manages the real immunity logic
                 player.invulnerableTime = isEnvironmentalDamage(event.getSource()) ? 10 : 5;
@@ -179,8 +185,18 @@ public class ICModHealthHandler {
             Long lastCustomHealth = lastKnownCustomHealth.get(playerId);
 
             if (lastVanillaHealth != null && lastCustomHealth != null) {
-                // Check if vanilla health decreased without authorization
-                if (currentVanillaHealth < lastVanillaHealth && currentCustomHealth == lastCustomHealth) {
+                // FIXED: Check if vanilla health decreased without authorization
+                // Only trigger protection if:
+                // 1. Vanilla health decreased AND custom health didn't change
+                // 2. We haven't processed legitimate damage recently (within 2 ticks)
+                long currentTime = player.level().getGameTime();
+                Long lastDamageTime = lastProcessedDamageTime.get(playerId);
+                boolean recentlyProcessedDamage = lastDamageTime != null && (currentTime - lastDamageTime) <= 2;
+
+                if (currentVanillaHealth < lastVanillaHealth &&
+                    currentCustomHealth == lastCustomHealth &&
+                    !recentlyProcessedDamage) {
+
                     // UNAUTHORIZED VANILLA HEALTH REDUCTION DETECTED
                     ImmortalCultivation.LOGGER.warn("Detected unauthorized vanilla health reduction for player {} - restoring from {} to {}",
                         player.getName().getString(), currentVanillaHealth, lastVanillaHealth);
@@ -235,6 +251,13 @@ public class ICModHealthHandler {
                 }
             }
         }
+
+        // Clean up old damage processing times to prevent memory leaks
+        if (player.tickCount % 100 == 0) {
+            long currentTime = player.level().getGameTime();
+            lastProcessedDamageTime.entrySet().removeIf(entry ->
+                (currentTime - entry.getValue()) > 100); // Remove entries older than 5 seconds
+        }
     }
 
     // === PLAYER LIFECYCLE PROTECTION ===
@@ -275,6 +298,7 @@ public class ICModHealthHandler {
                 lastKnownCustomHealth.put(playerId, healthAttachment.getCurrentHealth());
                 emergencyProtectionActive.remove(playerId);
                 lastAppliedDamage.remove(playerId);
+                lastProcessedDamageTime.remove(playerId); // Clean up damage tracking
 
                 ImmortalCultivation.LOGGER.info("Reset health protection for respawned player {}",
                     serverPlayer.getName().getString());
@@ -290,6 +314,7 @@ public class ICModHealthHandler {
         lastKnownCustomHealth.remove(playerId);
         emergencyProtectionActive.remove(playerId);
         lastAppliedDamage.remove(playerId);
+        lastProcessedDamageTime.remove(playerId); // Clean up damage tracking
     }
 
     // === UTILITY METHODS ===
@@ -360,41 +385,30 @@ public class ICModHealthHandler {
     }
 
     /**
-     * Convert vanilla healing to custom healing with cultivation bonuses
-     */
-    private static long calculateCustomHealing(float vanillaHealing, Player player) {
-        long baseHealing = Math.round(vanillaHealing);
-
-        // Apply cultivation bonuses here
-        // You can access other attachments to calculate bonuses
-
-        return Math.max(0, baseHealing);
-    }
-
-    /**
-     * Calculate damage after armor and enchantments (vanilla formula)
+     * Calculate damage after armor reduction (simplified armor calculation)
      */
     private static float calculateDamageAfterArmor(float damage, Player player, DamageSource damageSource) {
+        // Skip armor for certain damage types
         if (damageSource.is(net.minecraft.tags.DamageTypeTags.BYPASSES_ARMOR)) {
             return damage;
         }
 
-        // Calculate total armor value
-        int totalArmor = 0;
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
-                ItemStack armorPiece = player.getItemBySlot(slot);
-                if (!armorPiece.isEmpty() && armorPiece.getItem() instanceof net.minecraft.world.item.ArmorItem armorItem) {
-                    totalArmor += armorItem.getDefense();
-                }
-            }
-        }
+        // Get player's armor value
+        int armorValue = player.getArmorValue();
+        float armorToughness = (float) player.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ARMOR_TOUGHNESS);
 
-        // Apply vanilla armor formula: damage * (1 - min(20, max(armor/5, armor - damage/2)) / 25)
-        float armorValue = Math.min(20, Math.max(totalArmor / 5.0f, totalArmor - damage / 2.0f));
-        float damageReduction = armorValue / 25.0f;
+        // Apply vanilla armor calculation
+        float armorReduction = Math.min(20.0f, Math.max(armorValue / 5.0f, armorValue - damage / (2.0f + armorToughness / 4.0f))) / 25.0f;
 
-        return damage * (1.0f - damageReduction);
+        return damage * (1.0f - armorReduction);
+    }
+
+    /**
+     * Convert vanilla healing to custom healing with potential bonuses
+     */
+    private static long calculateCustomHealing(float vanillaHealing, Player player) {
+        // For now, use 1:1 scaling but you can add cultivation bonuses here
+        return Math.round(vanillaHealing);
     }
 
     /**
@@ -405,14 +419,26 @@ public class ICModHealthHandler {
             return;
         }
 
-        // Damage armor pieces
-        for (EquipmentSlot slot : EquipmentSlot.values()) {
-            if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
-                ItemStack armorPiece = player.getItemBySlot(slot);
-                if (!armorPiece.isEmpty()) {
-                    // Calculate durability damage (simplified)
-                    int durabilityDamage = Math.max(1, (int) (damage / 4.0f));
-                    armorPiece.hurtAndBreak(durabilityDamage, player, slot);
+        EquipmentSlot[] armorSlots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+
+        for (EquipmentSlot slot : armorSlots) {
+            ItemStack armor = player.getItemBySlot(slot);
+            if (!armor.isEmpty() && armor.isDamageableItem()) {
+                // Damage armor piece based on damage taken
+                int armorDamage = Math.max(1, Math.round(damage / 4.0f));
+
+                // Use the correct NeoForge 1.21.1 method
+                int currentDamage = armor.getDamageValue();
+                int newDamage = Math.min(currentDamage + armorDamage, armor.getMaxDamage());
+                armor.setDamageValue(newDamage);
+
+                // Check if item should break
+                if (newDamage >= armor.getMaxDamage()) {
+                    player.setItemSlot(slot, ItemStack.EMPTY);
+                    // Play break sound
+                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                        net.minecraft.sounds.SoundEvents.ITEM_BREAK, net.minecraft.sounds.SoundSource.PLAYERS,
+                        1.0f, 1.0f);
                 }
             }
         }
@@ -465,6 +491,7 @@ public class ICModHealthHandler {
         if (healthAttachment != null) {
             updateVanillaHealthFromCustom(player, healthAttachment);
             emergencyProtectionActive.put(player.getUUID(), false);
+            lastProcessedDamageTime.remove(player.getUUID()); // Clear damage tracking
             ImmortalCultivation.LOGGER.info("Emergency health correction applied for player {}",
                 player.getName().getString());
         }

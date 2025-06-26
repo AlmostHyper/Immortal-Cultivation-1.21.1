@@ -33,15 +33,16 @@ public interface IHealthData {
 
     /**
      * Consumes Health from the current amount
+     * FIXED: Now returns actual amount consumed, not requested amount
      *
      * @param amount Amount to consume
-     * @return True if successful, false if insufficient Health
+     * @return Actual amount consumed (may be less than requested if insufficient health)
      */
     default long consumeHealth(long amount) {
-        if (getCurrentHealth() >= amount) {
-            setCurrentHealth(getCurrentHealth() - amount);
-        }
-        return amount;
+        long current = getCurrentHealth();
+        long toConsume = Math.min(current, amount);
+        setCurrentHealth(current - toConsume);
+        return toConsume; // ✅ Return actual consumed amount
     }
 
     /**

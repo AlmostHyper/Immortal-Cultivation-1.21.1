@@ -124,8 +124,8 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
             PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (cultivation != null) {
                 // Small cultivation bonus to health
-                long qiCultivationBonus = (long)(cultivation.getCurrentQiCultivation() * 0.005);
-                long bodyCultivationBonus = (long)(cultivation.getCurrentBodyCultivation() * 0.01);
+                long qiCultivationBonus = (long)(cultivation.getCurrentQiCultivation() * 0.0005);
+                long bodyCultivationBonus = (long)(cultivation.getCurrentBodyCultivation() * 0.001);
                 return baseMaxHealth + qiCultivationBonus + bodyCultivationBonus;
             }
         } catch (Exception e) {
