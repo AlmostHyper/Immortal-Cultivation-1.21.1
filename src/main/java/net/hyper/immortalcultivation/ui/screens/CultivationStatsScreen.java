@@ -13,32 +13,43 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
-// NEW IMPORTS: These provide access to OpenGL texture filtering controls
 import com.mojang.blaze3d.systems.RenderSystem;
 import org.lwjgl.opengl.GL11;
 
 /**
- * COMPLETE SOLUTION: General cultivation monitoring interface with responsive design,
- * pixel-perfect positioning, and sharp texture rendering for the unified cultivation system.
- *
- * Updated to work with the new unified attachment system:
- * - PlayerCultivationAttachment for realm, cultivation progress, focus, and breakthrough data
- * - PlayerResourceAttachment for health, qi energy, and body energy
- * - PlayerTalentAttachment for spiritual roots and physique
- * - PlayerCombatStatsAttachment for combat bonuses
+ * Tabbed Cultivation Status Screen for organized information display
+ * Scales properly across different GUI scales and organizes content into logical tabs
  */
 public class CultivationStatsScreen extends Screen {
 
+    // === TAB SYSTEM ===
+    public enum Tab {
+        OVERVIEW("Overview"),
+        CULTIVATION("Cultivation"),
+        RESOURCES("Resources"),
+        DETAILS("Details");
+
+        private final String displayName;
+
+        Tab(String displayName) {
+            this.displayName = displayName;
+        }
+
+        public String getDisplayName() { return displayName; }
+    }
+
+    private Tab currentTab = Tab.OVERVIEW;
+
     // === RESPONSIVE SIZING SYSTEM ===
-    private static final int PREFERRED_WIDTH = 480;
-    private static final int PREFERRED_HEIGHT = 520;
+    private static final int PREFERRED_WIDTH = 500;
+    private static final int PREFERRED_HEIGHT = 480;
     private static final int MIN_WIDTH = 400;
-    private static final int MIN_HEIGHT = 450;
-    private static final int MAX_WIDTH = 600;
-    private static final int MAX_HEIGHT = 700;
-    private static final float MARGIN_PERCENTAGE = 0.03f;
-    private static final int MIN_MARGIN = 10;
-    private static final int MAX_MARGIN = 25;
+    private static final int MIN_HEIGHT = 350;
+    private static final int MAX_WIDTH = 700;
+    private static final int MAX_HEIGHT = 600;
+    private static final float MARGIN_PERCENTAGE = 0.02f;
+    private static final int MIN_MARGIN = 8;
+    private static final int MAX_MARGIN = 20;
 
     // === LAYOUT CONSTANTS ===
     private int windowWidth;
@@ -49,6 +60,9 @@ public class CultivationStatsScreen extends Screen {
     private int lineHeight;
     private int progressBarWidth;
     private int columnWidth;
+    private int tabHeight;
+    private int contentAreaY;
+    private int contentAreaHeight;
 
     // === VISUAL CONSTANTS ===
     private static final int QI_COLOR = 0xFF87CEEB;
@@ -58,38 +72,34 @@ public class CultivationStatsScreen extends Screen {
     private static final int READY_COLOR = 0xFF90EE90;
     private static final int NOT_READY_COLOR = 0xFFFFB6C1;
     private static final int SECTION_HEADER_COLOR = 0xFFDDA0DD;
+    private static final int RACE_COLOR = 0xFFFFD700;
     private static final int PROGRESS_BAR_HEIGHT = 8;
+    private static final int TAB_ACTIVE_COLOR = 0xFF4A4A4A;
+    private static final int TAB_INACTIVE_COLOR = 0xFF2A2A2A;
+    private static final int TAB_BORDER_COLOR = 0xFF666666;
 
-    // === PLAYER DATA (Updated for unified system) ===
-    private PlayerCultivationAttachment cultivationAttachment;   // Unified cultivation data
-    private PlayerResourceAttachment resourceAttachment;        // Unified resource data
-    private PlayerTalentAttachment talentAttachment;           // Unified talent data
-    private PlayerCombatStatsAttachment combatStatsAttachment; // Combat bonuses
+    // === PLAYER DATA ===
+    private PlayerCultivationAttachment cultivationAttachment;
+    private PlayerResourceAttachment resourceAttachment;
+    private PlayerTalentAttachment talentAttachment;
+    private PlayerRaceAttachment raceAttachment;
+    private PlayerCombatStatsAttachment combatStatsAttachment;
 
     public CultivationStatsScreen() {
-        super(Component.literal("Cultivation Status Overview"));
+        super(Component.literal("Cultivation Status"));
     }
 
     // === PIXEL-PERFECT RENDERING HELPERS ===
 
-    /**
-     * Gets the current GUI scale factor that Minecraft is using.
-     */
     private double getGuiScale() {
         return minecraft.getWindow().getGuiScale();
     }
 
-    /**
-     * Rounds a coordinate to be pixel-perfect at the current GUI scale.
-     */
     private int alignToPixel(double coordinate) {
         double scale = getGuiScale();
         return (int) Math.round(coordinate / scale) * (int) scale;
     }
 
-    /**
-     * Helper methods for drawing text with pixel-perfect positioning.
-     */
     private void drawStringAligned(GuiGraphics guiGraphics, String text, int x, int y, int color) {
         int alignedX = alignToPixel(x);
         int alignedY = alignToPixel(y);
@@ -102,11 +112,8 @@ public class CultivationStatsScreen extends Screen {
         guiGraphics.drawString(font, text, alignedX, alignedY, color);
     }
 
-    // === NEW: SHARP RENDERING SYSTEM ===
+    // === SHARP RENDERING SYSTEM ===
 
-    /**
-     * CORE SOLUTION: Enable sharp texture rendering mode
-     */
     private void enableSharpRendering() {
         RenderSystem.enableBlend();
         RenderSystem.defaultBlendFunc();
@@ -114,9 +121,6 @@ public class CultivationStatsScreen extends Screen {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
     }
 
-    /**
-     * ESSENTIAL CLEANUP: Restore normal texture rendering mode
-     */
     private void restoreNormalRendering() {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
@@ -125,45 +129,44 @@ public class CultivationStatsScreen extends Screen {
     @Override
     public void init() {
         super.init();
-        calculateResponsiveDimensionsPixelPerfect();
-        calculateLayoutConstantsPixelPerfect();
+        calculateResponsiveDimensions();
+        calculateLayoutConstants();
         loadCultivationData();
-        setupStatsInterfacePixelPerfect();
+        setupInterface();
     }
 
-    /**
-     * UPDATED: Main render method with sharp rendering integration
-     */
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         enableSharpRendering();
 
         try {
-            renderWindowFramePixelPerfect(guiGraphics);
-            renderCultivationOverview(guiGraphics);
+            renderBackground(guiGraphics, mouseX, mouseY, partialTicks);
+            renderWindowFrame(guiGraphics);
+            renderTabs(guiGraphics, mouseX, mouseY);
+            renderCurrentTabContent(guiGraphics);
             super.render(guiGraphics, mouseX, mouseY, partialTicks);
         } finally {
             restoreNormalRendering();
         }
     }
 
-    /**
-     * FIX for blurry background - Override renderBackground to prevent blur shader
-     */
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
     }
 
-    // === LAYOUT CALCULATION METHODS ===
+    // === LAYOUT CALCULATION ===
 
-    private void calculateResponsiveDimensionsPixelPerfect() {
+    private void calculateResponsiveDimensions() {
+        // Calculate available space
         int availableWidth = width - 40;
         int availableHeight = height - 40;
 
+        // Start with preferred size
         windowWidth = PREFERRED_WIDTH;
         windowHeight = PREFERRED_HEIGHT;
 
+        // Scale down if needed
         if (windowWidth > availableWidth || windowHeight > availableHeight) {
             float widthScale = (float) availableWidth / PREFERRED_WIDTH;
             float heightScale = (float) availableHeight / PREFERRED_HEIGHT;
@@ -173,317 +176,498 @@ public class CultivationStatsScreen extends Screen {
             windowHeight = (int) (PREFERRED_HEIGHT * scale);
         }
 
-        windowWidth = Math.max(windowWidth, MIN_WIDTH);
-        windowHeight = Math.max(windowHeight, MIN_HEIGHT);
-        windowWidth = Math.min(windowWidth, MAX_WIDTH);
-        windowHeight = Math.min(windowHeight, MAX_HEIGHT);
+        // Apply constraints
+        windowWidth = Mth.clamp(windowWidth, MIN_WIDTH, Math.min(MAX_WIDTH, availableWidth));
+        windowHeight = Mth.clamp(windowHeight, MIN_HEIGHT, Math.min(MAX_HEIGHT, availableHeight));
 
-        if (windowWidth > availableWidth) {
-            windowWidth = Math.min(windowWidth, width - 20);
-        }
-        if (windowHeight > availableHeight) {
-            windowHeight = Math.min(windowHeight, height - 20);
-        }
-
+        // Align to pixels
         windowWidth = alignToPixel(windowWidth);
         windowHeight = alignToPixel(windowHeight);
 
-        double centerX = (width - windowWidth) / 2.0;
-        double centerY = (height - windowHeight) / 2.0;
-
-        windowX = alignToPixel(centerX);
-        windowY = alignToPixel(centerY);
+        // Center the window
+        windowX = alignToPixel((width - windowWidth) / 2.0);
+        windowY = alignToPixel((height - windowHeight) / 2.0);
     }
 
-    private void calculateLayoutConstantsPixelPerfect() {
+    private void calculateLayoutConstants() {
+        // Calculate responsive margins and spacing
         int rawMargin = Mth.clamp(
-            (int) (windowWidth * MARGIN_PERCENTAGE),
+            (int) (Math.min(windowWidth, windowHeight) * MARGIN_PERCENTAGE),
             MIN_MARGIN,
             MAX_MARGIN
         );
         margin = alignToPixel(rawMargin);
 
-        int rawSectionSpacing = Math.max(15, windowHeight / 25);
-        sectionSpacing = alignToPixel(rawSectionSpacing);
-
-        int rawLineHeight = Math.max(12, windowHeight / 35);
+        int rawLineHeight = Math.max(10, Math.min(16, windowHeight / 30));
         lineHeight = alignToPixel(rawLineHeight);
 
-        int rawProgressBarWidth = Math.min(200, windowWidth / 3);
+        int rawSectionSpacing = Math.max(10, lineHeight);
+        sectionSpacing = alignToPixel(rawSectionSpacing);
+
+        int rawProgressBarWidth = Math.min(180, (windowWidth - 3 * margin) / 2);
         progressBarWidth = alignToPixel(rawProgressBarWidth);
 
         int rawColumnWidth = (windowWidth - 3 * margin) / 2;
         columnWidth = alignToPixel(rawColumnWidth);
+
+        // Tab system layout
+        tabHeight = alignToPixel(Math.max(24, lineHeight + 8));
+        contentAreaY = windowY + margin + tabHeight + 5;
+        contentAreaHeight = windowHeight - margin - tabHeight - 45; // Leave room for buttons
     }
 
-    /**
-     * UPDATED: Load cultivation data using unified attachment system
-     */
     private void loadCultivationData() {
         if (minecraft.player != null) {
             cultivationAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             resourceAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
             talentAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            raceAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
             combatStatsAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
 
-            // Set player reference for the attachments if needed
-            if (cultivationAttachment != null) {
-                cultivationAttachment.setPlayer(minecraft.player);
-            }
-            if (resourceAttachment != null) {
-                resourceAttachment.setPlayer(minecraft.player);
-            }
-            if (talentAttachment != null) {
-                talentAttachment.setPlayer(minecraft.player);
-            }
+            // Set player references
+            if (cultivationAttachment != null) cultivationAttachment.setPlayer(minecraft.player);
+            if (resourceAttachment != null) resourceAttachment.setPlayer(minecraft.player);
+            if (talentAttachment != null) talentAttachment.setPlayer(minecraft.player);
+            if (raceAttachment != null) raceAttachment.setPlayer(minecraft.player);
         }
     }
 
-    private void setupStatsInterfacePixelPerfect() {
-        int rawButtonHeight = Math.max(20, lineHeight + 6);
-        int buttonHeight = alignToPixel(rawButtonHeight);
+    // === INTERFACE SETUP ===
 
-        int smallButtonWidth = alignToPixel(Math.max(60, windowWidth / 8));
-        int mediumButtonWidth = alignToPixel(Math.max(120, windowWidth / 4));
-        int largeButtonWidth = alignToPixel(Math.max(180, windowWidth / 3));
-
-        int closeButtonX = alignToPixel(windowX + windowWidth - smallButtonWidth - margin/2);
-        int closeButtonY = alignToPixel(windowY + margin/2);
-
-        addRenderableWidget(Button.builder(Component.literal("Close"),
-                button -> onClose())
-            .bounds(closeButtonX, closeButtonY, smallButtonWidth, buttonHeight)
-            .build());
-
-        if (cultivationAttachment != null) {
-            createFocusToggleButtonPixelPerfect(buttonHeight, mediumButtonWidth);
-        }
-
-        int bottomY = alignToPixel(windowY + windowHeight - buttonHeight - margin);
-
-        int breakthroughButtonX = alignToPixel(windowX + margin);
-        addRenderableWidget(Button.builder(Component.literal("Breakthrough Analysis"),
-                button -> openBreakthroughScreen())
-            .bounds(breakthroughButtonX, bottomY, largeButtonWidth, buttonHeight)
-            .build());
-
-        int refreshButtonX = alignToPixel(windowX + windowWidth - smallButtonWidth - margin);
-        addRenderableWidget(Button.builder(Component.literal("Refresh"),
-                button -> refreshStats())
-            .bounds(refreshButtonX, bottomY, smallButtonWidth, buttonHeight)
-            .build());
+    private void setupInterface() {
+        setupTabButtons();
+        setupActionButtons();
     }
 
-    /**
-     * UPDATED: Create focus toggle button using unified cultivation attachment
-     */
-    private void createFocusToggleButtonPixelPerfect(int buttonHeight, int buttonWidth) {
-        int bottomY = alignToPixel(windowY + windowHeight - buttonHeight - margin);
-        int buttonX = alignToPixel(windowX + margin + 200);
+    private void setupTabButtons() {
+        Tab[] tabs = Tab.values();
+        int tabWidth = alignToPixel((windowWidth - 2 * margin) / tabs.length);
 
-        if (buttonX + buttonWidth > windowX + windowWidth - margin) {
-            buttonX = alignToPixel(windowX + windowWidth - buttonWidth - margin);
+        for (int i = 0; i < tabs.length; i++) {
+            Tab tab = tabs[i];
+            int tabX = windowX + margin + (i * tabWidth);
+            int tabY = windowY + margin;
+
+            addRenderableWidget(Button.builder(
+                    Component.literal(tab.getDisplayName()),
+                    button -> switchToTab(tab))
+                .bounds(tabX, tabY, tabWidth, tabHeight)
+                .build());
         }
+    }
 
-        // Use simplified focus toggle - just show current focus and allow toggle
-        PlayerCultivationAttachment.CultivationType currentFocus = cultivationAttachment.getCurrentFocus();
-        String switchTo = currentFocus == PlayerCultivationAttachment.CultivationType.QI ? "Body" : "Qi";
+    private void setupActionButtons() {
+        int buttonHeight = alignToPixel(Math.max(20, lineHeight + 4));
+        int buttonWidth = alignToPixel(Math.max(60, windowWidth / 8));
+        int bottomY = windowY + windowHeight - margin - buttonHeight;
 
+        // Close button
+        int closeX = windowX + windowWidth - margin - buttonWidth;
         addRenderableWidget(Button.builder(
-                Component.literal("Switch to " + switchTo + " Focus"),
-                button -> switchCultivationFocus())
-            .bounds(buttonX, bottomY, buttonWidth, buttonHeight)
+                Component.literal("Close"),
+                button -> onClose())
+            .bounds(closeX, bottomY, buttonWidth, buttonHeight)
+            .build());
+
+        // Focus toggle button (if cultivation data available)
+        if (cultivationAttachment != null) {
+            int focusWidth = alignToPixel(Math.max(120, windowWidth / 4));
+            int focusX = closeX - focusWidth - 5;
+
+            String switchTo = cultivationAttachment.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ? "Body" : "Qi";
+            addRenderableWidget(Button.builder(
+                    Component.literal("Focus: " + switchTo),
+                    button -> switchCultivationFocus())
+                .bounds(focusX, bottomY, focusWidth, buttonHeight)
+                .build());
+        }
+
+        // Refresh button
+        int refreshWidth = alignToPixel(Math.max(60, windowWidth / 10));
+        int refreshX = windowX + margin;
+        addRenderableWidget(Button.builder(
+                Component.literal("Refresh"),
+                button -> refreshStats())
+            .bounds(refreshX, bottomY, refreshWidth, buttonHeight)
             .build());
     }
 
-    private void renderWindowFramePixelPerfect(GuiGraphics guiGraphics) {
-        guiGraphics.fill(0, 0, width, height, 0x80000000);
+    // === RENDERING ===
+
+    private void renderWindowFrame(GuiGraphics guiGraphics) {
+        // Main window background
         guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF2C2C2C);
 
+        // Window border
         int borderColor = 0xFFFFFFFF;
         guiGraphics.fill(windowX - 1, windowY - 1, windowX + windowWidth + 1, windowY, borderColor);
         guiGraphics.fill(windowX - 1, windowY + windowHeight, windowX + windowWidth + 1, windowY + windowHeight + 1, borderColor);
         guiGraphics.fill(windowX - 1, windowY, windowX, windowY + windowHeight, borderColor);
         guiGraphics.fill(windowX + windowWidth, windowY, windowX + windowWidth + 1, windowY + windowHeight, borderColor);
-
-        String focusIndicator = cultivationAttachment != null ?
-            " [" + cultivationAttachment.getCurrentFocus().getDisplayName() + " Focused]" : "";
-        Component title = Component.literal("Cultivation Overview" + focusIndicator)
-            .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
-
-        int titleWidth = font.width(title);
-        int titleX = windowX + (windowWidth - titleWidth) / 2;
-        int titleY = windowY + margin;
-        drawStringAligned(guiGraphics, title, titleX, titleY, 0xFFFFFFFF);
     }
 
-    /**
-     * UPDATED: Render cultivation overview using unified attachments
-     */
-    private void renderCultivationOverview(GuiGraphics guiGraphics) {
+    private void renderTabs(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        Tab[] tabs = Tab.values();
+        int tabWidth = alignToPixel((windowWidth - 2 * margin) / tabs.length);
+
+        for (int i = 0; i < tabs.length; i++) {
+            Tab tab = tabs[i];
+            int tabX = windowX + margin + (i * tabWidth);
+            int tabY = windowY + margin;
+
+            // Tab background
+            int tabBgColor = (tab == currentTab) ? TAB_ACTIVE_COLOR : TAB_INACTIVE_COLOR;
+            guiGraphics.fill(tabX, tabY, tabX + tabWidth, tabY + tabHeight, tabBgColor);
+
+            // Tab border
+            if (tab == currentTab) {
+                guiGraphics.fill(tabX, tabY, tabX + tabWidth, tabY + 1, TAB_BORDER_COLOR);
+                guiGraphics.fill(tabX, tabY, tabX + 1, tabY + tabHeight, TAB_BORDER_COLOR);
+                guiGraphics.fill(tabX + tabWidth - 1, tabY, tabX + tabWidth, tabY + tabHeight, TAB_BORDER_COLOR);
+            }
+
+            // Tab text
+            String tabText = tab.getDisplayName();
+            int textWidth = font.width(tabText);
+            int textX = tabX + (tabWidth - textWidth) / 2;
+            int textY = tabY + (tabHeight - 8) / 2;
+            int textColor = (tab == currentTab) ? 0xFFFFFFFF : 0xFFCCCCCC;
+            drawStringAligned(guiGraphics, tabText, textX, textY, textColor);
+        }
+    }
+
+    private void renderCurrentTabContent(GuiGraphics guiGraphics) {
         if (cultivationAttachment == null) {
             renderErrorState(guiGraphics);
             return;
         }
 
-        int currentY = alignToPixel(windowY + margin * 2 + lineHeight);
-
-        // Player traits section
-        currentY = renderPlayerTraits(guiGraphics, currentY);
-        currentY = alignToPixel(currentY + sectionSpacing);
-
-        // Strategic overview
-        currentY = renderStrategicOverview(guiGraphics, currentY);
-        currentY = alignToPixel(currentY + sectionSpacing);
-
-        // Cultivation progress
-        currentY = renderCultivationProgress(guiGraphics, currentY);
-        currentY = alignToPixel(currentY + sectionSpacing);
-
-        // Resource status
-        currentY = renderResourceStatus(guiGraphics, currentY);
+        switch (currentTab) {
+            case OVERVIEW -> renderOverviewTab(guiGraphics);
+            case CULTIVATION -> renderCultivationTab(guiGraphics);
+            case RESOURCES -> renderResourcesTab(guiGraphics);
+            case DETAILS -> renderDetailsTab(guiGraphics);
+        }
     }
 
-    /**
-     * UPDATED: Render player traits using unified talent attachment
-     */
-    private int renderPlayerTraits(GuiGraphics guiGraphics, int startY) {
-        int currentY = alignToPixel(startY);
+    // === TAB CONTENT RENDERING ===
 
-        renderSectionHeaderPixelPerfect(guiGraphics, "Innate Cultivation Traits", currentY);
-        currentY = alignToPixel(currentY + lineHeight + 5);
+    private void renderOverviewTab(GuiGraphics guiGraphics) {
+        int currentY = contentAreaY;
 
-        // Display spiritual roots
-        if (talentAttachment != null && talentAttachment.hasSpiritualRootAssigned()) {
-            Component rootsLabel = Component.literal("Spiritual Roots: ")
-                .withStyle(ChatFormatting.WHITE);
-            Component rootsValue = Component.literal(talentAttachment.getSpiritualRootDisplayName())
-                .withStyle(ChatFormatting.BOLD);
+        // Character overview
+        currentY = renderSectionHeader(guiGraphics, "Character Overview", currentY);
+        currentY += 5;
 
-            drawStringAligned(guiGraphics, rootsLabel, windowX + margin, currentY, 0xFFFFFFFF);
-            int labelWidth = font.width(rootsLabel);
-            drawStringAligned(guiGraphics, rootsValue, windowX + margin + labelWidth, currentY,
-                talentAttachment.getSpiritualRootColor());
+        // Race info
+        if (raceAttachment != null && raceAttachment.hasRaceAssigned()) {
+            String raceText = String.format("Race: %s", raceAttachment.getRaceDisplayName());
+            drawStringAligned(guiGraphics, raceText, windowX + margin, currentY, RACE_COLOR);
+            currentY += lineHeight;
 
-            // Show multiplier
-            String multiplierText = String.format(" (×%.1f Qi rates)",
-                talentAttachment.getSpiritualRootMultiplier());
-            drawStringAligned(guiGraphics, multiplierText,
-                windowX + margin + labelWidth + font.width(rootsValue), currentY, QI_COLOR);
-
-            currentY = alignToPixel(currentY + lineHeight);
-        }
-
-        // Display physique
-        if (talentAttachment != null && talentAttachment.hasPhysiqueAssigned()) {
-            Component physiqueLabel = Component.literal("Physique: ")
-                .withStyle(ChatFormatting.WHITE);
-            Component physiqueValue = Component.literal(talentAttachment.getPhysiqueDisplayName())
-                .withStyle(ChatFormatting.BOLD);
-
-            drawStringAligned(guiGraphics, physiqueLabel, windowX + margin, currentY, 0xFFFFFFFF);
-            int labelWidth = font.width(physiqueLabel);
-            drawStringAligned(guiGraphics, physiqueValue, windowX + margin + labelWidth, currentY,
-                talentAttachment.getPhysiqueColor());
-
-            // Show multiplier
-            String multiplierText = String.format(" (×%.1f Body rates)",
-                talentAttachment.getPhysiqueMultiplier());
-            drawStringAligned(guiGraphics, multiplierText,
-                windowX + margin + labelWidth + font.width(physiqueValue), currentY, BODY_COLOR);
-
-            currentY = alignToPixel(currentY + lineHeight);
-        }
-
-        // Combined talent status
-        if (talentAttachment != null && talentAttachment.hasSpiritualRootAssigned() && talentAttachment.hasPhysiqueAssigned()) {
-            String combinedDesc = talentAttachment.getCombinedTalentDescription();
-            float overallMultiplier = talentAttachment.getOverallCultivationMultiplier();
-
-            String combinedText = String.format("%s (Overall: %.2fx)", combinedDesc, overallMultiplier);
-            drawStringAligned(guiGraphics, combinedText, windowX + margin, currentY, 0xFFDDA0DD);
-            currentY = alignToPixel(currentY + lineHeight);
-
-            if (talentAttachment.hasDivineDaoDestiny()) {
-                drawStringAligned(guiGraphics, "🌟 DIVINE DAO DESTINY 🌟", windowX + margin, currentY, 0xFFFFD700);
-                currentY = alignToPixel(currentY + lineHeight);
+            String bonusText = raceAttachment.getRaceBonusDescription();
+            if (!bonusText.equals("No bonuses or penalties")) {
+                drawStringAligned(guiGraphics, "  " + bonusText, windowX + margin, currentY, 0xFFCCCCCC);
+                currentY += lineHeight;
             }
         }
 
-        return currentY;
-    }
+        // Spiritual roots and physique
+        if (talentAttachment != null) {
+            if (talentAttachment.hasSpiritualRootAssigned()) {
+                String rootText = String.format("Spiritual Root: %s (×%.1f)",
+                    talentAttachment.getSpiritualRootDisplayName(),
+                    talentAttachment.getSpiritualRootMultiplier());
+                drawStringAligned(guiGraphics, rootText, windowX + margin, currentY, QI_COLOR);
+                currentY += lineHeight;
+            }
 
-    /**
-     * UPDATED: Render strategic overview using unified cultivation attachment
-     */
-    private int renderStrategicOverview(GuiGraphics guiGraphics, int startY) {
-        int currentY = alignToPixel(startY);
-
-        renderSectionHeaderPixelPerfect(guiGraphics, "Strategic Overview", currentY);
-        currentY = alignToPixel(currentY + lineHeight + 5);
-
-        if (cultivationAttachment != null) {
-            String focusText = "Cultivation Focus: " + cultivationAttachment.getCurrentFocus().getDisplayName() +
-                " (2× advancement rate)";
-            int focusColor = cultivationAttachment.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
-            drawStringAligned(guiGraphics, focusText, windowX + margin, currentY, focusColor);
-            currentY = alignToPixel(currentY + lineHeight);
-
-            // Show effective rates
-            double qiRate = cultivationAttachment.getEffectiveQiCultivationRate();
-            double bodyRate = cultivationAttachment.getEffectiveBodyCultivationRate();
-            String ratesText = String.format("Rates: Qi %.2f/s | Body %.2f/s", qiRate, bodyRate);
-            drawStringAligned(guiGraphics, ratesText, windowX + margin, currentY, 0xFFCCCCCC);
-            currentY = alignToPixel(currentY + lineHeight);
+            if (talentAttachment.hasPhysiqueAssigned()) {
+                String physiqueText = String.format("Physique: %s (×%.1f)",
+                    talentAttachment.getPhysiqueDisplayName(),
+                    talentAttachment.getPhysiqueMultiplier());
+                drawStringAligned(guiGraphics, physiqueText, windowX + margin, currentY, BODY_COLOR);
+                currentY += lineHeight;
+            }
         }
+
+        currentY += sectionSpacing;
+
+        // Current status
+        currentY = renderSectionHeader(guiGraphics, "Current Status", currentY);
+        currentY += 5;
+
+        // Focus and realms
+        PlayerCultivationAttachment.CultivationType focus = cultivationAttachment.getCurrentFocus();
+        String focusText = "Focus: " + focus.getDisplayName() + " Cultivation";
+        int focusColor = focus == PlayerCultivationAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
+        drawStringAligned(guiGraphics, focusText, windowX + margin, currentY, focusColor);
+        currentY += lineHeight;
 
         CultivationRealm qiRealm = cultivationAttachment.getCurrentQiRealm();
         CultivationRealm bodyRealm = cultivationAttachment.getCurrentBodyRealm();
-        String overallLevel = String.format("Realms: Qi %s | Body %s", qiRealm.getDisplayName(), bodyRealm.getDisplayName());
-        drawStringAligned(guiGraphics, overallLevel, windowX + margin, currentY, 0xFFFFFFFF);
-        currentY = alignToPixel(currentY + lineHeight);
+        String realmsText = String.format("Realms: Qi %s | Body %s", qiRealm.getDisplayName(), bodyRealm.getDisplayName());
+        drawStringAligned(guiGraphics, realmsText, windowX + margin, currentY, 0xFFFFFFFF);
+        currentY += lineHeight;
 
-        return currentY;
+        // Cultivation rates
+        double qiRate = cultivationAttachment.getEffectiveQiCultivationRate();
+        double bodyRate = cultivationAttachment.getEffectiveBodyCultivationRate();
+        String ratesText = String.format("Rates: Qi %.2f/s | Body %.2f/s", qiRate, bodyRate);
+        drawStringAligned(guiGraphics, ratesText, windowX + margin, currentY, 0xFFCCCCCC);
     }
 
-    /**
-     * UPDATED: Render cultivation progress using unified cultivation attachment
-     */
-    private int renderCultivationProgress(GuiGraphics guiGraphics, int startY) {
-        int currentY = alignToPixel(startY);
+    private void renderCultivationTab(GuiGraphics guiGraphics) {
+        int currentY = contentAreaY;
 
-        renderSectionHeaderPixelPerfect(guiGraphics, "Cultivation Progress", currentY);
-        currentY = alignToPixel(currentY + lineHeight + 8);
+        currentY = renderSectionHeader(guiGraphics, "Cultivation Progress", currentY);
+        currentY += 10;
 
-        int leftColumnX = alignToPixel(windowX + margin);
-        int rightColumnX = alignToPixel(windowX + margin + columnWidth);
+        int leftColumnX = windowX + margin;
+        int rightColumnX = windowX + margin + columnWidth + 10;
 
-        renderCultivationColumnPixelPerfect(guiGraphics, leftColumnX, currentY, PlayerCultivationAttachment.CultivationType.QI);
-        renderCultivationColumnPixelPerfect(guiGraphics, rightColumnX, currentY, PlayerCultivationAttachment.CultivationType.BODY);
-
-        return alignToPixel(currentY + Math.max(140, windowHeight / 4));
+        renderCultivationColumn(guiGraphics, leftColumnX, currentY, PlayerCultivationAttachment.CultivationType.QI);
+        renderCultivationColumn(guiGraphics, rightColumnX, currentY, PlayerCultivationAttachment.CultivationType.BODY);
     }
 
-    /**
-     * UPDATED: Render cultivation column using unified cultivation attachment
-     */
-    private void renderCultivationColumnPixelPerfect(GuiGraphics guiGraphics, int x, int y, PlayerCultivationAttachment.CultivationType type) {
-        int alignedX = alignToPixel(x);
-        int currentY = alignToPixel(y);
+    private void renderResourcesTab(GuiGraphics guiGraphics) {
+        int currentY = contentAreaY;
 
+        if (resourceAttachment == null) {
+            drawStringAligned(guiGraphics, "Resource data unavailable", windowX + margin, currentY, 0xFFFF6666);
+            return;
+        }
+
+        currentY = renderSectionHeader(guiGraphics, "Resource Status", currentY);
+        currentY += 10;
+
+        // Health
+        long currentHealth = resourceAttachment.getCurrentHealth();
+        long maxHealth = resourceAttachment.getMaxHealth();
+        double healthPercentage = maxHealth > 0 ? (double) currentHealth / maxHealth : 0.0;
+
+        String healthText = String.format("Health: %d/%d (%.1f%%)", currentHealth, maxHealth, healthPercentage * 100);
+        drawStringAligned(guiGraphics, healthText, windowX + margin, currentY, HEALTH_COLOR);
+        currentY += lineHeight + 2;
+
+        int barX = windowX + margin;
+        renderProgressBar(guiGraphics, barX, currentY, progressBarWidth, PROGRESS_BAR_HEIGHT, healthPercentage, HEALTH_COLOR);
+        currentY += PROGRESS_BAR_HEIGHT + sectionSpacing;
+
+        // Qi Energy
+        long currentQi = resourceAttachment.getCurrentQi();
+        long maxQi = resourceAttachment.getMaxQi();
+        double qiPercentage = maxQi > 0 ? (double) currentQi / maxQi : 0.0;
+
+        String qiText = String.format("Qi Energy: %d/%d (%.1f%%)", currentQi, maxQi, qiPercentage * 100);
+        drawStringAligned(guiGraphics, qiText, windowX + margin, currentY, QI_COLOR);
+        currentY += lineHeight + 2;
+
+        renderProgressBar(guiGraphics, barX, currentY, progressBarWidth, PROGRESS_BAR_HEIGHT, qiPercentage, QI_COLOR);
+        currentY += PROGRESS_BAR_HEIGHT + sectionSpacing;
+
+        // Body Energy
+        long currentBody = resourceAttachment.getCurrentBody();
+        long maxBody = resourceAttachment.getMaxBody();
+        double bodyPercentage = maxBody > 0 ? (double) currentBody / maxBody : 0.0;
+
+        String bodyText = String.format("Body Energy: %d/%d (%.1f%%)", currentBody, maxBody, bodyPercentage * 100);
+        drawStringAligned(guiGraphics, bodyText, windowX + margin, currentY, BODY_COLOR);
+        currentY += lineHeight + 2;
+
+        renderProgressBar(guiGraphics, barX, currentY, progressBarWidth, PROGRESS_BAR_HEIGHT, bodyPercentage, BODY_COLOR);
+    }
+
+    private void renderDetailsTab(GuiGraphics guiGraphics) {
+        int currentY = contentAreaY;
+
+        currentY = renderSectionHeader(guiGraphics, "Detailed Information", currentY);
+        currentY += 10;
+
+        // Race details - Always show race information if attachment exists
+        if (raceAttachment != null) {
+            currentY = renderSectionHeader(guiGraphics, "Race Details", currentY);
+            currentY += 5;
+
+            // Race name
+            String raceName = raceAttachment.hasRaceAssigned() ?
+                raceAttachment.getRaceDisplayName() : "Not Assigned";
+            String raceText = "Current Race: " + raceName;
+            drawStringAligned(guiGraphics, raceText, windowX + margin, currentY, RACE_COLOR);
+            currentY += lineHeight + 3;
+
+            if (raceAttachment.hasRaceAssigned()) {
+                // Race description
+                String raceDesc = raceAttachment.getRaceDescription();
+                if (raceDesc != null && !raceDesc.isEmpty()) {
+                    // Word wrap the description if it's too long
+                    int maxWidth = windowWidth - 2 * margin - 20;
+                    if (font.width(raceDesc) > maxWidth) {
+                        // Simple word wrapping
+                        String[] words = raceDesc.split(" ");
+                        StringBuilder currentLine = new StringBuilder();
+
+                        for (String word : words) {
+                            if (font.width(currentLine + " " + word) > maxWidth) {
+                                if (currentLine.length() > 0) {
+                                    drawStringAligned(guiGraphics, currentLine.toString(), windowX + margin, currentY, 0xFFCCCCCC);
+                                    currentY += lineHeight;
+                                    currentLine = new StringBuilder();
+                                }
+                            }
+                            if (currentLine.length() > 0) currentLine.append(" ");
+                            currentLine.append(word);
+                        }
+                        if (currentLine.length() > 0) {
+                            drawStringAligned(guiGraphics, currentLine.toString(), windowX + margin, currentY, 0xFFCCCCCC);
+                            currentY += lineHeight;
+                        }
+                    } else {
+                        drawStringAligned(guiGraphics, raceDesc, windowX + margin, currentY, 0xFFCCCCCC);
+                        currentY += lineHeight;
+                    }
+                    currentY += 5;
+                }
+
+                // Race bonus/penalty description
+                String bonusDesc = raceAttachment.getRaceBonusDescription();
+                if (bonusDesc != null && !bonusDesc.isEmpty()) {
+                    String bonusText = "Racial Effects: " + bonusDesc;
+                    drawStringAligned(guiGraphics, bonusText, windowX + margin, currentY, 0xFFAADDFF);
+                    currentY += lineHeight + 3;
+                }
+
+                // Detailed multipliers
+                String multipliersText = String.format("Cultivation Multipliers: Qi ×%.1f | Body ×%.1f",
+                    raceAttachment.getQiMultiplier(), raceAttachment.getBodyMultiplier());
+                drawStringAligned(guiGraphics, multipliersText, windowX + margin, currentY, 0xFF999999);
+                currentY += lineHeight;
+
+                // Show if race has bonuses or penalties
+                boolean hasBonus = raceAttachment.getRaceType().hasBonus();
+                boolean hasPenalty = raceAttachment.getRaceType().hasPenalty();
+
+                if (hasBonus || hasPenalty) {
+                    String effectType = "";
+                    int effectColor = 0xFFCCCCCC;
+
+                    if (hasBonus && hasPenalty) {
+                        effectType = "Mixed Effects: Both bonuses and penalties";
+                        effectColor = 0xFFFFDD77;
+                    } else if (hasBonus) {
+                        effectType = "Beneficial Race: Provides cultivation bonuses";
+                        effectColor = 0xFF77FF77;
+                    } else if (hasPenalty) {
+                        effectType = "Challenging Race: Has cultivation penalties";
+                        effectColor = 0xFFFF7777;
+                    }
+
+                    drawStringAligned(guiGraphics, effectType, windowX + margin, currentY, effectColor);
+                    currentY += lineHeight;
+                }
+
+                currentY += sectionSpacing;
+            } else {
+                // Show message if no race assigned
+                drawStringAligned(guiGraphics, "No race has been assigned to this character.", windowX + margin, currentY, 0xFFFF9999);
+                drawStringAligned(guiGraphics, "Race assignment may be required for cultivation.", windowX + margin, currentY + lineHeight, 0xFFCCCCCC);
+                currentY += lineHeight * 2 + sectionSpacing;
+            }
+        } else {
+            // Show error if race attachment is missing
+            currentY = renderSectionHeader(guiGraphics, "Race Information", currentY);
+            currentY += 5;
+            drawStringAligned(guiGraphics, "Race data unavailable - attachment missing", windowX + margin, currentY, 0xFFFF6666);
+            currentY += lineHeight + sectionSpacing;
+        }
+
+        // Cultivation rates breakdown
+        currentY = renderSectionHeader(guiGraphics, "Cultivation Rate Breakdown", currentY);
+        currentY += 5;
+
+        double qiBase = cultivationAttachment.getBaseQiCultivationRate();
+        double qiEffective = cultivationAttachment.getEffectiveQiCultivationRate();
+        double bodyBase = cultivationAttachment.getBaseBodyCultivationRate();
+        double bodyEffective = cultivationAttachment.getEffectiveBodyCultivationRate();
+
+        String qiBreakdown = String.format("Qi: %.3f base → %.3f effective (×%.2f total)", qiBase, qiEffective, qiEffective / qiBase);
+        drawStringAligned(guiGraphics, qiBreakdown, windowX + margin, currentY, QI_COLOR);
+        currentY += lineHeight;
+
+        String bodyBreakdown = String.format("Body: %.3f base → %.3f effective (×%.2f total)", bodyBase, bodyEffective, bodyEffective / bodyBase);
+        drawStringAligned(guiGraphics, bodyBreakdown, windowX + margin, currentY, BODY_COLOR);
+        currentY += lineHeight + 5;
+
+        // Show multiplier breakdown if race affects rates
+        if (raceAttachment != null && raceAttachment.hasRaceAssigned()) {
+            float qiRaceMultiplier = raceAttachment.getQiMultiplier();
+            float bodyRaceMultiplier = raceAttachment.getBodyMultiplier();
+
+            if (qiRaceMultiplier != 1.0f || bodyRaceMultiplier != 1.0f) {
+                drawStringAligned(guiGraphics, "Rate Multiplier Sources:", windowX + margin, currentY, 0xFFDDDDDD);
+                currentY += lineHeight;
+
+                if (qiRaceMultiplier != 1.0f) {
+                    String qiRaceText = String.format("  Qi from Race (%s): ×%.1f",
+                        raceAttachment.getRaceDisplayName(), qiRaceMultiplier);
+                    int qiRaceColor = qiRaceMultiplier > 1.0f ? 0xFF77FF77 : 0xFFFF7777;
+                    drawStringAligned(guiGraphics, qiRaceText, windowX + margin, currentY, qiRaceColor);
+                    currentY += lineHeight;
+                }
+
+                if (bodyRaceMultiplier != 1.0f) {
+                    String bodyRaceText = String.format("  Body from Race (%s): ×%.1f",
+                        raceAttachment.getRaceDisplayName(), bodyRaceMultiplier);
+                    int bodyRaceColor = bodyRaceMultiplier > 1.0f ? 0xFF77FF77 : 0xFFFF7777;
+                    drawStringAligned(guiGraphics, bodyRaceText, windowX + margin, currentY, bodyRaceColor);
+                    currentY += lineHeight;
+                }
+
+                // Show other multiplier sources
+                if (talentAttachment != null) {
+                    if (talentAttachment.hasSpiritualRootAssigned()) {
+                        String rootText = String.format("  Qi from Spiritual Root (%s): ×%.1f",
+                            talentAttachment.getSpiritualRootDisplayName(),
+                            talentAttachment.getSpiritualRootMultiplier());
+                        drawStringAligned(guiGraphics, rootText, windowX + margin, currentY, QI_COLOR);
+                        currentY += lineHeight;
+                    }
+
+                    if (talentAttachment.hasPhysiqueAssigned()) {
+                        String physiqueText = String.format("  Body from Physique (%s): ×%.1f",
+                            talentAttachment.getPhysiqueDisplayName(),
+                            talentAttachment.getPhysiqueMultiplier());
+                        drawStringAligned(guiGraphics, physiqueText, windowX + margin, currentY, BODY_COLOR);
+                        currentY += lineHeight;
+                    }
+                }
+
+                // Show focus bonus
+                PlayerCultivationAttachment.CultivationType currentFocus = cultivationAttachment.getCurrentFocus();
+                String focusText = String.format("  Focus Bonus (%s): ×2.0", currentFocus.getDisplayName());
+                int focusColor = currentFocus == PlayerCultivationAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
+                drawStringAligned(guiGraphics, focusText, windowX + margin, currentY, focusColor);
+            }
+        }
+    }
+
+    // === HELPER RENDERING METHODS ===
+
+    private void renderCultivationColumn(GuiGraphics guiGraphics, int x, int y, PlayerCultivationAttachment.CultivationType type) {
+        int currentY = y;
         int typeColor = type == PlayerCultivationAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
         String typeName = type.getDisplayName();
 
-        drawStringAligned(guiGraphics, typeName + " Cultivation", alignedX, currentY, typeColor);
-        currentY = alignToPixel(currentY + lineHeight + 3);
+        drawStringAligned(guiGraphics, typeName + " Cultivation", x, currentY, typeColor);
+        currentY += lineHeight + 3;
 
         CultivationRealm currentRealm = type == PlayerCultivationAttachment.CultivationType.QI ?
             cultivationAttachment.getCurrentQiRealm() : cultivationAttachment.getCurrentBodyRealm();
-        drawStringAligned(guiGraphics, "Realm: " + currentRealm.getDisplayName(), alignedX, currentY, 0xFFFFFFFF);
-        currentY = alignToPixel(currentY + lineHeight);
+        drawStringAligned(guiGraphics, "Realm: " + currentRealm.getDisplayName(), x, currentY, 0xFFFFFFFF);
+        currentY += lineHeight;
 
         long current, max;
-        double baseRate, effectiveRate, meditationRate;
+        double baseRate, effectiveRate;
         double percentage;
 
         if (type == PlayerCultivationAttachment.CultivationType.QI) {
@@ -491,36 +675,28 @@ public class CultivationStatsScreen extends Screen {
             max = cultivationAttachment.getMaxQiCultivation();
             baseRate = cultivationAttachment.getBaseQiCultivationRate();
             effectiveRate = cultivationAttachment.getEffectiveQiCultivationRate();
-            meditationRate = cultivationAttachment.getEffectiveCirculatingQiCultivationRate();
             percentage = cultivationAttachment.getQiProgress();
         } else {
             current = cultivationAttachment.getCurrentBodyCultivation();
             max = cultivationAttachment.getMaxBodyCultivation();
             baseRate = cultivationAttachment.getBaseBodyCultivationRate();
             effectiveRate = cultivationAttachment.getEffectiveBodyCultivationRate();
-            meditationRate = cultivationAttachment.getEffectiveCirculatingBodyCultivationRate();
             percentage = cultivationAttachment.getBodyProgress();
         }
 
         String progressText = String.format("%.1f%% (%d/%d)", percentage * 100, current, max);
-        drawStringAligned(guiGraphics, progressText, alignedX, currentY, 0xFFCCCCCC);
-        currentY = alignToPixel(currentY + lineHeight + 2);
+        drawStringAligned(guiGraphics, progressText, x, currentY, 0xFFCCCCCC);
+        currentY += lineHeight + 2;
 
-        int barWidth = Math.min(progressBarWidth, columnWidth - 20);
-        int barX = alignToPixel(alignedX);
-        int barY = alignToPixel(currentY);
-        renderProgressBarPixelPerfect(guiGraphics, barX, barY, barWidth, PROGRESS_BAR_HEIGHT, percentage, typeColor);
-        currentY = alignToPixel(currentY + PROGRESS_BAR_HEIGHT + 5);
+        int barWidth = Math.min(progressBarWidth, columnWidth - 10);
+        renderProgressBar(guiGraphics, x, currentY, barWidth, PROGRESS_BAR_HEIGHT, percentage, typeColor);
+        currentY += PROGRESS_BAR_HEIGHT + 5;
 
-        // Show base rate
         String baseRateText = String.format("Base: %.3f/s", baseRate);
-        drawStringAligned(guiGraphics, baseRateText, alignedX, currentY, 0xFF999999);
-        currentY = alignToPixel(currentY + lineHeight);
+        drawStringAligned(guiGraphics, baseRateText, x, currentY, 0xFF999999);
+        currentY += lineHeight;
 
-        // Show effective rate with indicator of multipliers applied
         boolean isFocused = cultivationAttachment.getCurrentFocus() == type;
-
-        // Calculate total multiplier
         double totalMultiplier = effectiveRate / baseRate;
         String effectiveRateText;
         if (Math.abs(totalMultiplier - 1.0) > 0.01) {
@@ -531,122 +707,73 @@ public class CultivationStatsScreen extends Screen {
 
         if (isFocused) effectiveRateText += " [FOCUSED]";
 
-        int rateColor = isFocused ? FOCUS_ACTIVE_COLOR : 0xFFFFFFFF;
-        drawStringAligned(guiGraphics, effectiveRateText, alignedX, currentY, rateColor);
-        currentY = alignToPixel(currentY + lineHeight);
+        int rateColor = isFocused ? FOCUS_ACTIVE_COLOR : 0xFFCCCCCC;
+        drawStringAligned(guiGraphics, effectiveRateText, x, currentY, rateColor);
+    }
 
-        // Show meditation rate
-        double meditationMultiplier = meditationRate / baseRate;
-        String meditationText = String.format("Meditation: %.3f/s (×%.1f)", meditationRate, meditationMultiplier);
-        drawStringAligned(guiGraphics, meditationText, alignedX, currentY, 0xFFCCCCCC);
-        currentY = alignToPixel(currentY + lineHeight);
+    private int renderSectionHeader(GuiGraphics guiGraphics, String title, int y) {
+        drawStringAligned(guiGraphics, title, windowX + margin, y, SECTION_HEADER_COLOR);
 
-        // Show bonuses if any
-        double additiveBonus = type == PlayerCultivationAttachment.CultivationType.QI ?
-            cultivationAttachment.getQiAdditiveBonus() : cultivationAttachment.getBodyAdditiveBonus();
+        int lineY = y + lineHeight + 2;
+        int lineWidth = font.width(title) + 20;
+        guiGraphics.fill(windowX + margin, lineY, windowX + margin + lineWidth, lineY + 1, SECTION_HEADER_COLOR);
 
-        if (additiveBonus > 0) {
-            String bonusText = String.format("Pills: +%.3f/s", additiveBonus);
-            drawStringAligned(guiGraphics, bonusText, alignedX, currentY, 0xFFDDA0DD);
-            currentY = alignToPixel(currentY + lineHeight);
+        return lineY + 5;
+    }
+
+    private void renderProgressBar(GuiGraphics guiGraphics, int x, int y, int width, int height, double percentage, int color) {
+        // Background
+        guiGraphics.fill(x, y, x + width, y + height, 0xFF333333);
+
+        // Progress fill
+        if (percentage > 0) {
+            int fillWidth = (int) (width * Math.min(1.0, percentage));
+            guiGraphics.fill(x, y, x + fillWidth, y + height, color);
         }
 
-        // Breakthrough readiness
-        boolean ready = current >= max;
-        String readinessText = ready ? "✓ Ready" : "Not Ready";
-        int readinessColor = ready ? READY_COLOR : NOT_READY_COLOR;
-        drawStringAligned(guiGraphics, "Breakthrough: " + readinessText, alignedX, currentY, readinessColor);
-    }
-
-    /**
-     * UPDATED: Render resource status using unified resource attachment
-     */
-    private int renderResourceStatus(GuiGraphics guiGraphics, int startY) {
-        int currentY = alignToPixel(startY);
-
-        renderSectionHeaderPixelPerfect(guiGraphics, "Current Resources", currentY);
-        currentY = alignToPixel(currentY + lineHeight + 8);
-
-        if (resourceAttachment != null) {
-            currentY = renderResourceLinePixelPerfect(guiGraphics, currentY, "Health",
-                resourceAttachment.getCurrentHealth(), resourceAttachment.getMaxHealth(),
-                resourceAttachment.getEffectiveHealthRegenerationRate(), HEALTH_COLOR);
-
-            currentY = renderResourceLinePixelPerfect(guiGraphics, currentY, "Qi Energy",
-                resourceAttachment.getCurrentQi(), resourceAttachment.getMaxQi(),
-                resourceAttachment.getEffectiveQiRegenerationRate(), QI_COLOR);
-
-            currentY = renderResourceLinePixelPerfect(guiGraphics, currentY, "Body Energy",
-                resourceAttachment.getCurrentBody(), resourceAttachment.getMaxBody(),
-                resourceAttachment.getEffectiveBodyRegenerationRate(), BODY_COLOR);
-
-            // Show meditation status
-            boolean meditating = resourceAttachment.isPlayerMeditating();
-            String meditationStatus = "Meditation: " + (meditating ? "Active (10x rates)" : "Inactive");
-            int meditationColor = meditating ? 0xFF90EE90 : 0xFFCCCCCC;
-            drawStringAligned(guiGraphics, meditationStatus, windowX + margin, currentY, meditationColor);
-            currentY = alignToPixel(currentY + lineHeight + 3);
-        }
-
-        return currentY;
-    }
-
-    private int renderResourceLinePixelPerfect(GuiGraphics guiGraphics, int y, String resourceName,
-                                               long current, long max, double regenRate, int color) {
-        int alignedY = alignToPixel(y);
-
-        String resourceText = String.format("%s: %d/%d", resourceName, current, max);
-        drawStringAligned(guiGraphics, resourceText, windowX + margin, alignedY, color);
-
-        String regenText = String.format("(+%.2f/s)", regenRate);
-        int textWidth = font.width(resourceText);
-        int regenX = alignToPixel(windowX + margin + textWidth + 10);
-        drawStringAligned(guiGraphics, regenText, regenX, alignedY, 0xFFCCCCCC);
-
-        double percentage = max > 0 ? (double) current / max : 0;
-        int barX = alignToPixel(windowX + margin + Math.max(250, windowWidth / 2));
-        int barY = alignToPixel(alignedY + 2);
-
-        renderProgressBarPixelPerfect(guiGraphics, barX, barY, progressBarWidth, PROGRESS_BAR_HEIGHT, percentage, color);
-
-        return alignToPixel(alignedY + lineHeight + 3);
-    }
-
-    private void renderProgressBarPixelPerfect(GuiGraphics guiGraphics, int x, int y, int width, int height,
-                                               double percentage, int fillColor) {
-        int alignedX = alignToPixel(x);
-        int alignedY = alignToPixel(y);
-        int alignedWidth = alignToPixel(width);
-        int alignedHeight = alignToPixel(height);
-
-        guiGraphics.fill(alignedX, alignedY,
-            alignedX + alignedWidth, alignedY + alignedHeight,
-            0xFF404040);
-
-        int fillWidth = alignToPixel(alignedWidth * Math.min(1.0, Math.max(0.0, percentage)));
-        if (fillWidth > 0) {
-            guiGraphics.fill(alignedX, alignedY,
-                alignedX + fillWidth, alignedY + alignedHeight,
-                fillColor);
-        }
-
-        int borderColor = 0xFF808080;
-        guiGraphics.fill(alignedX - 1, alignedY - 1, alignedX + alignedWidth + 1, alignedY, borderColor);
-        guiGraphics.fill(alignedX - 1, alignedY + alignedHeight, alignedX + alignedWidth + 1, alignedY + alignedHeight + 1, borderColor);
-        guiGraphics.fill(alignedX - 1, alignedY, alignedX, alignedY + alignedHeight, borderColor);
-        guiGraphics.fill(alignedX + alignedWidth, alignedY, alignedX + alignedWidth + 1, alignedY + alignedHeight, borderColor);
-    }
-
-    private void renderSectionHeaderPixelPerfect(GuiGraphics guiGraphics, String headerText, int y) {
-        int alignedY = alignToPixel(y);
-        Component header = Component.literal(headerText).withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD);
-        drawStringAligned(guiGraphics, header, windowX + margin, alignedY, SECTION_HEADER_COLOR);
+        // Border
+        guiGraphics.fill(x - 1, y - 1, x + width + 1, y, 0xFFFFFFFF);
+        guiGraphics.fill(x - 1, y + height, x + width + 1, y + height + 1, 0xFFFFFFFF);
+        guiGraphics.fill(x - 1, y, x, y + height, 0xFFFFFFFF);
+        guiGraphics.fill(x + width, y, x + width + 1, y + height, 0xFFFFFFFF);
     }
 
     private void renderErrorState(GuiGraphics guiGraphics) {
-        String errorText = "Cultivation data not available";
-        int errorY = alignToPixel(windowY + 100);
-        drawStringAligned(guiGraphics, errorText, windowX + margin, errorY, 0xFFFF6666);
+        String errorMsg = "Cultivation data not available";
+        int textWidth = font.width(errorMsg);
+        int textX = windowX + (windowWidth - textWidth) / 2;
+        int textY = contentAreaY + 50;
+        drawStringAligned(guiGraphics, errorMsg, textX, textY, 0xFFFF6666);
+    }
+
+    // === TAB SWITCHING ===
+
+    private void switchToTab(Tab tab) {
+        this.currentTab = tab;
+        // Clear existing widgets and rebuild interface
+        clearWidgets();
+        setupInterface();
+    }
+
+    // === ACTION METHODS ===
+
+    private void switchCultivationFocus() {
+        if (cultivationAttachment != null) {
+            ICModNetwork.sendToServer(new CultivationFocusTogglePacket());
+            // Rebuild interface to update button text
+            clearWidgets();
+            setupInterface();
+        }
+    }
+
+    private void refreshStats() {
+        if (cultivationAttachment != null) cultivationAttachment.forceSync();
+        if (resourceAttachment != null) resourceAttachment.forceSync();
+        if (talentAttachment != null) talentAttachment.forceSync();
+        if (raceAttachment != null) raceAttachment.forceSync();
+        if (combatStatsAttachment != null) combatStatsAttachment.forceSync();
+
+        init();
     }
 
     @Override
@@ -654,37 +781,8 @@ public class CultivationStatsScreen extends Screen {
         return false;
     }
 
-    // === ACTION METHODS ===
-
-    /**
-     * UPDATED: Switch cultivation focus using unified cultivation attachment
-     */
-    private void switchCultivationFocus() {
-        if (cultivationAttachment != null) {
-            ImmortalCultivation.LOGGER.info("Client requesting focus toggle from {} to {} cultivation",
-                cultivationAttachment.getCurrentFocus().getDisplayName(),
-                cultivationAttachment.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ? "Body" : "Qi");
-
-            // Send packet to server to toggle focus
-            ICModNetwork.sendToServer(new CultivationFocusTogglePacket());
-        } else {
-            ImmortalCultivation.LOGGER.info("Cannot switch focus - cultivation attachment missing");
-        }
-    }
-
-    private void openBreakthroughScreen() {
-        minecraft.setScreen(new CultivationBreakthroughScreen());
-    }
-
-    /**
-     * UPDATED: Refresh stats using unified attachments
-     */
-    private void refreshStats() {
-        if (cultivationAttachment != null) cultivationAttachment.forceSync();
-        if (resourceAttachment != null) resourceAttachment.forceSync();
-        if (talentAttachment != null) talentAttachment.forceSync();
-        if (combatStatsAttachment != null) combatStatsAttachment.forceSync();
-
-        init();
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return true;
     }
 }

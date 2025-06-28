@@ -250,6 +250,16 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             ImmortalCultivation.LOGGER.error("Error applying spiritual root", e);
         }
 
+        // Apply race multiplier for Qi cultivation
+        try {
+            PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+            if (race != null && race.hasRaceAssigned()) {
+                baseRate *= race.getQiMultiplier();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying race Qi multiplier", e);
+        }
+
         // Apply bonuses
         baseRate = applyQiCultivationBonuses(baseRate);
 
@@ -381,6 +391,16 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying physique", e);
+        }
+
+        // Apply race multiplier for Body cultivation
+        try {
+            PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+            if (race != null && race.hasRaceAssigned()) {
+                baseRate *= race.getBodyMultiplier();
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying race Body multiplier", e);
         }
 
         // Apply bonuses
