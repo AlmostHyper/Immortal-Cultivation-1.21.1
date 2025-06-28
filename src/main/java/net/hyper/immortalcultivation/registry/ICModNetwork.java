@@ -28,6 +28,18 @@ public class ICModNetwork {
         // === SERVER -> CLIENT === //
 
         REGISTRY.playToClient(
+            RaceSyncPacket.TYPE,
+            RaceSyncPacket.STREAM_CODEC,
+            RaceSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
+            OpenRaceSelectionSyncPacket.TYPE,
+            OpenRaceSelectionSyncPacket.STREAM_CODEC,
+            OpenRaceSelectionSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
             CultivationSyncPacket.TYPE,
             CultivationSyncPacket.STREAM_CODEC,
             CultivationSyncPacket::handleClient
@@ -65,14 +77,17 @@ public class ICModNetwork {
 
         // === CLIENT -> SERVER === //
 
-
+        REGISTRY.playToServer(
+            RaceSelectionRequestPacket.TYPE,
+            RaceSelectionRequestPacket.STREAM_CODEC,
+            RaceSelectionRequestPacket::handleServer
+        );
 
         REGISTRY.playToServer(
             CultivationRequestPacket.TYPE,
             CultivationRequestPacket.STREAM_CODEC,
             CultivationRequestPacket::handleServer
         );
-
 
         REGISTRY.playToServer(
             ResourceRequestPacket.TYPE,

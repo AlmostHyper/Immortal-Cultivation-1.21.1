@@ -4,8 +4,10 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.cultivation.SpiritualRootType;
 import net.hyper.immortalcultivation.cultivation.PhysiqueType;
+import net.hyper.immortalcultivation.network.server.OpenRaceSelectionSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -34,9 +36,10 @@ public class PlayerLoginHandler {
 
             // Initialize all unified cultivation attachments in the proper order
             // Order matters here because some attachments depend on others
-            initializeTalentAttachment(player);    // First: talents (spiritual roots & physique)
-            initializeCultivationAttachment(player); // Second: cultivation (realms, progress, focus, bonuses)
-            initializeResourceAttachment(player);   // Third: resources (health, qi, body energy)
+            initializeRaceAttachment(player);       // First: race (affects cultivation multipliers)
+            initializeTalentAttachment(player);     // Second: talents (spiritual roots & physique)
+            initializeCultivationAttachment(player); // Third: cultivation (realms, progress, focus, bonuses)
+            initializeResourceAttachment(player);   // Fourth: resources (health, qi, body energy)
 
             // IMPORTANT: Force sync all data to ensure client has latest values
             forceSyncAllUnifiedData(player);
@@ -46,6 +49,69 @@ public class PlayerLoginHandler {
 
             ImmortalCultivation.LOGGER.info("Unified dual cultivation system fully initialized for player: {}",
                 player.getName().getString());
+        }
+    }
+
+    /**
+     * Initialize unified race attachment.
+     * This determines the player's cultivation path bonuses and penalties.
+     * Race selection must happen before talents are assigned as it affects base multipliers.
+     */
+    private static void initializeRaceAttachment(ServerPlayer player) {
+        try {
+            PlayerRaceAttachment raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+
+            if (raceAttachment != null) {
+                // IMPORTANT: Set player reference for proper functionality
+                raceAttachment.setPlayer(player);
+
+                // Check if race has been assigned
+                if (!raceAttachment.hasRaceAssigned()) {
+                    // Send packet to client to open race selection screen
+                    ICModNetwork.sendToPlayer(new OpenRaceSelectionSyncPacket(), player);
+
+                    ImmortalCultivation.LOGGER.info("Player {} needs to select a cultivation race",
+                        player.getName().getString());
+
+                    // Send welcome message
+                    Component welcomeMessage = Component.literal("⚡ Welcome, young cultivator! ⚡\n")
+                        .append(Component.literal("Before you begin your journey to immortality, you must choose your race.\n"))
+                        .append(Component.literal("This choice is permanent and will shape your cultivation path!"))
+                        .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
+                    player.sendSystemMessage(welcomeMessage);
+
+                } else {
+                    // Race already assigned - log current state
+                    ImmortalCultivation.LOGGER.info("Player {} cultivation race: {} (Qi: {}x, Body: {}x)",
+                        player.getName().getString(),
+                        raceAttachment.getRaceDisplayName(),
+                        raceAttachment.getQiMultiplier(),
+                        raceAttachment.getBodyMultiplier());
+
+                    // Send reminder message about their race
+                    Component raceInfo = Component.literal("Your cultivation race: ")
+                        .append(Component.literal(raceAttachment.getRaceDisplayName())
+                            .withStyle(Style.EMPTY.withColor(raceAttachment.getRaceColor()).withBold(true)))
+                        .append(Component.literal(" - " + raceAttachment.getRaceBonusDescription())
+                            .withStyle(ChatFormatting.GRAY));
+                    player.sendSystemMessage(raceInfo);
+                }
+
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null race attachment! This should never happen!",
+                    player.getName().getString());
+
+                // Attempt recovery by creating default race
+                player.sendSystemMessage(Component.literal("Error: Race data not found. Please contact an administrator.")
+                    .withStyle(ChatFormatting.RED));
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Critical error initializing race for player {}",
+                player.getName().getString(), e);
+
+            // Send error message to player
+            player.sendSystemMessage(Component.literal("A critical error occurred during race initialization. Please rejoin.")
+                .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
         }
     }
 
@@ -212,7 +278,7 @@ public class PlayerLoginHandler {
 
     /**
      * Check if player has achieved divine dao destiny (both heavenly talents)
-     * This is the rarest possible achievement: 0.01% chance (1 in 10,000)
+     * This is the rarest possible achievement: 0.000001% chance (1 in 1,000,000)
      */
     private static void checkForDivineDaoDestiny(ServerPlayer player) {
         try {
@@ -313,7 +379,7 @@ public class PlayerLoginHandler {
 
     /**
      * Broadcast divine dao destiny achievement - the rarest possible: both heavenly talents
-     * Called when player has both Heavenly Spiritual Root AND Heavenly Physique (0.01% chance)
+     * Called when player has both Heavenly Spiritual Root AND Heavenly Physique (0.000001% chance)
      */
     private static void broadcastDivineDaoDestiny(ServerPlayer player, String rootName, String physiqueName) {
         try {
@@ -333,7 +399,7 @@ public class PlayerLoginHandler {
                 .append(Component.literal(" AND "))
                 .append(physique)
                 .append(Component.literal("!\n"))
-                .append(Component.literal("Trample the Heavens and shatter the Earth, Child of Heaven!"))
+                .append(Component.literal("Trample the Heavens and shatter the Earth, fated Immortal Emperor!"))
                 .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
 
             // Send to ALL players including the achiever (this is so rare it deserves to be seen by everyone)

@@ -8,6 +8,11 @@
   "key.categories.immortalcultivation.cultivation": "Cultivation System",
   "key.immortalcultivation.cultivation_stats": "Open Cultivation Stats",
   "key.immortalcultivation.breakthrough_screen": "Open Breakthrough Analysis",
+  "key.categories.immortalcultivation.cultivation": "Cultivation",
+
+  "immortalcultivation.race.human": "Human",
+  "immortalcultivation.race.spirit": "Spirit",
+  "immortalcultivation.race.demonic_beast": "Demonic Beast",
 
   "block.immortalcultivation.low_quality_spirit_stone_block": "Low Quality Spirit Stone Block",
   "block.immortalcultivation.low_quality_spirit_stone_ore_block": "Low Quality Spirit Stone Ore",

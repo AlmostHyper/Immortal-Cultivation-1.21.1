@@ -21,6 +21,7 @@ public class PlayerRespawnHandler {
             player.getName().getString());
 
         // Reset unified attachments in proper order
+        resetRaceAttachment(player);
         resetCultivationAttachment(player);
         resetResourceAttachment(player);
         resetTalentAttachment(player);
@@ -30,6 +31,34 @@ public class PlayerRespawnHandler {
 
         ImmortalCultivation.LOGGER.info("Unified attachment reset complete for player {}",
             player.getName().getString());
+    }
+
+    /**
+     * Reset race attachment - handles player race
+     */
+    private static void resetRaceAttachment(ServerPlayer player) {
+        try {
+            PlayerRaceAttachment raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+            if (raceAttachment != null) {
+                // IMPORTANT: Reset player reference after respawn
+                raceAttachment.setPlayer(player);
+
+                // NOTE: Don't reset race itself - it is a permanent character trait!
+                // Race should persist through death and respawn
+
+                ImmortalCultivation.LOGGER.info("Reset player {} race references - Race: {} (Qi: {}x, Body: {}x)",
+                    player.getName().getString(),
+                    raceAttachment.getRaceDisplayName(),
+                    raceAttachment.getQiMultiplier(),
+                    raceAttachment.getBodyMultiplier());
+            } else {
+                ImmortalCultivation.LOGGER.error("Player {} has null race attachment after respawn!",
+                    player.getName().getString());
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error resetting race for player {}",
+                player.getName().getString(), e);
+        }
     }
 
     /**
