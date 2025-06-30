@@ -42,7 +42,7 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
     public PillFurnaceMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
         this(containerId, playerInventory,
             (PillFurnaceBlockEntity) playerInventory.player.level().getBlockEntity(extraData.readBlockPos()),
-            new SimpleContainerData(4));
+            new SimpleContainerData(6)); // Updated to 6 for new ContainerData size
     }
 
     private void addPillFurnaceSlots(IItemHandler itemHandler) {
@@ -57,60 +57,65 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
         // Spirit stone slot (middle)
         this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.SPIRIT_STONE_SLOT, 80, 35));
 
-        // Output slot (right side)
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_COMMON, 134, 35) {
+        // Output slots - arranged vertically by rarity (Legendary at top, Common at bottom)
+        // This follows Xianxia tradition where higher quality items are "more elevated"
+
+        // Legendary output slot (top - most prestigious)
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_LEGENDARY, 134, 17) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
             }
-        },
+        });
 
-        // Output slot (right side)
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_UNCOMMON, 134, 35) {
-            @Override
-            public boolean mayPlace(ItemStack stack) {
-                return false; // Output only
-            }
-        }
-
-        // Output slot (right side)
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_RARE, 134, 35) {
-            @Override
-            public boolean mayPlace(ItemStack stack) {
-                return false; // Output only
-            }
-        },
-
-        // Output slot (right side)
+        // Epic output slot
         this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_EPIC, 134, 35) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
             }
-        },
+        });
 
-        // Output slot (right side)
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_LEGENDARY, 134, 35) {
+        // Rare output slot
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_RARE, 134, 53) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
             }
-        }
+        });
+
+        // Uncommon output slot
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_UNCOMMON, 134, 71) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return false; // Output only
+            }
+        });
+
+        // Common output slot (bottom - most common)
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_COMMON, 134, 89) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return false; // Output only
+            }
+        });
     }
 
     private void addPlayerInventory(Inventory playerInventory) {
         // Player inventory slots (3 rows of 9)
+        // Adjusted Y position to accommodate the vertical output slots
         for (int row = 0; row < 3; ++row) {
             for (int col = 0; col < 9; ++col) {
-                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 84 + row * 18));
+                this.addSlot(new Slot(playerInventory, col + row * 9 + 9, 8 + col * 18, 118 + row * 18));
             }
         }
     }
 
     private void addPlayerHotbar(Inventory playerInventory) {
         // Player hotbar slots (1 row of 9)
+        // Adjusted Y position to match new inventory position
         for (int col = 0; col < 9; ++col) {
-            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 142));
+            this.addSlot(new Slot(playerInventory, col, 8 + col * 18, 176));
         }
     }
 
@@ -225,6 +230,14 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
 
     public int getMaxFuelTime() {
         return this.data.get(3);
+    }
+
+    public int getBatchSize() {
+        return this.data.get(4);
+    }
+
+    public int getCurrentBatch() {
+        return this.data.get(5);
     }
 
     public boolean isCrafting() {
