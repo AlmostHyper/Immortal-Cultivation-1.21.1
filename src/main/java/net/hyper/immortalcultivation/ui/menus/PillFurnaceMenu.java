@@ -58,12 +58,44 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
         this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.SPIRIT_STONE_SLOT, 80, 35));
 
         // Output slot (right side)
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT, 134, 35) {
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_COMMON, 134, 35) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
             }
-        });
+        },
+
+        // Output slot (right side)
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_UNCOMMON, 134, 35) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return false; // Output only
+            }
+        }
+
+        // Output slot (right side)
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_RARE, 134, 35) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return false; // Output only
+            }
+        },
+
+        // Output slot (right side)
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_EPIC, 134, 35) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return false; // Output only
+            }
+        },
+
+        // Output slot (right side)
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_LEGENDARY, 134, 35) {
+            @Override
+            public boolean mayPlace(ItemStack stack) {
+                return false; // Output only
+            }
+        }
     }
 
     private void addPlayerInventory(Inventory playerInventory) {

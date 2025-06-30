@@ -108,6 +108,12 @@ public class ICModNetwork {
         );
 
         REGISTRY.playToServer(
+            BreakthroughRequestPacket.TYPE,
+            BreakthroughRequestPacket.STREAM_CODEC,
+            BreakthroughRequestPacket::handleServer
+        );
+
+        REGISTRY.playToServer(
             CombatStatsRequestPacket.TYPE,
             CombatStatsRequestPacket.STREAM_CODEC,
             CombatStatsRequestPacket::handleServer

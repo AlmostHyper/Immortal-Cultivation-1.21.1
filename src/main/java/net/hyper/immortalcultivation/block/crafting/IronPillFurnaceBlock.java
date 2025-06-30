@@ -51,7 +51,7 @@ public class IronPillFurnaceBlock extends PillFurnaceBlock {
 
     @Override
     public @Nullable BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new PillFurnaceBlockEntity(pos, state);
+        return new IronPillFurnaceBlockEntity(pos, state);
     }
 
     @Override

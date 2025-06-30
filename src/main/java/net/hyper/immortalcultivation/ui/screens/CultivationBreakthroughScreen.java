@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * Specialized breakthrough interface focused exclusively on breakthrough planning and execution.
- * Updated to work with the unified cultivation attachment system.
+ * Updated to work with the unified cultivation attachment system and display accurate success rates.
  *
  * This screen is designed for the specific task of analyzing and attempting cultivation breakthroughs.
  * It provides detailed information about breakthrough options, success rates, and strategic implications
@@ -33,7 +33,7 @@ public class CultivationBreakthroughScreen extends Screen {
     // Visual organization for breakthrough-focused display
     private static final int SECTION_SPACING = 18;
     private static final int LINE_HEIGHT = 14;
-    private static final int OPTION_BUTTON_HEIGHT = 65;
+    private static final int OPTION_BUTTON_HEIGHT = 80; // Increased to show attempt count
 
     // Color scheme specifically for breakthrough analysis
     private static final int QI_COLOR = 0xFF87CEEB;
@@ -43,6 +43,7 @@ public class CultivationBreakthroughScreen extends Screen {
     private static final int SUCCESS_LOW = 0xFFFF6666;     // Red for <40% success
     private static final int READY_COLOR = 0xFF90EE90;     // Light green for ready
     private static final int NOT_READY_COLOR = 0xFFFFB6C1; // Light red for not ready
+    private static final int ATTEMPT_COLOR = 0xFFDDA0DD;   // Plum for attempt counts
 
     // Player cultivation data needed for breakthrough analysis (unified attachments)
     private PlayerCultivationAttachment cultivationAttachment;
@@ -243,122 +244,134 @@ public class CultivationBreakthroughScreen extends Screen {
 
         int currentY = windowY + 40;
 
-        // Current focus context (important for breakthrough success rates)
-        String focusInfo = "Current Focus: " + cultivationAttachment.getCurrentFocus().getDisplayName() + " Cultivation";
-        guiGraphics.drawString(font, focusInfo, windowX + 15, currentY, 0xFFFFD700);
-        currentY += LINE_HEIGHT + 2;
+        // Current cultivation status
+        String qiInfo = String.format("Qi: %s (%.1f%%)",
+            cultivationAttachment.getCurrentQiRealm().getDisplayName(),
+            cultivationAttachment.getQiProgress() * 100);
 
-        // Show talent bonuses if any
-        if (talentAttachment != null && (talentAttachment.hasSpiritualRootAssigned() || talentAttachment.hasPhysiqueAssigned())) {
-            String talentInfo = String.format("Talent Multipliers: Qi %.1fx | Body %.1fx",
-                talentAttachment.getSpiritualRootMultiplier(),
-                talentAttachment.getPhysiqueMultiplier());
-            guiGraphics.drawString(font, talentInfo, windowX + 15, currentY, 0xFFDDA0DD);
-            currentY += LINE_HEIGHT + 2;
-        }
+        String bodyInfo = String.format("Body: %s (%.1f%%)",
+            cultivationAttachment.getCurrentBodyRealm().getDisplayName(),
+            cultivationAttachment.getBodyProgress() * 100);
 
-        currentY += 8; // Extra spacing
+        guiGraphics.drawString(font, qiInfo, windowX + 15, currentY, QI_COLOR);
+        guiGraphics.drawString(font, bodyInfo, windowX + 15, currentY + LINE_HEIGHT, BODY_COLOR);
 
-        // Qi cultivation breakthrough readiness
-        currentY = renderBreakthroughReadiness(guiGraphics, currentY, PlayerCultivationAttachment.CultivationType.QI);
-        currentY += 8;
+        currentY += LINE_HEIGHT * 3;
 
-        // Body cultivation breakthrough readiness
-        currentY = renderBreakthroughReadiness(guiGraphics, currentY, PlayerCultivationAttachment.CultivationType.BODY);
+        // Focus information
+        String focusInfo = String.format("Current Focus: %s",
+            cultivationAttachment.getCurrentFocus().getDisplayName());
+        guiGraphics.drawString(font, focusInfo, windowX + 15, currentY, 0xFFFFFFFF);
+
+        currentY += LINE_HEIGHT * 2;
+
+        // Breakthrough readiness analysis
+        renderBreakthroughReadiness(guiGraphics, currentY);
     }
 
     /**
-     * Renders breakthrough readiness information for a specific cultivation type using unified attachment.
+     * Renders breakthrough readiness analysis for both cultivation types.
+     * FIXED: Now shows actual server-side success rates and attempt counts.
      */
-    private int renderBreakthroughReadiness(GuiGraphics guiGraphics, int startY, PlayerCultivationAttachment.CultivationType type) {
+    private void renderBreakthroughReadiness(GuiGraphics guiGraphics, int startY) {
         int currentY = startY;
-        int typeColor = type == PlayerCultivationAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
-        String typeName = type.getDisplayName();
 
-        // Section header
-        String header = typeName + " Cultivation Status";
-        guiGraphics.drawString(font, header, windowX + 15, currentY, typeColor);
-        currentY += LINE_HEIGHT + 2;
+        // Header
+        guiGraphics.drawString(font, "Breakthrough Analysis:", windowX + 15, currentY, 0xFFD4AF37);
+        currentY += LINE_HEIGHT * 2;
 
-        // Current realm
-        CultivationRealm currentRealm = type == PlayerCultivationAttachment.CultivationType.QI ?
-            cultivationAttachment.getCurrentQiRealm() : cultivationAttachment.getCurrentBodyRealm();
-        String realmInfo = "Realm: " + currentRealm.getDisplayName();
-        guiGraphics.drawString(font, realmInfo, windowX + 25, currentY, 0xFFFFFFFF);
-        currentY += LINE_HEIGHT;
+        // Qi breakthrough analysis
+        if (canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType.QI) ||
+            isNearBreakthrough(PlayerCultivationAttachment.CultivationType.QI)) {
 
-        // Cultivation progress
-        long current, max;
-        double percentage;
+            boolean qiReady = canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType.QI);
+            double qiSuccessRate = cultivationAttachment.calculateBreakthroughSuccessRate(PlayerCultivationAttachment.CultivationType.QI);
+            long qiAttempts = cultivationAttachment.getQiBreakthroughAttempts();
 
-        if (type == PlayerCultivationAttachment.CultivationType.QI) {
-            current = cultivationAttachment.getCurrentQiCultivation();
-            max = cultivationAttachment.getMaxQiCultivation();
-            percentage = cultivationAttachment.getQiProgress();
-        } else {
-            current = cultivationAttachment.getCurrentBodyCultivation();
-            max = cultivationAttachment.getMaxBodyCultivation();
-            percentage = cultivationAttachment.getBodyProgress();
+            String qiStatus = String.format("Qi: %s (%.0f%% success)",
+                qiReady ? "READY" : "Preparing", qiSuccessRate * 100);
+
+            int qiColor = qiReady ? READY_COLOR : NOT_READY_COLOR;
+            guiGraphics.drawString(font, qiStatus, windowX + 15, currentY, qiColor);
+            currentY += LINE_HEIGHT;
+
+            // Show attempt count
+            String qiAttemptInfo = String.format("  Failed attempts: %d (+%d%% bonus)", qiAttempts, (int)(qiAttempts * 5));
+            guiGraphics.drawString(font, qiAttemptInfo, windowX + 15, currentY, ATTEMPT_COLOR);
+            currentY += LINE_HEIGHT;
         }
 
-        String progressInfo = String.format("Progress: %d/%d (%.1f%%)", current, max, percentage * 100);
-        guiGraphics.drawString(font, progressInfo, windowX + 25, currentY, 0xFFCCCCCC);
-        currentY += LINE_HEIGHT;
+        // Body breakthrough analysis
+        if (canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType.BODY) ||
+            isNearBreakthrough(PlayerCultivationAttachment.CultivationType.BODY)) {
 
-        // Breakthrough readiness
-        boolean meetsThreshold = current >= max;
-        int thresholdColor = meetsThreshold ? READY_COLOR : NOT_READY_COLOR;
-        String thresholdText = meetsThreshold ? "✓ Ready for breakthrough" : "Need " + (max - current) + " more cultivation";
-        guiGraphics.drawString(font, thresholdText, windowX + 25, currentY, thresholdColor);
-        currentY += LINE_HEIGHT;
+            boolean bodyReady = canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType.BODY);
+            double bodySuccessRate = cultivationAttachment.calculateBreakthroughSuccessRate(PlayerCultivationAttachment.CultivationType.BODY);
+            long bodyAttempts = cultivationAttachment.getBodyBreakthroughAttempts();
 
-        return currentY;
+            String bodyStatus = String.format("Body: %s (%.0f%% success)",
+                bodyReady ? "READY" : "Preparing", bodySuccessRate * 100);
+
+            int bodyColor = bodyReady ? READY_COLOR : NOT_READY_COLOR;
+            guiGraphics.drawString(font, bodyStatus, windowX + 15, currentY, bodyColor);
+            currentY += LINE_HEIGHT;
+
+            // Show attempt count
+            String bodyAttemptInfo = String.format("  Failed attempts: %d (+%d%% bonus)", bodyAttempts, (int)(bodyAttempts * 5));
+            guiGraphics.drawString(font, bodyAttemptInfo, windowX + 15, currentY, ATTEMPT_COLOR);
+        }
     }
 
     /**
-     * Renders section headers for breakthrough option groups.
+     * Renders section headers for breakthrough options.
      */
     private void renderSectionHeaders(GuiGraphics guiGraphics) {
-        int currentY = windowY + 185; // Position of first section header
+        if (cultivationAttachment == null) return;
 
-        boolean qiReady = canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType.QI);
-        boolean qiNear = isNearBreakthrough(PlayerCultivationAttachment.CultivationType.QI);
+        int headerY = windowY + 185;
 
-        if (qiReady || qiNear) {
-            String headerText = qiReady ? "Qi Cultivation Breakthrough Options" : "Qi Cultivation (Not Ready)";
-            guiGraphics.drawString(font, headerText, windowX + 15, currentY, QI_COLOR);
-            currentY += 25 + OPTION_BUTTON_HEIGHT + 8 + SECTION_SPACING;
+        // Only render headers where sections exist
+        boolean qiSectionExists = canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType.QI) ||
+            isNearBreakthrough(PlayerCultivationAttachment.CultivationType.QI);
+
+        boolean bodySectionExists = canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType.BODY) ||
+            isNearBreakthrough(PlayerCultivationAttachment.CultivationType.BODY);
+
+        if (qiSectionExists) {
+            Component qiHeader = Component.literal("▲ QI CULTIVATION BREAKTHROUGH ▲").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
+            int qiHeaderWidth = font.width(qiHeader);
+            guiGraphics.drawString(font, qiHeader, windowX + (WINDOW_WIDTH - qiHeaderWidth) / 2, headerY, QI_COLOR);
+
+            if (bodySectionExists) {
+                headerY += OPTION_BUTTON_HEIGHT + 8 + SECTION_SPACING + 25;
+            }
         }
 
-        boolean bodyReady = canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType.BODY);
-        boolean bodyNear = isNearBreakthrough(PlayerCultivationAttachment.CultivationType.BODY);
-
-        if (bodyReady || bodyNear) {
-            String headerText = bodyReady ? "Body Cultivation Breakthrough Options" : "Body Cultivation (Not Ready)";
-            guiGraphics.drawString(font, headerText, windowX + 15, currentY, BODY_COLOR);
+        if (bodySectionExists) {
+            Component bodyHeader = Component.literal("▲ BODY CULTIVATION BREAKTHROUGH ▲").withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
+            int bodyHeaderWidth = font.width(bodyHeader);
+            guiGraphics.drawString(font, bodyHeader, windowX + (WINDOW_WIDTH - bodyHeaderWidth) / 2, headerY, BODY_COLOR);
         }
     }
 
     /**
-     * Checks if a breakthrough can currently be attempted using unified cultivation attachment.
+     * Checks if player can attempt breakthrough for given cultivation type.
+     * Updated to use unified cultivation attachment.
      */
     private boolean canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType type) {
         if (cultivationAttachment == null) return false;
 
-        long current, max;
-        if (type == PlayerCultivationAttachment.CultivationType.QI) {
-            current = cultivationAttachment.getCurrentQiCultivation();
-            max = cultivationAttachment.getMaxQiCultivation();
-        } else {
-            current = cultivationAttachment.getCurrentBodyCultivation();
-            max = cultivationAttachment.getMaxBodyCultivation();
-        }
+        double progress = type == PlayerCultivationAttachment.CultivationType.QI ?
+            cultivationAttachment.getQiProgress() : cultivationAttachment.getBodyProgress();
 
-        return current >= max;
+        boolean onCooldown = cultivationAttachment.isBreakthroughOnCooldown(type);
+
+        // Allow breakthrough at 100% progress and not on cooldown
+        return progress >= 1.0 && !onCooldown;
     }
 
     /**
-     * Checks if a cultivation type is near breakthrough (>80% progress).
+     * Checks if player is near breakthrough (>80% progress).
      */
     private boolean isNearBreakthrough(PlayerCultivationAttachment.CultivationType type) {
         if (cultivationAttachment == null) return false;
@@ -369,33 +382,6 @@ public class CultivationBreakthroughScreen extends Screen {
         return progress > 0.8;
     }
 
-    /**
-     * Calculates estimated success rate for a breakthrough.
-     */
-    private double calculateSuccessRate(PlayerCultivationAttachment.CultivationType type) {
-        // Base success rate starts at 10%
-        double baseRate = 0.1;
-
-        // Focus bonus
-        if (cultivationAttachment.getCurrentFocus() == type) {
-            baseRate += 0.2; // +20% for focused cultivation
-        }
-
-        // Talent bonus
-        if (talentAttachment != null) {
-            if (type == PlayerCultivationAttachment.CultivationType.QI && talentAttachment.hasSpiritualRootAssigned()) {
-                float multiplier = talentAttachment.getSpiritualRootMultiplier();
-                baseRate += (multiplier - 1.0) * 0.1; // Each 0.1x talent adds 1% success rate
-            } else if (type == PlayerCultivationAttachment.CultivationType.BODY && talentAttachment.hasPhysiqueAssigned()) {
-                float multiplier = talentAttachment.getPhysiqueMultiplier();
-                baseRate += (multiplier - 1.0) * 0.1;
-            }
-        }
-
-        // Cap at 95%
-        return Math.min(0.95, baseRate);
-    }
-
     @Override
     public boolean isPauseScreen() {
         return false; // Allow cultivation to continue while analyzing breakthrough options
@@ -403,6 +389,7 @@ public class CultivationBreakthroughScreen extends Screen {
 
     /**
      * Specialized button for breakthrough option display and execution using unified system.
+     * UPDATED: Now shows accurate success rates and attempt counts.
      */
     private class BreakthroughOptionButton extends Button {
         private final PlayerCultivationAttachment.CultivationType cultivationType;
@@ -426,73 +413,85 @@ public class CultivationBreakthroughScreen extends Screen {
             boolean hovered = isHoveredOrFocused();
 
             // Background with hover state
-            int bgColor = hovered ? 0xFF4A4A4A : 0xFF3A3A3A;
-            guiGraphics.fill(getX(), getY(), getX() + getWidth(), getY() + getHeight(), bgColor);
+            int bgColor = hovered ? 0xFF444444 : 0xFF2F2F2F;
+            if (!canAttempt) bgColor = 0xFF1F1F1F;
 
-            // Border color indicates cultivation type and availability
-            int borderColor = getBorderColor();
+            guiGraphics.fill(getX(), getY(), getX() + width, getY() + height, bgColor);
 
-            // Render border
-            guiGraphics.fill(getX() - 1, getY() - 1, getX() + getWidth() + 1, getY(), borderColor);
-            guiGraphics.fill(getX() - 1, getY() + getHeight(), getX() + getWidth() + 1, getY() + getHeight() + 1, borderColor);
-            guiGraphics.fill(getX() - 1, getY(), getX(), getY() + getHeight(), borderColor);
-            guiGraphics.fill(getX() + getWidth(), getY(), getX() + getWidth() + 1, getY() + getHeight(), borderColor);
+            // Border
+            int borderColor = canAttempt ? getCultivationTypeColor() : 0xFF666666;
+            renderBorder(guiGraphics, getX(), getY(), width, height, borderColor, 1);
 
-            // Render breakthrough option information
-            renderOptionDetails(guiGraphics);
-        }
+            // Title
+            Component titleText = Component.literal(cultivationType.getDisplayName().toUpperCase() + " BREAKTHROUGH")
+                .withStyle(canAttempt ? ChatFormatting.WHITE : ChatFormatting.GRAY);
+            int titleWidth = font.width(titleText);
+            guiGraphics.drawString(font, titleText,
+                getX() + (width - titleWidth) / 2,
+                getY() + 8,
+                canAttempt ? 0xFFFFFFFF : 0xFF888888);
 
-        /**
-         * Renders detailed information about this breakthrough option.
-         */
-        private void renderOptionDetails(GuiGraphics guiGraphics) {
-            // Breakthrough type and target
-            String typeText = cultivationType.getDisplayName().toUpperCase() + " BREAKTHROUGH";
+            // Target realm
             String targetText = "→ " + targetRealm.getDisplayName();
+            guiGraphics.drawString(font, targetText,
+                getX() + 8,
+                getY() + 25,
+                getCultivationTypeColor());
 
-            // Success rate with focus bonus indication
-            double successRate = calculateSuccessRate(cultivationType);
-            String focusBonus = "";
-            if (cultivationAttachment.getCurrentFocus() == cultivationType) {
-                focusBonus = " (FOCUSED +BONUS)";
-            }
-            String chanceText = String.format("Estimated Success: %.1f%%", successRate * 100) + focusBonus;
+            // FIXED: Use actual server-side success rate calculation
+            double successRate = cultivationAttachment.calculateBreakthroughSuccessRate(cultivationType);
+            String successText = String.format("Success Rate: %.0f%%", successRate * 100);
+            guiGraphics.drawString(font, successText,
+                getX() + 8,
+                getY() + 38,
+                getSuccessRateColor(successRate));
 
-            // Render text information
-            guiGraphics.drawString(font, typeText, getX() + 8, getY() + 6, 0xFFFFFFFF);
-            guiGraphics.drawString(font, targetText, getX() + 8, getY() + 20, 0xFFAAFFAA);
-            guiGraphics.drawString(font, chanceText, getX() + 8, getY() + 34, getSuccessRateColor());
+            // Show attempt count and bonus
+            long attempts = (cultivationType == PlayerCultivationAttachment.CultivationType.QI) ?
+                cultivationAttachment.getQiBreakthroughAttempts() : cultivationAttachment.getBodyBreakthroughAttempts();
+            String attemptText = String.format("Attempts: %d (+%d%%)", attempts, (int)(attempts * 5));
+            guiGraphics.drawString(font, attemptText,
+                getX() + 8,
+                getY() + 51,
+                ATTEMPT_COLOR);
 
-            // Show unavailability reason if needed
-            if (!canAttempt) {
-                String reason = getUnavailabilityReason();
-                guiGraphics.drawString(font, reason, getX() + 8, getY() + 48, 0xFFFF6666);
-            }
+            // Status indicator
+            String statusText = canAttempt ? "READY TO ATTEMPT" : getUnavailabilityReason();
+            int statusColor = canAttempt ? READY_COLOR : NOT_READY_COLOR;
+            guiGraphics.drawString(font, statusText,
+                getX() + 8,
+                getY() + 64,
+                statusColor);
         }
 
         /**
-         * Determines the appropriate border color for this breakthrough option.
+         * Renders a border around a rectangle.
          */
-        private int getBorderColor() {
-            if (!canAttempt) {
-                return 0xFFAA0000; // Red for unavailable
-            }
-
-            // Use cultivation type color, with gold highlight for focused cultivation
-            if (cultivationAttachment.getCurrentFocus() == cultivationType) {
-                return 0xFFFFD700; // Gold for focused cultivation
-            }
-
-            return cultivationType == PlayerCultivationAttachment.CultivationType.QI ? QI_COLOR : BODY_COLOR;
+        private void renderBorder(GuiGraphics guiGraphics, int x, int y, int width, int height, int color, int thickness) {
+            // Top
+            guiGraphics.fill(x, y, x + width, y + thickness, color);
+            // Bottom
+            guiGraphics.fill(x, y + height - thickness, x + width, y + height, color);
+            // Left
+            guiGraphics.fill(x, y, x + thickness, y + height, color);
+            // Right
+            guiGraphics.fill(x + width - thickness, y, x + width, y + height, color);
         }
 
         /**
-         * Determines the color for success rate display based on the percentage.
+         * Gets the color associated with the cultivation type.
          */
-        private int getSuccessRateColor() {
-            double chance = calculateSuccessRate(cultivationType);
-            if (chance >= 0.7) return SUCCESS_HIGH;
-            if (chance >= 0.4) return SUCCESS_MED;
+        private int getCultivationTypeColor() {
+            return cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
+                QI_COLOR : BODY_COLOR;
+        }
+
+        /**
+         * FIXED: Determines the color for success rate display based on the actual percentage.
+         */
+        private int getSuccessRateColor(double successRate) {
+            if (successRate >= 0.7) return SUCCESS_HIGH;
+            if (successRate >= 0.4) return SUCCESS_MED;
             return SUCCESS_LOW;
         }
 
@@ -501,6 +500,10 @@ public class CultivationBreakthroughScreen extends Screen {
          */
         private String getUnavailabilityReason() {
             if (cultivationAttachment == null) return "No cultivation data";
+
+            if (cultivationAttachment.isBreakthroughOnCooldown(cultivationType)) {
+                return "Breakthrough on cooldown";
+            }
 
             if (!canAttempt) {
                 return "Cultivation requirements not met";
@@ -511,37 +514,30 @@ public class CultivationBreakthroughScreen extends Screen {
     }
 
     /**
-     * Attempts a breakthrough for the specified cultivation type using unified system.
-     * This uses the simplified breakthrough system in the unified attachment.
+     * FIXED: Attempts a breakthrough for the specified cultivation type using network packet.
+     * This now properly sends a BreakthroughRequestPacket to the server instead of trying
+     * to execute the breakthrough client-side.
      */
     private void attemptBreakthrough(PlayerCultivationAttachment.CultivationType cultivationType) {
         if (cultivationAttachment == null || !canAttemptBreakthrough(cultivationType)) {
+            ImmortalCultivation.LOGGER.warn("Cannot attempt breakthrough: cultivation={}, canAttempt={}",
+                cultivationAttachment != null, canAttemptBreakthrough(cultivationType));
             return;
         }
 
         try {
-            PlayerCultivationAttachment.BreakthroughResult result;
+            // FIXED: Send packet to server instead of attempting breakthrough client-side
+            BreakthroughRequestPacket packet = new BreakthroughRequestPacket(cultivationType);
+            ICModNetwork.sendToServer(packet);
 
-            if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
-                result = cultivationAttachment.attemptQiBreakthrough();
-            } else {
-                result = cultivationAttachment.attemptBodyBreakthrough();
-            }
+            ImmortalCultivation.LOGGER.info("Sent {} breakthrough request to server",
+                cultivationType.getDisplayName());
 
-            // Show result to player
-            if (result.success()) {
-                ImmortalCultivation.LOGGER.info("Breakthrough successful for {}: {}",
-                    cultivationType.getDisplayName(), result.message());
-            } else {
-                ImmortalCultivation.LOGGER.info("Breakthrough failed for {}: {}",
-                    cultivationType.getDisplayName(), result.message());
-            }
+            // Close the screen after sending the request
+            onClose();
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error attempting breakthrough", e);
+            ImmortalCultivation.LOGGER.error("Error sending breakthrough request", e);
         }
-
-        // Close the screen after attempt
-        onClose();
     }
 }

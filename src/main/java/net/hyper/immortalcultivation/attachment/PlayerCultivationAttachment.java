@@ -1048,19 +1048,44 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             return new BreakthroughResult(false, "No higher realm available", null);
         }
 
+        // FIXED: Calculate chance BEFORE incrementing attempts
         double chance = 0.1 + (qiBreakthroughAttempts * 0.05);
         chance = Math.min(chance, 0.95);
 
-        qiBreakthroughAttempts++;
+        // Update last attempt time (this should happen regardless of outcome)
         lastQiBreakthroughAttempt = player.level().getGameTime();
 
+        // Check for success/failure
         if (player.getRandom().nextDouble() < chance) {
+            // SUCCESS: Reset attempts to 0 (handled by setCurrentQiRealm)
             CultivationRealm newRealm = nextRealms.get(0);
             setCurrentQiRealm(newRealm);
-            return new BreakthroughResult(true, "Qi breakthrough successful!", newRealm);
+
+            // Force sync after successful breakthrough
+            forceSync();
+
+            ImmortalCultivation.LOGGER.info("Qi breakthrough SUCCESS for {} after {} attempts ({}% chance)",
+                player.getName().getString(), qiBreakthroughAttempts, (int)(chance * 100));
+
+            return new BreakthroughResult(true,
+                String.format("Qi breakthrough successful! (%d attempts, %.0f%% chance)",
+                    qiBreakthroughAttempts, chance * 100), newRealm);
         } else {
+            // FAILURE: Increment attempts and set cooldown
+            qiBreakthroughAttempts++;
             qiBreakthroughCooldown = true;
-            return new BreakthroughResult(false, "Breakthrough failed", null);
+
+            // CRITICAL: Force sync after failed attempt to update client with new attempt count
+            forceSync();
+
+            ImmortalCultivation.LOGGER.info("Qi breakthrough FAILED for {} - attempt {} ({}% chance, next: {}%)",
+                player.getName().getString(), qiBreakthroughAttempts, (int)(chance * 100),
+                (int)Math.min(95, (0.1 + (qiBreakthroughAttempts * 0.05)) * 100));
+
+            return new BreakthroughResult(false,
+                String.format("Breakthrough failed (attempt %d, %.0f%% chance). Next attempt: %.0f%% chance",
+                    qiBreakthroughAttempts, chance * 100,
+                    Math.min(95, (0.1 + (qiBreakthroughAttempts * 0.05)) * 100)), null);
         }
     }
 
@@ -1078,19 +1103,91 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             return new BreakthroughResult(false, "No higher realm available", null);
         }
 
+        // FIXED: Calculate chance BEFORE incrementing attempts
         double chance = 0.1 + (bodyBreakthroughAttempts * 0.05);
         chance = Math.min(chance, 0.95);
 
-        bodyBreakthroughAttempts++;
+        // Update last attempt time (this should happen regardless of outcome)
         lastBodyBreakthroughAttempt = player.level().getGameTime();
 
+        // Check for success/failure
         if (player.getRandom().nextDouble() < chance) {
+            // SUCCESS: Reset attempts to 0 (handled by setCurrentBodyRealm)
             CultivationRealm newRealm = nextRealms.get(0);
             setCurrentBodyRealm(newRealm);
-            return new BreakthroughResult(true, "Body breakthrough successful!", newRealm);
+
+            // Force sync after successful breakthrough
+            forceSync();
+
+            ImmortalCultivation.LOGGER.info("Body breakthrough SUCCESS for {} after {} attempts ({}% chance)",
+                player.getName().getString(), bodyBreakthroughAttempts, (int)(chance * 100));
+
+            return new BreakthroughResult(true,
+                String.format("Body breakthrough successful! (%d attempts, %.0f%% chance)",
+                    bodyBreakthroughAttempts, chance * 100), newRealm);
         } else {
+            // FAILURE: Increment attempts and set cooldown
+            bodyBreakthroughAttempts++;
             bodyBreakthroughCooldown = true;
-            return new BreakthroughResult(false, "Breakthrough failed", null);
+
+            // CRITICAL: Force sync after failed attempt to update client with new attempt count
+            forceSync();
+
+            ImmortalCultivation.LOGGER.info("Body breakthrough FAILED for {} - attempt {} ({}% chance, next: {}%)",
+                player.getName().getString(), bodyBreakthroughAttempts, (int)(chance * 100),
+                (int)Math.min(95, (0.1 + (bodyBreakthroughAttempts * 0.05)) * 100));
+
+            return new BreakthroughResult(false,
+                String.format("Breakthrough failed (attempt %d, %.0f%% chance). Next attempt: %.0f%% chance",
+                    bodyBreakthroughAttempts, chance * 100,
+                    Math.min(95, (0.1 + (bodyBreakthroughAttempts * 0.05)) * 100)), null);
         }
+    }
+
+    /**
+     * Get the number of failed Qi breakthrough attempts for this realm.
+     * Used for calculating breakthrough success rate bonus.
+     */
+    public long getQiBreakthroughAttempts() {
+        return qiBreakthroughAttempts;
+    }
+
+
+    /**
+     * Get the number of failed Body breakthrough attempts for this realm.
+     * Used for calculating breakthrough success rate bonus.
+     */
+    public long getBodyBreakthroughAttempts() {
+        return bodyBreakthroughAttempts;
+    }
+
+    /**
+     * Calculate actual breakthrough success rate as used by the server.
+     * This matches the exact calculation used in attemptQiBreakthrough() and attemptBodyBreakthrough().
+     *
+     * @param type The cultivation type to calculate for
+     * @return The success rate as a value between 0.0 and 1.0
+     */
+    public double calculateBreakthroughSuccessRate(CultivationType type) {
+        long attempts = (type == CultivationType.QI) ? qiBreakthroughAttempts : bodyBreakthroughAttempts;
+        double chance = 0.1 + (attempts * 0.05);
+        return Math.min(chance, 0.95);
+    }
+
+    /**
+     * Check if breakthrough is on cooldown for the specified type.
+     */
+    public boolean isBreakthroughOnCooldown(CultivationType type) {
+        return (type == CultivationType.QI) ? qiBreakthroughCooldown : bodyBreakthroughCooldown;
+    }
+
+    /**
+     * Get time since last breakthrough attempt for the specified type.
+     */
+    public long getTimeSinceLastBreakthroughAttempt(CultivationType type) {
+        if (player == null) return Long.MAX_VALUE;
+
+        long lastAttempt = (type == CultivationType.QI) ? lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
+        return player.level().getGameTime() - lastAttempt;
     }
 }
