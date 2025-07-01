@@ -12,42 +12,89 @@ public class ICModPillFurnaceRecipeHelper {
     public static void buildPillFurnaceRecipes(RecipeOutput recipeOutput, ICModRecipeProvider.RecipeHelper helper) {
         // === MORTAL REALM PILLS === //
 
-        // Qi Absorption Pills
+        // === QI CULTIVATION PILLS === //
+
+        // Low Quality Qi Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.LOW_QUALITY_QI_CULTIVATION_PILL.get())
             .input1(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
             .input2(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
             .input3(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
             .requiresSpiritStone(true)
-            .successChance(0.5)
+            .successChance(0.8)
             .unlockedBy("has_low_quality_spirit_stone", helper.has(ICModItems.LOW_QUALITY_SPIRIT_STONE.get()))
             .save(recipeOutput, "low_quality_qi_absorption_pill");
 
-        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.LOW_QUALITY_BODY_CULTIVATION_PILL.get())
-            .input1(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
-            .input2(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
-            .input3(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
-            .requiresSpiritStone(true)
-            .successChance(0.5)
-            .unlockedBy("has_low_quality_spirit_stone", helper.has(ICModItems.LOW_QUALITY_SPIRIT_STONE.get()))
-            .save(recipeOutput, "low_quality_body_absorption_pill");
-
+        // Medium Quality Qi Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL.get())
             .input1(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
             .input2(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
             .input3(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
             .requiresSpiritStone(true)
-            .successChance(0.4)
+            .successChance(0.6)
             .unlockedBy("has_medium_quality_spirit_stone", helper.has(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()))
             .save(recipeOutput, "medium_quality_qi_absorption_pill");
 
+        // High Quality Qi Cultivation Pills
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.HIGH_QUALITY_QI_CULTIVATION_PILL.get())
+            .input1(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.4)
+            .unlockedBy("has_high_quality_spirit_stone", helper.has(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "high_quality_qi_absorption_pill");
+
+        // Top Quality Qi Cultivation Pills
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.TOP_QUALITY_QI_CULTIVATION_PILL.get())
+            .input1(ICModItems.TOP_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.TOP_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.TOP_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.2)
+            .unlockedBy("has_top_quality_spirit_stone", helper.has(ICModItems.TOP_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "top_quality_qi_absorption_pill");
+
+        // === BODY CULTIVATION PILLS === //
+
+        // Low Quality Body Cultivation Pills
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.LOW_QUALITY_BODY_CULTIVATION_PILL.get())
+            .input1(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.8)
+            .unlockedBy("has_low_quality_spirit_stone", helper.has(ICModItems.LOW_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "low_quality_body_absorption_pill");
+
+        // Medium Quality Body Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL.get())
             .input1(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
             .input2(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
             .input3(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
             .requiresSpiritStone(true)
-            .successChance(0.4)
+            .successChance(0.6)
             .unlockedBy("has_medium_quality_spirit_stone", helper.has(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()))
             .save(recipeOutput, "medium_quality_body_absorption_pill");
+
+        // High Quality Body Cultivation Pills
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.HIGH_QUALITY_BODY_CULTIVATION_PILL.get())
+            .input1(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.4)
+            .unlockedBy("has_high_quality_spirit_stone", helper.has(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "high_quality_body_absorption_pill");
+
+        // Top Quality Body Cultivation Pills
+        PillFurnaceRecipeBuilder.pillRecipe(ICModItems.TOP_QUALITY_BODY_CULTIVATION_PILL.get())
+            .input1(ICModItems.TOP_QUALITY_SPIRIT_STONE.get())
+            .input2(ICModItems.TOP_QUALITY_SPIRIT_STONE.get())
+            .input3(ICModItems.TOP_QUALITY_SPIRIT_STONE.get())
+            .requiresSpiritStone(true)
+            .successChance(0.2)
+            .unlockedBy("has_top_quality_spirit_stone", helper.has(ICModItems.TOP_QUALITY_SPIRIT_STONE.get()))
+            .save(recipeOutput, "top_quality_body_absorption_pill");
 
 
 

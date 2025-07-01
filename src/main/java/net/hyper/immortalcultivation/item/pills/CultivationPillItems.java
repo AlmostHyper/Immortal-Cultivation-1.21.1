@@ -8,8 +8,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.effect.MobEffectInstance;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
@@ -23,11 +21,11 @@ import java.util.function.Supplier;
 
 public class CultivationPillItems {
 
-    // Base cultivation values for each pill tier
-    private static final double LOW_QUALITY_BASE = 20.0;
-    private static final double MEDIUM_QUALITY_BASE = 50.0;
-    private static final double HIGH_QUALITY_BASE = 100.0;
-    private static final double TOP_QUALITY_BASE = 200.0;
+    // Base cultivation rate bonuses for each pill tier (per second)
+    private static final double LOW_QUALITY_BASE_RATE = 0.005;      // 0.005/sec
+    private static final double MEDIUM_QUALITY_BASE_RATE = 0.02;    // 0.02/sec
+    private static final double HIGH_QUALITY_BASE_RATE = 0.1;       // 0.1/sec
+    private static final double TOP_QUALITY_BASE_RATE = 1.0;        // 1.0/sec
 
     // Low Quality Qi Cultivation Pill (for Mortal -> Qi Condensation)
     public static Supplier<Item> LOW_QUALITY_QI_CULTIVATION_PILL() {
@@ -37,16 +35,16 @@ public class CultivationPillItems {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
-                        double baseAmount = LOW_QUALITY_BASE;
-                        double finalAmount = applyRarityMultiplier(consumedStack, baseAmount);
+                        double baseRateBonus = LOW_QUALITY_BASE_RATE;
+                        double finalRateBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        cultivation.addQiCultivation(finalAmount);
+                        // Add to cultivation rate instead of flat amount
+                        cultivation.addQiBonus(finalRateBonus, 0.0);
 
-                        // Apply minor effects based on rarity
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
 
                         player.sendSystemMessage(
-                            Component.literal("Absorbed " + String.format("%.0f", finalAmount) + " Qi from the pill")
+                            Component.literal("Qi cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
@@ -68,15 +66,15 @@ public class CultivationPillItems {
                             .withStyle(rarity.getColor())));
                 }
 
-                // Base effect
-                double baseAmount = LOW_QUALITY_BASE;
-                double finalAmount = applyRarityMultiplier(stack, baseAmount);
-                tooltip.add(Component.literal("Effect: +" + String.format("%.0f", finalAmount) + " Qi Cultivation")
+                // Rate effect (not flat amount)
+                double baseRate = LOW_QUALITY_BASE_RATE;
+                double finalRate = applyRarityMultiplier(stack, baseRate);
+                tooltip.add(Component.literal("Effect: +" + String.format("%.3f", finalRate) + " Qi/sec")
                     .withStyle(ChatFormatting.AQUA));
 
                 // Description
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal("A basic pill for beginning cultivators")
+                tooltip.add(Component.literal("Permanently increases Qi cultivation rate")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             }
 
@@ -97,15 +95,13 @@ public class CultivationPillItems {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
-                        double baseAmount = MEDIUM_QUALITY_BASE;
-                        double finalAmount = applyRarityMultiplier(consumedStack, baseAmount);
+                        double baseRateBonus = MEDIUM_QUALITY_BASE_RATE;
+                        double finalRateBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        cultivation.addQiCultivation(finalAmount);
-
-                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        cultivation.addQiBonus(finalRateBonus, 0.0);
 
                         player.sendSystemMessage(
-                            Component.literal("Absorbed " + String.format("%.0f", finalAmount) + " Qi from the pill")
+                            Component.literal("Qi cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
@@ -125,13 +121,13 @@ public class CultivationPillItems {
                             .withStyle(rarity.getColor())));
                 }
 
-                double baseAmount = MEDIUM_QUALITY_BASE;
-                double finalAmount = applyRarityMultiplier(stack, baseAmount);
-                tooltip.add(Component.literal("Effect: +" + String.format("%.0f", finalAmount) + " Qi Cultivation")
+                double baseRate = MEDIUM_QUALITY_BASE_RATE;
+                double finalRate = applyRarityMultiplier(stack, baseRate);
+                tooltip.add(Component.literal("Effect: +" + String.format("%.3f", finalRate) + " Qi/sec")
                     .withStyle(ChatFormatting.AQUA));
 
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal("Refined for Qi Condensation cultivators")
+                tooltip.add(Component.literal("Permanently increases Qi cultivation rate")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             }
 
@@ -152,15 +148,13 @@ public class CultivationPillItems {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
-                        double baseAmount = HIGH_QUALITY_BASE;
-                        double finalAmount = applyRarityMultiplier(consumedStack, baseAmount);
+                        double baseRateBonus = HIGH_QUALITY_BASE_RATE;
+                        double finalRateBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        cultivation.addQiCultivation(finalAmount);
-
-                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        cultivation.addQiBonus(finalRateBonus, 0.0);
 
                         player.sendSystemMessage(
-                            Component.literal("Absorbed " + String.format("%.0f", finalAmount) + " Qi from the pill")
+                            Component.literal("Qi cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
@@ -180,13 +174,13 @@ public class CultivationPillItems {
                             .withStyle(rarity.getColor())));
                 }
 
-                double baseAmount = HIGH_QUALITY_BASE;
-                double finalAmount = applyRarityMultiplier(stack, baseAmount);
-                tooltip.add(Component.literal("Effect: +" + String.format("%.0f", finalAmount) + " Qi Cultivation")
+                double baseRate = HIGH_QUALITY_BASE_RATE;
+                double finalRate = applyRarityMultiplier(stack, baseRate);
+                tooltip.add(Component.literal("Effect: +" + String.format("%.3f", finalRate) + " Qi/sec")
                     .withStyle(ChatFormatting.AQUA));
 
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal("Potent pills for established cultivators")
+                tooltip.add(Component.literal("Permanently increases Qi cultivation rate")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             }
 
@@ -207,15 +201,13 @@ public class CultivationPillItems {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
-                        double baseAmount = TOP_QUALITY_BASE;
-                        double finalAmount = applyRarityMultiplier(consumedStack, baseAmount);
+                        double baseRateBonus = TOP_QUALITY_BASE_RATE;
+                        double finalRateBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        cultivation.addQiCultivation(finalAmount);
-
-                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        cultivation.addQiBonus(finalRateBonus, 0.0);
 
                         player.sendSystemMessage(
-                            Component.literal("Absorbed " + String.format("%.0f", finalAmount) + " Qi from the pill")
+                            Component.literal("Qi cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
@@ -235,13 +227,13 @@ public class CultivationPillItems {
                             .withStyle(rarity.getColor())));
                 }
 
-                double baseAmount = TOP_QUALITY_BASE;
-                double finalAmount = applyRarityMultiplier(stack, baseAmount);
-                tooltip.add(Component.literal("Effect: +" + String.format("%.0f", finalAmount) + " Qi Cultivation")
+                double baseRate = TOP_QUALITY_BASE_RATE;
+                double finalRate = applyRarityMultiplier(stack, baseRate);
+                tooltip.add(Component.literal("Effect: +" + String.format("%.3f", finalRate) + " Qi/sec")
                     .withStyle(ChatFormatting.AQUA));
 
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal("Treasured pills for advanced cultivators")
+                tooltip.add(Component.literal("Permanently increases Qi cultivation rate")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             }
 
@@ -252,7 +244,9 @@ public class CultivationPillItems {
         };
     }
 
-    // Body Cultivation Pills follow the same pattern
+    // === BODY CULTIVATION PILLS ===
+
+    // Low Quality Body Cultivation Pill
     public static Supplier<Item> LOW_QUALITY_BODY_CULTIVATION_PILL() {
         return () -> new BaseConsumableItem(new Item.Properties().stacksTo(64)) {
             @Override
@@ -260,15 +254,13 @@ public class CultivationPillItems {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
-                        double baseAmount = LOW_QUALITY_BASE;
-                        double finalAmount = applyRarityMultiplier(consumedStack, baseAmount);
+                        double baseRateBonus = LOW_QUALITY_BASE_RATE;
+                        double finalRateBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        cultivation.addBodyCultivation(finalAmount);
-
-                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        cultivation.addBodyBonus(finalRateBonus, 0.0);
 
                         player.sendSystemMessage(
-                            Component.literal("Body strengthened by " + String.format("%.0f", finalAmount) + " points")
+                            Component.literal("Body cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.RED)
                         );
                     }
@@ -288,13 +280,13 @@ public class CultivationPillItems {
                             .withStyle(rarity.getColor())));
                 }
 
-                double baseAmount = LOW_QUALITY_BASE;
-                double finalAmount = applyRarityMultiplier(stack, baseAmount);
-                tooltip.add(Component.literal("Effect: +" + String.format("%.0f", finalAmount) + " Body Cultivation")
+                double baseRate = LOW_QUALITY_BASE_RATE;
+                double finalRate = applyRarityMultiplier(stack, baseRate);
+                tooltip.add(Component.literal("Effect: +" + String.format("%.3f", finalRate) + " Body/sec")
                     .withStyle(ChatFormatting.RED));
 
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal("Basic body tempering medicine")
+                tooltip.add(Component.literal("Permanently increases body cultivation rate")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             }
 
@@ -315,16 +307,14 @@ public class CultivationPillItems {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
-                        double baseAmount = MEDIUM_QUALITY_BASE;
-                        double finalAmount = applyRarityMultiplier(consumedStack, baseAmount);
+                        double baseRateBonus = MEDIUM_QUALITY_BASE_RATE;
+                        double finalRateBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        cultivation.addBodyCultivation(finalAmount);
-
-                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        cultivation.addBodyBonus(finalRateBonus, 0.0);
 
                         player.sendSystemMessage(
-                            Component.literal("Absorbed " + String.format("%.0f", finalAmount) + " Body from the pill")
-                                .withStyle(ChatFormatting.AQUA)
+                            Component.literal("Body cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                                .withStyle(ChatFormatting.RED)
                         );
                     }
                 }
@@ -343,13 +333,13 @@ public class CultivationPillItems {
                             .withStyle(rarity.getColor())));
                 }
 
-                double baseAmount = MEDIUM_QUALITY_BASE;
-                double finalAmount = applyRarityMultiplier(stack, baseAmount);
-                tooltip.add(Component.literal("Effect: +" + String.format("%.0f", finalAmount) + " Body Cultivation")
-                    .withStyle(ChatFormatting.AQUA));
+                double baseRate = MEDIUM_QUALITY_BASE_RATE;
+                double finalRate = applyRarityMultiplier(stack, baseRate);
+                tooltip.add(Component.literal("Effect: +" + String.format("%.3f", finalRate) + " Body/sec")
+                    .withStyle(ChatFormatting.RED));
 
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal("Refined for Foundation Establishment cultivators")
+                tooltip.add(Component.literal("Permanently increases body cultivation rate")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             }
 
@@ -370,16 +360,14 @@ public class CultivationPillItems {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
-                        double baseAmount = HIGH_QUALITY_BASE;
-                        double finalAmount = applyRarityMultiplier(consumedStack, baseAmount);
+                        double baseRateBonus = HIGH_QUALITY_BASE_RATE;
+                        double finalRateBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        cultivation.addBodyCultivation(finalAmount);
-
-                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        cultivation.addBodyBonus(finalRateBonus, 0.0);
 
                         player.sendSystemMessage(
-                            Component.literal("Absorbed " + String.format("%.0f", finalAmount) + " Body from the pill")
-                                .withStyle(ChatFormatting.AQUA)
+                            Component.literal("Body cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                                .withStyle(ChatFormatting.RED)
                         );
                     }
                 }
@@ -398,13 +386,13 @@ public class CultivationPillItems {
                             .withStyle(rarity.getColor())));
                 }
 
-                double baseAmount = HIGH_QUALITY_BASE;
-                double finalAmount = applyRarityMultiplier(stack, baseAmount);
-                tooltip.add(Component.literal("Effect: +" + String.format("%.0f", finalAmount) + " Body Cultivation")
-                    .withStyle(ChatFormatting.AQUA));
+                double baseRate = HIGH_QUALITY_BASE_RATE;
+                double finalRate = applyRarityMultiplier(stack, baseRate);
+                tooltip.add(Component.literal("Effect: +" + String.format("%.3f", finalRate) + " Body/sec")
+                    .withStyle(ChatFormatting.RED));
 
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal("Potent pills for established cultivators")
+                tooltip.add(Component.literal("Permanently increases body cultivation rate")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             }
 
@@ -425,16 +413,14 @@ public class CultivationPillItems {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
-                        double baseAmount = TOP_QUALITY_BASE;
-                        double finalAmount = applyRarityMultiplier(consumedStack, baseAmount);
+                        double baseRateBonus = TOP_QUALITY_BASE_RATE;
+                        double finalRateBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        cultivation.addBodyCultivation(finalAmount);
-
-                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        cultivation.addBodyBonus(finalRateBonus, 0.0);
 
                         player.sendSystemMessage(
-                            Component.literal("Absorbed " + String.format("%.0f", finalAmount) + " Body from the pill")
-                                .withStyle(ChatFormatting.AQUA)
+                            Component.literal("Body cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                                .withStyle(ChatFormatting.RED)
                         );
                     }
                 }
@@ -444,7 +430,7 @@ public class CultivationPillItems {
             public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
                 PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
 
-                tooltip.add(Component.literal("Quality: Top (Nascent Soul)")
+                tooltip.add(Component.literal("Quality: Top (Core Formation+)")
                     .withStyle(ChatFormatting.LIGHT_PURPLE));
 
                 if (rarity != null) {
@@ -453,13 +439,13 @@ public class CultivationPillItems {
                             .withStyle(rarity.getColor())));
                 }
 
-                double baseAmount = TOP_QUALITY_BASE;
-                double finalAmount = applyRarityMultiplier(stack, baseAmount);
-                tooltip.add(Component.literal("Effect: +" + String.format("%.0f", finalAmount) + " Body Cultivation")
-                    .withStyle(ChatFormatting.AQUA));
+                double baseRate = TOP_QUALITY_BASE_RATE;
+                double finalRate = applyRarityMultiplier(stack, baseRate);
+                tooltip.add(Component.literal("Effect: +" + String.format("%.3f", finalRate) + " Body/sec")
+                    .withStyle(ChatFormatting.RED));
 
                 tooltip.add(Component.empty());
-                tooltip.add(Component.literal("Treasured pills for advanced cultivators")
+                tooltip.add(Component.literal("Permanently increases body cultivation rate")
                     .withStyle(ChatFormatting.DARK_GRAY, ChatFormatting.ITALIC));
             }
 
@@ -470,31 +456,34 @@ public class CultivationPillItems {
         };
     }
 
-    // Helper methods for rarity system - FIXED for 1.21.1
+    // === UTILITY METHODS ===
+
+    /**
+     * Get the rarity of a pill from its NBT data
+     */
     private static PillFurnaceBlockEntity.PillRarity getRarity(ItemStack stack) {
         CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-        if (customData != null) {
-            CompoundTag tag = customData.copyTag();
-            if (tag.contains("PillRarity")) {
-                String rarityName = tag.getString("PillRarity");
-                try {
-                    return PillFurnaceBlockEntity.PillRarity.valueOf(rarityName);
-                } catch (IllegalArgumentException e) {
-                    return null;
-                }
-            }
+        if (customData == null) return null;
+
+        CompoundTag tag = customData.copyTag();
+        String rarityName = tag.getString("PillRarity");
+
+        if (rarityName.isEmpty()) return null;
+
+        try {
+            return PillFurnaceBlockEntity.PillRarity.valueOf(rarityName);
+        } catch (IllegalArgumentException e) {
+            return null;
         }
-        return null;
     }
 
+    /**
+     * Apply rarity multiplier to base amount
+     */
     private static double applyRarityMultiplier(ItemStack stack, double baseAmount) {
-        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
-        if (customData != null) {
-            CompoundTag tag = customData.copyTag();
-            if (tag.contains("EffectMultiplier")) {
-                return baseAmount * tag.getDouble("EffectMultiplier");
-            }
-        }
-        return baseAmount;
+        PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
+        if (rarity == null) return baseAmount;
+
+        return baseAmount * rarity.getEffectMultiplier();
     }
 }

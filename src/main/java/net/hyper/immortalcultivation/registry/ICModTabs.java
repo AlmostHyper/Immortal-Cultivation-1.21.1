@@ -72,10 +72,17 @@ public class ICModTabs {
                         output.accept(ICModItems.WHITE_METAL_ROOTS);
                         output.accept(ICModItems.BLACK_WATER_ROOTS);
                         output.accept(ICModItems.BLUE_WOOD_ROOTS);
+
+                        // === Pills === //
+
                         output.accept(ICModItems.LOW_QUALITY_QI_CULTIVATION_PILL);
                         output.accept(ICModItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL);
+                        output.accept(ICModItems.HIGH_QUALITY_QI_CULTIVATION_PILL);
+                        output.accept(ICModItems.TOP_QUALITY_QI_CULTIVATION_PILL);
                         output.accept(ICModItems.LOW_QUALITY_BODY_CULTIVATION_PILL);
                         output.accept(ICModItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL);
+                        output.accept(ICModItems.HIGH_QUALITY_BODY_CULTIVATION_PILL);
+                        output.accept(ICModItems.TOP_QUALITY_BODY_CULTIVATION_PILL);
                     }).build());
 
     public static final Supplier<CreativeModeTab> immortalcultivation_TOOLS_TAB = REGISTRY.register("immortalcultivation_tools_tab",

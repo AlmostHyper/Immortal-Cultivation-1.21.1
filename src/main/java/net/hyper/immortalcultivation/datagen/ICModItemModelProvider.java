@@ -129,10 +129,13 @@ public class ICModItemModelProvider extends ItemModelProvider {
         // Qi Cultivation Pills
         basicItem(ICModItems.LOW_QUALITY_QI_CULTIVATION_PILL.get());
         basicItem(ICModItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL.get());
+        basicItem(ICModItems.HIGH_QUALITY_QI_CULTIVATION_PILL.get());
+        basicItem(ICModItems.TOP_QUALITY_QI_CULTIVATION_PILL.get());
 
         // Body Cultivation Pills
         basicItem(ICModItems.LOW_QUALITY_BODY_CULTIVATION_PILL.get());
         basicItem(ICModItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL.get());
-
+        basicItem(ICModItems.HIGH_QUALITY_BODY_CULTIVATION_PILL.get());
+        basicItem(ICModItems.TOP_QUALITY_BODY_CULTIVATION_PILL.get());
     }
 }

@@ -119,12 +119,6 @@ public class ICModNetwork {
             CombatStatsRequestPacket::handleServer
         );
 
-        REGISTRY.playToServer(
-            ConsumePillRequestPacket.TYPE,
-            ConsumePillRequestPacket.STREAM_CODEC,
-            ConsumePillRequestPacket::handleServer
-        );
-
         ImmortalCultivation.LOGGER.info("Network packets registered successfully!");
     }
 
