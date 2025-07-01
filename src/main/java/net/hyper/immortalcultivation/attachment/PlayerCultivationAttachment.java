@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,7 +25,7 @@ import java.util.Objects;
  * Merges: PlayerRealmAttachment, PlayerQiCultivationAttachment,
  * PlayerBodyCultivationAttachment, PlayerCultivationFocusAttachment,
  * and PlayerCultivationBonusAttachment
- * Enhanced with comprehensive pill system integration.
+ * Enhanced with comprehensive pill system integration and breakthrough types.
  */
 public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCultivationData {
 
@@ -102,7 +103,94 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     private int tickCounter = 0;
     private static final int SYNC_INTERVAL = 20;
 
-    // === Constructor (FIXED - removed void) ===
+    // === Breakthrough Type System ===
+
+    /**
+     * Different types of breakthroughs with varying difficulty and success rates
+     */
+    public enum BreakthroughType {
+        MINOR(0.50, "Minor Breakthrough"),      // 50% base chance - small realm advancement
+        MAJOR(0.30, "Major Breakthrough"),      // 30% base chance - significant realm advancement
+        SPECIAL(0.20, "Special Breakthrough"),  // 20% base chance - unique cultivation paths
+        BOUNDARY(0.10, "Boundary Breakthrough"); // 10% base chance - major stage transitions
+
+        private final double baseSuccessChance;
+        private final String displayName;
+
+        BreakthroughType(double baseSuccessChance, String displayName) {
+            this.baseSuccessChance = baseSuccessChance;
+            this.displayName = displayName;
+        }
+
+        public double getBaseSuccessChance() {
+            return baseSuccessChance;
+        }
+
+        public String getDisplayName() {
+            return displayName;
+        }
+    }
+
+    /**
+     * Breakthrough result with detailed information
+     */
+    public record BreakthroughResult(
+        boolean success,
+        String message,
+        @Nullable CultivationRealm newRealm,
+        BreakthroughType type,
+        double successChance,
+        long attemptNumber
+    ) {
+        // Compatibility constructor for simple results
+        public BreakthroughResult(boolean success, String message, @Nullable CultivationRealm newRealm) {
+            this(success, message, newRealm, BreakthroughType.MINOR, 0.0, 0L);
+        }
+    }
+
+    /**
+     * Breakthrough option for UI display
+     */
+    public record BreakthroughOption(
+        BreakthroughType type,
+        CultivationRealm targetRealm,
+        double successChance,
+        CultivationType cultivationType,
+        boolean available,
+        String unavailabilityReason
+    ) {}
+
+    /**
+     * Container for all available breakthrough options
+     */
+    public record BreakthroughOptions(
+        List<BreakthroughOption> qiOptions,
+        List<BreakthroughOption> bodyOptions
+    ) {}
+
+    /**
+     * Detailed breakdown of success chance calculation for UI
+     */
+    public record BreakthroughChanceBreakdown(
+        double baseChance,
+        double failureBonus,
+        double talentBonus,
+        double focusBonus,
+        double totalChance,
+        long attempts
+    ) {
+        public String getFormattedBreakdown() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("Base: %.0f%%", baseChance * 100));
+            if (failureBonus > 0) sb.append(String.format(" + Attempts: %.0f%%", failureBonus * 100));
+            if (talentBonus > 0) sb.append(String.format(" + Talent: %.0f%%", talentBonus * 100));
+            if (focusBonus > 0) sb.append(String.format(" + Focus: %.0f%%", focusBonus * 100));
+            sb.append(String.format(" = %.0f%%", totalChance * 100));
+            return sb.toString();
+        }
+    }
+
+    // === Constructor ===
     public PlayerCultivationAttachment() {
         this.currentQiRealm = ICModCultivationRealms.MORTAL;
         this.currentBodyRealm = ICModCultivationRealms.MORTAL;
@@ -591,6 +679,9 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         }
     }
 
+    /**
+     * UPDATED: Calculate state hash including breakthrough data
+     */
     private long calculateStateHash() {
         return Objects.hash(
             currentQiRealm.getId(),
@@ -599,10 +690,18 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             currentBodyCultivation,
             currentFocus,
             qiCultivationAdditiveBonus,
-            bodyCultivationAdditiveBonus
+            bodyCultivationAdditiveBonus,
+            // ADDED: Include breakthrough data in hash
+            qiBreakthroughAttempts,
+            bodyBreakthroughAttempts,
+            qiBreakthroughCooldown,
+            bodyBreakthroughCooldown
         );
     }
 
+    /**
+     * UPDATED: Sync to client including breakthrough data
+     */
     private void syncToClient() {
         if (player instanceof ServerPlayer serverPlayer) {
             CultivationSyncPacket packet = new CultivationSyncPacket(
@@ -618,15 +717,33 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                 qiCultivationAdditiveBonus,
                 qiCultivationMultiplicativeBonus,
                 bodyCultivationAdditiveBonus,
-                bodyCultivationMultiplicativeBonus
+                bodyCultivationMultiplicativeBonus,
+                // ADDED: Include breakthrough data in sync packet
+                qiBreakthroughAttempts,
+                bodyBreakthroughAttempts,
+                qiBreakthroughCooldown,
+                bodyBreakthroughCooldown,
+                lastQiBreakthroughAttempt,
+                lastBodyBreakthroughAttempt
             );
+
             ICModNetwork.sendToPlayer(packet, serverPlayer);
+
+            ImmortalCultivation.LOGGER.debug("Synced cultivation data to client - Qi attempts: {}, Body attempts: {}",
+                qiBreakthroughAttempts, bodyBreakthroughAttempts);
         }
     }
 
+    /**
+     * UPDATED: Force sync method with better logging
+     */
     public void forceSync() {
-        lastSyncedHash = 0; // Force sync on next check
-        syncToClient();
+        if (player instanceof ServerPlayer) {
+            lastSyncedHash = 0; // Force a sync by invalidating hash
+            syncToClient();
+            ImmortalCultivation.LOGGER.debug("Forced cultivation sync for player {}",
+                player.getName().getString());
+        }
     }
 
     // === Utility Methods ===
@@ -647,35 +764,73 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         return bodyAccumulationRate;
     }
 
-    // === Sync Application Method ===
+    // === Sync Application Methods ===
 
+    /**
+     * UPDATED: Apply sync data from server including breakthrough data
+     */
+    public void applySync(String currentQiRealmId, String previousQiRealmId,
+                          String currentBodyRealmId, String previousBodyRealmId,
+                          long currentQiCultivation, long maxQiCultivation,
+                          long currentBodyCultivation, long maxBodyCultivation,
+                          CultivationType currentFocus,
+                          double qiAdditiveBonus, double qiMultiplicativeBonus,
+                          double bodyAdditiveBonus, double bodyMultiplicativeBonus,
+                          // ADDED: Breakthrough data parameters
+                          long qiBreakthroughAttempts, long bodyBreakthroughAttempts,
+                          boolean qiBreakthroughCooldown, boolean bodyBreakthroughCooldown,
+                          long lastQiBreakthroughAttempt, long lastBodyBreakthroughAttempt) {
+
+        // Apply realm data
+        this.currentQiRealm = ICModCultivationRealms.get(currentQiRealmId);
+        if (!previousQiRealmId.isEmpty()) {
+            this.previousQiRealm = ICModCultivationRealms.get(previousQiRealmId);
+        }
+        this.currentBodyRealm = ICModCultivationRealms.get(currentBodyRealmId);
+        if (!previousBodyRealmId.isEmpty()) {
+            this.previousBodyRealm = ICModCultivationRealms.get(previousBodyRealmId);
+        }
+
+        // Apply cultivation progress
+        this.currentQiCultivation = currentQiCultivation;
+        this.maxQiCultivation = maxQiCultivation;
+        this.currentBodyCultivation = currentBodyCultivation;
+        this.maxBodyCultivation = maxBodyCultivation;
+
+        // Apply focus
+        this.currentFocus = currentFocus;
+
+        // Apply bonuses
+        this.qiCultivationAdditiveBonus = qiAdditiveBonus;
+        this.qiCultivationMultiplicativeBonus = qiMultiplicativeBonus;
+        this.bodyCultivationAdditiveBonus = bodyAdditiveBonus;
+        this.bodyCultivationMultiplicativeBonus = bodyMultiplicativeBonus;
+
+        // ADDED: Apply breakthrough data
+        this.qiBreakthroughAttempts = qiBreakthroughAttempts;
+        this.bodyBreakthroughAttempts = bodyBreakthroughAttempts;
+        this.qiBreakthroughCooldown = qiBreakthroughCooldown;
+        this.bodyBreakthroughCooldown = bodyBreakthroughCooldown;
+        this.lastQiBreakthroughAttempt = lastQiBreakthroughAttempt;
+        this.lastBodyBreakthroughAttempt = lastBodyBreakthroughAttempt;
+
+        ImmortalCultivation.LOGGER.debug("Applied cultivation sync - Qi attempts: {}, Body attempts: {}",
+            qiBreakthroughAttempts, bodyBreakthroughAttempts);
+    }
+
+    /**
+     * COMPATIBILITY: Old applySync method signature for backward compatibility
+     */
     public void applySync(String qiRealmId, String prevQiRealmId, String bodyRealmId, String prevBodyRealmId,
                           long qiCurrent, long qiMax, long bodyCurrent, long bodyMax,
                           CultivationType focus, double qiAdd, double qiMult, double bodyAdd, double bodyMult) {
 
-        // Update realms
-        this.currentQiRealm = ICModCultivationRealms.get(qiRealmId);
-        this.previousQiRealm = prevQiRealmId.isEmpty() ? null : ICModCultivationRealms.get(prevQiRealmId);
-        this.currentBodyRealm = ICModCultivationRealms.get(bodyRealmId);
-        this.previousBodyRealm = prevBodyRealmId.isEmpty() ? null : ICModCultivationRealms.get(prevBodyRealmId);
-
-        // Update cultivation progress
-        this.currentQiCultivation = qiCurrent;
-        this.maxQiCultivation = qiMax;
-        this.currentBodyCultivation = bodyCurrent;
-        this.maxBodyCultivation = bodyMax;
-
-        // Update focus
-        this.currentFocus = focus;
-
-        // Update bonuses
-        this.qiCultivationAdditiveBonus = qiAdd;
-        this.qiCultivationMultiplicativeBonus = qiMult;
-        this.bodyCultivationAdditiveBonus = bodyAdd;
-        this.bodyCultivationMultiplicativeBonus = bodyMult;
-
-        ImmortalCultivation.LOGGER.debug("Applied cultivation sync - Qi: {}/{}, Body: {}/{}, Focus: {}",
-            qiCurrent, qiMax, bodyCurrent, bodyMax, focus.getDisplayName());
+        // Call the new method with default breakthrough data
+        applySync(qiRealmId, prevQiRealmId, bodyRealmId, prevBodyRealmId,
+            qiCurrent, qiMax, bodyCurrent, bodyMax,
+            focus, qiAdd, qiMult, bodyAdd, bodyMult,
+            // Default breakthrough data
+            0L, 0L, false, false, 0L, 0L);
     }
 
     // === Additional Getters for Network/UI ===
@@ -686,6 +841,371 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
 
     public double getBodyMultiplicativeBonus() {
         return bodyCultivationMultiplicativeBonus;
+    }
+
+    // === Breakthrough System Implementation ===
+
+    /**
+     * COMPATIBILITY: Simple breakthrough methods using MINOR type
+     */
+    public BreakthroughResult attemptQiBreakthrough() {
+        return attemptTypedBreakthrough(CultivationType.QI, BreakthroughType.MINOR);
+    }
+
+    public BreakthroughResult attemptBodyBreakthrough() {
+        return attemptTypedBreakthrough(CultivationType.BODY, BreakthroughType.MINOR);
+    }
+
+    /**
+     * Get the number of failed Qi breakthrough attempts for this realm.
+     * Used for calculating breakthrough success rate bonus.
+     */
+    public long getQiBreakthroughAttempts() {
+        return qiBreakthroughAttempts;
+    }
+
+    /**
+     * Get the number of failed Body breakthrough attempts for this realm.
+     * Used for calculating breakthrough success rate bonus.
+     */
+    public long getBodyBreakthroughAttempts() {
+        return bodyBreakthroughAttempts;
+    }
+
+    /**
+     * Calculate actual breakthrough success rate as used by the server.
+     * This matches the exact calculation used in attemptQiBreakthrough() and attemptBodyBreakthrough().
+     *
+     * @param type The cultivation type to calculate for
+     * @return The success rate as a value between 0.0 and 1.0
+     */
+    public double calculateBreakthroughSuccessRate(CultivationType type) {
+        // Use MINOR breakthrough type for the standard calculation
+        return calculateBreakthroughSuccessChance(type, BreakthroughType.MINOR);
+    }
+
+    /**
+     * Get success rate for a specific breakthrough type
+     */
+    public double calculateBreakthroughSuccessRate(CultivationType type, BreakthroughType breakthroughType) {
+        return calculateBreakthroughSuccessChance(type, breakthroughType);
+    }
+
+    /**
+     * Check if breakthrough is on cooldown for the specified type.
+     */
+    public boolean isBreakthroughOnCooldown(CultivationType type) {
+        return (type == CultivationType.QI) ? qiBreakthroughCooldown : bodyBreakthroughCooldown;
+    }
+
+    /**
+     * Get time since last breakthrough attempt for the specified type.
+     */
+    public long getTimeSinceLastBreakthroughAttempt(CultivationType type) {
+        if (player == null) return Long.MAX_VALUE;
+
+        long lastAttempt = (type == CultivationType.QI) ? lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
+        return player.level().getGameTime() - lastAttempt;
+    }
+
+    /**
+     * Attempt breakthrough with specific type for better control
+     */
+    public BreakthroughResult attemptTypedBreakthrough(CultivationType cultivationType, BreakthroughType breakthroughType) {
+        if (player == null) {
+            return new BreakthroughResult(false, "No player reference", null, breakthroughType, 0.0, 0L);
+        }
+
+        // Check basic requirements first
+        if (cultivationType == CultivationType.QI) {
+            if (currentQiCultivation < maxQiCultivation) {
+                return new BreakthroughResult(false, "Qi cultivation not at maximum", null, breakthroughType, 0.0, qiBreakthroughAttempts);
+            }
+            if (qiBreakthroughCooldown) {
+                return new BreakthroughResult(false, "Qi breakthrough on cooldown", null, breakthroughType, 0.0, qiBreakthroughAttempts);
+            }
+        } else {
+            if (currentBodyCultivation < maxBodyCultivation) {
+                return new BreakthroughResult(false, "Body cultivation not at maximum", null, breakthroughType, 0.0, bodyBreakthroughAttempts);
+            }
+            if (bodyBreakthroughCooldown) {
+                return new BreakthroughResult(false, "Body breakthrough on cooldown", null, breakthroughType, 0.0, bodyBreakthroughAttempts);
+            }
+        }
+
+        // Get current realm and check for available breakthrough paths
+        CultivationRealm currentRealm = cultivationType == CultivationType.QI ? currentQiRealm : currentBodyRealm;
+        List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
+
+        if (nextRealms.isEmpty()) {
+            return new BreakthroughResult(false, "No higher realm available", null, breakthroughType, 0.0,
+                cultivationType == CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts);
+        }
+
+        // Get target realm (for now, just use the first available - can be enhanced later)
+        CultivationRealm targetRealm = nextRealms.get(0);
+
+        // Calculate success chance combining base type chance with failure bonus
+        double successChance = calculateBreakthroughSuccessChance(cultivationType, breakthroughType);
+
+        // Record attempt
+        long currentAttempts;
+        if (cultivationType == CultivationType.QI) {
+            lastQiBreakthroughAttempt = player.level().getGameTime();
+            currentAttempts = qiBreakthroughAttempts;
+        } else {
+            lastBodyBreakthroughAttempt = player.level().getGameTime();
+            currentAttempts = bodyBreakthroughAttempts;
+        }
+
+        // Roll for success
+        boolean success = player.getRandom().nextDouble() < successChance;
+
+        if (success) {
+            // SUCCESS: Advance to new realm and reset attempts
+            if (cultivationType == CultivationType.QI) {
+                setCurrentQiRealm(targetRealm); // This resets attempts to 0
+            } else {
+                setCurrentBodyRealm(targetRealm); // This resets attempts to 0
+            }
+
+            forceSync();
+
+            String message = String.format("%s %s breakthrough successful! (%d attempts, %.0f%% chance)",
+                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
+                currentAttempts, successChance * 100);
+
+            ImmortalCultivation.LOGGER.info("{} {} breakthrough SUCCESS for {} after {} attempts ({}% chance)",
+                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
+                player.getName().getString(), currentAttempts, (int)(successChance * 100));
+
+            return new BreakthroughResult(true, message, targetRealm, breakthroughType, successChance, currentAttempts);
+
+        } else {
+            // FAILURE: Increment attempts and set cooldown
+            if (cultivationType == CultivationType.QI) {
+                qiBreakthroughAttempts++;
+                qiBreakthroughCooldown = true;
+            } else {
+                bodyBreakthroughAttempts++;
+                bodyBreakthroughCooldown = true;
+            }
+
+            forceSync();
+
+            // Calculate next attempt chance for the message
+            double nextChance = calculateBreakthroughSuccessChance(cultivationType, breakthroughType);
+
+            String message = String.format("%s %s breakthrough failed (attempt %d, %.0f%% chance). Next attempt: %.0f%% chance",
+                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
+                cultivationType == CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts,
+                successChance * 100, nextChance * 100);
+
+            ImmortalCultivation.LOGGER.info("{} {} breakthrough FAILED for {} - attempt {} ({}% chance, next: {}%)",
+                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
+                player.getName().getString(),
+                cultivationType == CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts,
+                (int)(successChance * 100), (int)(nextChance * 100));
+
+            return new BreakthroughResult(false, message, null, breakthroughType, successChance,
+                cultivationType == CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts);
+        }
+    }
+
+    /**
+     * Calculate success chance combining breakthrough type with failure bonus
+     */
+    private double calculateBreakthroughSuccessChance(CultivationType cultivationType, BreakthroughType breakthroughType) {
+        // Base chance from breakthrough type
+        double baseChance = breakthroughType.getBaseSuccessChance();
+
+        // Add failure bonus (5% per failed attempt)
+        long attempts = (cultivationType == CultivationType.QI) ? qiBreakthroughAttempts : bodyBreakthroughAttempts;
+        double failureBonus = attempts * 0.05;
+
+        // Calculate total chance
+        double totalChance = baseChance + failureBonus;
+
+        // Apply talent bonuses if available
+        totalChance = applyTalentBonuses(cultivationType, totalChance);
+
+        // Apply focus bonus
+        totalChance = applyFocusBonus(cultivationType, totalChance);
+
+        // Cap at 95% max success rate
+        return Math.min(0.95, Math.max(0.05, totalChance)); // Min 5%, Max 95%
+    }
+
+    /**
+     * Apply talent-based bonuses to breakthrough success rate
+     */
+    private double applyTalentBonuses(CultivationType cultivationType, double currentChance) {
+        if (player == null) return currentChance;
+
+        try {
+            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            if (talentAttachment != null) {
+                if (cultivationType == CultivationType.QI && talentAttachment.hasSpiritualRootAssigned()) {
+                    float multiplier = talentAttachment.getSpiritualRootMultiplier();
+                    // Each 0.1x talent adds 2% breakthrough success rate
+                    double bonus = (multiplier - 1.0) * 0.2;
+                    return currentChance + bonus;
+                } else if (cultivationType == CultivationType.BODY && talentAttachment.hasPhysiqueAssigned()) {
+                    float multiplier = talentAttachment.getPhysiqueMultiplier();
+                    // Each 0.1x talent adds 2% breakthrough success rate
+                    double bonus = (multiplier - 1.0) * 0.2;
+                    return currentChance + bonus;
+                }
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying talent bonuses to breakthrough", e);
+        }
+
+        return currentChance;
+    }
+
+    /**
+     * Apply focus bonus to breakthrough success rate
+     */
+    private double applyFocusBonus(CultivationType cultivationType, double currentChance) {
+        // If player is focused on this cultivation type, add 5% bonus
+        if (currentFocus == cultivationType) {
+            return currentChance + 0.05;
+        }
+        return currentChance;
+    }
+
+    /**
+     * Get all available breakthrough options for UI display
+     */
+    public BreakthroughOptions getAllAvailableBreakthroughOptions() {
+        List<BreakthroughOption> qiOptions = getBreakthroughOptionsForType(CultivationType.QI);
+        List<BreakthroughOption> bodyOptions = getBreakthroughOptionsForType(CultivationType.BODY);
+
+        return new BreakthroughOptions(qiOptions, bodyOptions);
+    }
+
+    /**
+     * Get breakthrough options for a specific cultivation type
+     */
+    public List<BreakthroughOption> getBreakthroughOptionsForType(CultivationType cultivationType) {
+        List<BreakthroughOption> options = new ArrayList<>();
+
+        if (player == null) {
+            return options;
+        }
+
+        CultivationRealm currentRealm = (cultivationType == CultivationType.QI) ? currentQiRealm : currentBodyRealm;
+        List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
+
+        if (nextRealms.isEmpty()) {
+            return options;
+        }
+
+        // For now, use the first available realm for all breakthrough types
+        // In a more advanced system, different breakthrough types could lead to different realms
+        CultivationRealm targetRealm = nextRealms.get(0);
+
+        for (BreakthroughType type : BreakthroughType.values()) {
+            boolean available = canAttemptTypedBreakthrough(cultivationType, type);
+            String unavailabilityReason = available ? "" : getUnavailabilityReason(cultivationType, type);
+            double successChance = available ? calculateBreakthroughSuccessChance(cultivationType, type) : 0.0;
+
+            options.add(new BreakthroughOption(
+                type,
+                targetRealm,
+                successChance,
+                cultivationType,
+                available,
+                unavailabilityReason
+            ));
+        }
+
+        return options;
+    }
+
+    /**
+     * Check if a specific type of breakthrough can be attempted
+     */
+    public boolean canAttemptTypedBreakthrough(CultivationType cultivationType, BreakthroughType breakthroughType) {
+        if (player == null) return false;
+
+        // Check basic requirements
+        if (cultivationType == CultivationType.QI) {
+            if (currentQiCultivation < maxQiCultivation) return false;
+            if (qiBreakthroughCooldown) return false;
+        } else {
+            if (currentBodyCultivation < maxBodyCultivation) return false;
+            if (bodyBreakthroughCooldown) return false;
+        }
+
+        // Check if there are available advancement paths
+        CultivationRealm currentRealm = (cultivationType == CultivationType.QI) ? currentQiRealm : currentBodyRealm;
+        List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
+
+        if (nextRealms.isEmpty()) return false;
+
+        // Additional type-specific requirements could be added here
+        // For example, SPECIAL breakthroughs might require certain items or conditions
+        switch (breakthroughType) {
+            case SPECIAL:
+                // Could require special cultivation techniques or items
+                return true; // For now, allow if basic requirements are met
+            case BOUNDARY:
+                // Could require specific realm level or major stage transitions
+                return true; // For now, allow if basic requirements are met
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Get the reason why a breakthrough type is not available
+     */
+    private String getUnavailabilityReason(CultivationType cultivationType, BreakthroughType breakthroughType) {
+        if (player == null) return "No player reference";
+
+        if (cultivationType == CultivationType.QI) {
+            if (currentQiCultivation < maxQiCultivation) {
+                return "Qi cultivation not at maximum";
+            }
+            if (qiBreakthroughCooldown) {
+                return "Qi breakthrough on cooldown";
+            }
+        } else {
+            if (currentBodyCultivation < maxBodyCultivation) {
+                return "Body cultivation not at maximum";
+            }
+            if (bodyBreakthroughCooldown) {
+                return "Body breakthrough on cooldown";
+            }
+        }
+
+        CultivationRealm currentRealm = (cultivationType == CultivationType.QI) ? currentQiRealm : currentBodyRealm;
+        List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
+
+        if (nextRealms.isEmpty()) {
+            return "No higher realm available";
+        }
+
+        return "Requirements not met";
+    }
+
+    /**
+     * Get detailed breakdown of success rate calculation for UI display
+     */
+    public BreakthroughChanceBreakdown getBreakthroughChanceBreakdown(CultivationType cultivationType, BreakthroughType breakthroughType) {
+        double baseChance = breakthroughType.getBaseSuccessChance();
+        long attempts = (cultivationType == CultivationType.QI) ? qiBreakthroughAttempts : bodyBreakthroughAttempts;
+        double failureBonus = attempts * 0.05;
+        double talentBonus = applyTalentBonuses(cultivationType, 0.0); // Apply to 0 to get just the bonus
+        double focusBonus = (currentFocus == cultivationType) ? 0.05 : 0.0;
+
+        double totalChance = Math.min(0.95, Math.max(0.05, baseChance + failureBonus + talentBonus + focusBonus));
+
+        return new BreakthroughChanceBreakdown(
+            baseChance, failureBonus, talentBonus, focusBonus, totalChance, attempts
+        );
     }
 
     // === Serialization with Codec ===
@@ -849,164 +1369,5 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         data.bodyCultivationMultiplicativeBonus = bonuses.bodyMultiplicative;
 
         return data;
-    }
-
-    public record BreakthroughResult(boolean success, String message, @Nullable CultivationRealm newRealm) {}
-
-    public BreakthroughResult attemptQiBreakthrough() {
-        if (currentQiCultivation < maxQiCultivation) {
-            return new BreakthroughResult(false, "Qi cultivation not at maximum", null);
-        }
-
-        if (qiBreakthroughCooldown) {
-            return new BreakthroughResult(false, "Breakthrough on cooldown", null);
-        }
-
-        List<CultivationRealm> nextRealms = currentQiRealm.getNextCultivationRealms();
-        if (nextRealms.isEmpty()) {
-            return new BreakthroughResult(false, "No higher realm available", null);
-        }
-
-        // FIXED: Calculate chance BEFORE incrementing attempts
-        double chance = 0.1 + (qiBreakthroughAttempts * 0.05);
-        chance = Math.min(chance, 0.95);
-
-        // Update last attempt time (this should happen regardless of outcome)
-        lastQiBreakthroughAttempt = player.level().getGameTime();
-
-        // Check for success/failure
-        if (player.getRandom().nextDouble() < chance) {
-            // SUCCESS: Reset attempts to 0 (handled by setCurrentQiRealm)
-            CultivationRealm newRealm = nextRealms.get(0);
-            setCurrentQiRealm(newRealm);
-
-            // Force sync after successful breakthrough
-            forceSync();
-
-            ImmortalCultivation.LOGGER.info("Qi breakthrough SUCCESS for {} after {} attempts ({}% chance)",
-                player.getName().getString(), qiBreakthroughAttempts, (int)(chance * 100));
-
-            return new BreakthroughResult(true,
-                String.format("Qi breakthrough successful! (%d attempts, %.0f%% chance)",
-                    qiBreakthroughAttempts, chance * 100), newRealm);
-        } else {
-            // FAILURE: Increment attempts and set cooldown
-            qiBreakthroughAttempts++;
-            qiBreakthroughCooldown = true;
-
-            // CRITICAL: Force sync after failed attempt to update client with new attempt count
-            forceSync();
-
-            ImmortalCultivation.LOGGER.info("Qi breakthrough FAILED for {} - attempt {} ({}% chance, next: {}%)",
-                player.getName().getString(), qiBreakthroughAttempts, (int)(chance * 100),
-                (int)Math.min(95, (0.1 + (qiBreakthroughAttempts * 0.05)) * 100));
-
-            return new BreakthroughResult(false,
-                String.format("Breakthrough failed (attempt %d, %.0f%% chance). Next attempt: %.0f%% chance",
-                    qiBreakthroughAttempts, chance * 100,
-                    Math.min(95, (0.1 + (qiBreakthroughAttempts * 0.05)) * 100)), null);
-        }
-    }
-
-    public BreakthroughResult attemptBodyBreakthrough() {
-        if (currentBodyCultivation < maxBodyCultivation) {
-            return new BreakthroughResult(false, "Body cultivation not at maximum", null);
-        }
-
-        if (bodyBreakthroughCooldown) {
-            return new BreakthroughResult(false, "Breakthrough on cooldown", null);
-        }
-
-        List<CultivationRealm> nextRealms = currentBodyRealm.getNextCultivationRealms();
-        if (nextRealms.isEmpty()) {
-            return new BreakthroughResult(false, "No higher realm available", null);
-        }
-
-        // FIXED: Calculate chance BEFORE incrementing attempts
-        double chance = 0.1 + (bodyBreakthroughAttempts * 0.05);
-        chance = Math.min(chance, 0.95);
-
-        // Update last attempt time (this should happen regardless of outcome)
-        lastBodyBreakthroughAttempt = player.level().getGameTime();
-
-        // Check for success/failure
-        if (player.getRandom().nextDouble() < chance) {
-            // SUCCESS: Reset attempts to 0 (handled by setCurrentBodyRealm)
-            CultivationRealm newRealm = nextRealms.get(0);
-            setCurrentBodyRealm(newRealm);
-
-            // Force sync after successful breakthrough
-            forceSync();
-
-            ImmortalCultivation.LOGGER.info("Body breakthrough SUCCESS for {} after {} attempts ({}% chance)",
-                player.getName().getString(), bodyBreakthroughAttempts, (int)(chance * 100));
-
-            return new BreakthroughResult(true,
-                String.format("Body breakthrough successful! (%d attempts, %.0f%% chance)",
-                    bodyBreakthroughAttempts, chance * 100), newRealm);
-        } else {
-            // FAILURE: Increment attempts and set cooldown
-            bodyBreakthroughAttempts++;
-            bodyBreakthroughCooldown = true;
-
-            // CRITICAL: Force sync after failed attempt to update client with new attempt count
-            forceSync();
-
-            ImmortalCultivation.LOGGER.info("Body breakthrough FAILED for {} - attempt {} ({}% chance, next: {}%)",
-                player.getName().getString(), bodyBreakthroughAttempts, (int)(chance * 100),
-                (int)Math.min(95, (0.1 + (bodyBreakthroughAttempts * 0.05)) * 100));
-
-            return new BreakthroughResult(false,
-                String.format("Breakthrough failed (attempt %d, %.0f%% chance). Next attempt: %.0f%% chance",
-                    bodyBreakthroughAttempts, chance * 100,
-                    Math.min(95, (0.1 + (bodyBreakthroughAttempts * 0.05)) * 100)), null);
-        }
-    }
-
-    /**
-     * Get the number of failed Qi breakthrough attempts for this realm.
-     * Used for calculating breakthrough success rate bonus.
-     */
-    public long getQiBreakthroughAttempts() {
-        return qiBreakthroughAttempts;
-    }
-
-
-    /**
-     * Get the number of failed Body breakthrough attempts for this realm.
-     * Used for calculating breakthrough success rate bonus.
-     */
-    public long getBodyBreakthroughAttempts() {
-        return bodyBreakthroughAttempts;
-    }
-
-    /**
-     * Calculate actual breakthrough success rate as used by the server.
-     * This matches the exact calculation used in attemptQiBreakthrough() and attemptBodyBreakthrough().
-     *
-     * @param type The cultivation type to calculate for
-     * @return The success rate as a value between 0.0 and 1.0
-     */
-    public double calculateBreakthroughSuccessRate(CultivationType type) {
-        long attempts = (type == CultivationType.QI) ? qiBreakthroughAttempts : bodyBreakthroughAttempts;
-        double chance = 0.1 + (attempts * 0.05);
-        return Math.min(chance, 0.95);
-    }
-
-    /**
-     * Check if breakthrough is on cooldown for the specified type.
-     */
-    public boolean isBreakthroughOnCooldown(CultivationType type) {
-        return (type == CultivationType.QI) ? qiBreakthroughCooldown : bodyBreakthroughCooldown;
-    }
-
-    /**
-     * Get time since last breakthrough attempt for the specified type.
-     */
-    public long getTimeSinceLastBreakthroughAttempt(CultivationType type) {
-        if (player == null) return Long.MAX_VALUE;
-
-        long lastAttempt = (type == CultivationType.QI) ? lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
-        return player.level().getGameTime() - lastAttempt;
     }
 }
