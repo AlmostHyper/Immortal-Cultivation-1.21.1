@@ -1,0 +1,44 @@
+{
+  "basic_info": {
+    "id": "qi_condensation_l1",
+    "display_name": "1st Layer of Qi Condensation",
+    "realm_level": 1,
+    "cultivation_stage": "Qi Condensation",
+    "description": "The first step in true cultivation. Practitioners begin to sense and gather Qi, slowly condensing it within their dantian. The body is tempered and enhanced beyond mortal limits."
+  },
+  "physical_stats": {
+    "base_health": 5,
+    "base_health_regeneration": 0.001,
+    "base_attack_damage": 0.1,
+    "base_movement_speed": 0.05,
+    "base_jump_height": 0.05
+  },
+  "cultivation_stats": {
+    "base_max_cultivation": 300,
+    "base_cultivation_rate": 0.01
+  },
+  "qi_stats": {
+    "base_max_qi": 10,
+    "base_qi_regeneration_rate": 0.1,
+    "base_circulating_qi_regeneration_rate": 9.0
+  },
+  "visual_properties": {
+    "realm_color": 5635925,
+    "particle_effect": "minecraft:enchant"
+  },
+  "progression": {
+    "previous_realms": ["mortal"],
+    "next_realms": ["qi_condensation_l2"]
+  },
+  "features": {
+    "unlocked_abilities": [],
+    "realm_benefits": [
+      "+5 Health",
+      "+10% Attack Damage",
+      "+5% Movement Speed",
+      "Qi storage and regeneration",
+      "Enhanced physical capabilities"
+    ],
+    "available_techniques": []
+  }
+}

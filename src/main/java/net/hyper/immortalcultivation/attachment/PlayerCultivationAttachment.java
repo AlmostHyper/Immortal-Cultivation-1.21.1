@@ -4,12 +4,15 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
-import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
+import net.hyper.immortalcultivation.cultivation.realms.data.CultivationRealmData;
+import net.hyper.immortalcultivation.cultivation.realms.data.JsonCultivationRealm;
 import net.hyper.immortalcultivation.network.server.CultivationSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
+import net.minecraft.ChatFormatting;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
@@ -28,6 +31,10 @@ import java.util.Objects;
  * Enhanced with comprehensive pill system integration and breakthrough types.
  */
 public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCultivationData {
+
+    // === Default Values (fallback when JSON isn't loaded yet) ===
+    private static final long DEFAULT_MAX_CULTIVATION = 100L;
+    private static final String DEFAULT_MORTAL_REALM_ID = "mortal";
 
     // === Player Reference ===
     @Nullable
@@ -192,11 +199,110 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
 
     // === Constructor ===
     public PlayerCultivationAttachment() {
-        this.currentQiRealm = ICModCultivationRealms.MORTAL;
-        this.currentBodyRealm = ICModCultivationRealms.MORTAL;
-        // Initialize max cultivation based on realms
-        this.maxQiCultivation = currentQiRealm.getBaseMaxCultivation();
-        this.maxBodyCultivation = currentBodyRealm.getBaseMaxCultivation();
+        // Use safe initialization that handles JSON not being loaded yet
+        this.currentQiRealm = getDefaultMortalRealm();
+        this.currentBodyRealm = getDefaultMortalRealm();
+
+        // Initialize max cultivation with safe defaults
+        this.maxQiCultivation = getSafeMaxCultivation(currentQiRealm);
+        this.maxBodyCultivation = getSafeMaxCultivation(currentBodyRealm);
+    }
+
+    /**
+     * Safely gets the mortal realm, handling cases where JSON isn't loaded yet
+     */
+    private CultivationRealm getDefaultMortalRealm() {
+        // First try to get from the registry
+        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
+
+        if (mortalRealm != null) {
+            return mortalRealm;
+        }
+
+        // If still null, create a temporary default realm
+        ImmortalCultivation.LOGGER.warn("Mortal realm not found during initialization, using temporary default");
+        return createTemporaryMortalRealm();
+    }
+
+    /**
+     * Safely gets max cultivation from a realm, with fallback for null realms
+     */
+    private long getSafeMaxCultivation(CultivationRealm realm) {
+        if (realm != null) {
+            try {
+                return realm.getBaseMaxCultivation();
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.warn("Error getting max cultivation from realm, using default", e);
+            }
+        }
+        return DEFAULT_MAX_CULTIVATION;
+    }
+
+    /**
+     * Creates a temporary mortal realm for use during early initialization
+     */
+    private CultivationRealm createTemporaryMortalRealm() {
+        // Create basic mortal realm data
+        var basicInfo = new CultivationRealmData.BasicInfo(
+            DEFAULT_MORTAL_REALM_ID, "Mortal", 0, "Mortal",
+            "Temporary mortal realm used during initialization"
+        );
+
+        var physicalStats = new CultivationRealmData.PhysicalStats(
+            20L, 0.0, 0.0, 0.0, 0.0
+        );
+
+        var cultivationStats = new CultivationRealmData.CultivationStats(
+            DEFAULT_MAX_CULTIVATION, 0.005
+        );
+
+        var qiStats = new CultivationRealmData.QiStats(
+            0L, 0.0, 0.0
+        );
+
+        var visualProperties = new CultivationRealmData.VisualProperties(
+            8421504, "minecraft:cloud", java.util.Optional.empty()
+        );
+
+        var progression = new CultivationRealmData.Progression(
+            java.util.List.of(), java.util.List.of()
+        );
+
+        var features = new CultivationRealmData.Features(
+            java.util.List.of(), java.util.List.of(), java.util.List.of()
+        );
+
+        var realmData = new CultivationRealmData(
+            basicInfo, physicalStats, cultivationStats, qiStats,
+            visualProperties, progression, features,
+            java.util.Optional.empty(), java.util.Optional.empty()
+        );
+
+        return new JsonCultivationRealm(realmData);
+    }
+
+    /**
+     * Updates realms after JSON loading is complete.
+     * Call this method after the JSON realm system has been initialized.
+     */
+    public void updateRealmsAfterJsonLoad() {
+        if (currentQiRealm == null || DEFAULT_MORTAL_REALM_ID.equals(currentQiRealm.getId())) {
+            CultivationRealm newMortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
+            if (newMortalRealm != null && newMortalRealm != currentQiRealm) {
+                ImmortalCultivation.LOGGER.info("Updating Qi realm from temporary to loaded JSON realm");
+                this.currentQiRealm = newMortalRealm;
+                this.maxQiCultivation = currentQiRealm.getBaseMaxCultivation();
+            }
+        }
+
+        if (currentBodyRealm == null || DEFAULT_MORTAL_REALM_ID.equals(currentBodyRealm.getId())) {
+            CultivationRealm newMortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
+            if (newMortalRealm != null && newMortalRealm != currentBodyRealm) {
+                ImmortalCultivation.LOGGER.info("Updating Body realm from temporary to loaded JSON realm");
+                this.currentBodyRealm = newMortalRealm;
+                this.maxBodyCultivation = currentBodyRealm.getBaseMaxCultivation();
+            }
+        }
     }
 
     // === Player Reference Management ===
@@ -483,31 +589,188 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         return currentBodyRealm;
     }
 
-    public void setCurrentQiRealm(CultivationRealm realm) {
-        this.previousQiRealm = this.currentQiRealm;
-        this.currentQiRealm = realm;
-        this.maxQiCultivation = realm.getBaseMaxCultivation();
-        this.currentQiCultivation = 0;
-        this.timeInCurrentQiRealm = 0;
-        this.qiBreakthroughAttempts = 0;
-        this.qiBreakthroughCooldown = false;
 
-        if (player instanceof ServerPlayer serverPlayer) {
-            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+    /**
+     * Updates the max cultivation limits based on current realms
+     */
+    private void updateCultivationLimits() {
+        // Update max Qi cultivation based on current Qi realm
+        long newMaxQiCultivation = currentQiRealm.getBaseMaxCultivation();
+        if (newMaxQiCultivation != maxQiCultivation) {
+            setMaxQiCultivation(newMaxQiCultivation);
+        }
+
+        // Update max Body cultivation based on current Body realm
+        long newMaxBodyCultivation = currentBodyRealm.getBaseMaxCultivation();
+        if (newMaxBodyCultivation != maxBodyCultivation) {
+            setMaxBodyCultivation(newMaxBodyCultivation);
         }
     }
 
-    public void setCurrentBodyRealm(CultivationRealm realm) {
-        this.previousBodyRealm = this.currentBodyRealm;
-        this.currentBodyRealm = realm;
-        this.maxBodyCultivation = realm.getBaseMaxCultivation();
-        this.currentBodyCultivation = 0;
-        this.timeInCurrentBodyRealm = 0;
-        this.bodyBreakthroughAttempts = 0;
-        this.bodyBreakthroughCooldown = false;
+    /**
+     * Sets the current Qi realm and applies permanent health bonus if this is an advancement
+     */
+    public void setCurrentQiRealm(CultivationRealm realm) {
+        CultivationRealm previousRealm = this.currentQiRealm;
+        this.previousQiRealm = previousRealm;
+        this.currentQiRealm = realm;
 
-        if (player instanceof ServerPlayer serverPlayer) {
-            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+        // Reset breakthrough attempts when successfully advancing
+        this.qiBreakthroughAttempts = 0;
+
+        // Apply permanent bonuses if this is an advancement
+        applyPermanentBonusesIfAdvancement(previousRealm, realm, CultivationType.QI);
+
+        // Update cultivation limits based on new realm
+        updateCultivationLimits();
+
+        forceSync();
+
+        // Call realm advancement events
+        if (player != null && realm != null) {
+            realm.onRealmAdvancement(player, (IQiCultivationData) this, previousRealm);
+        }
+    }
+
+    /**
+     * Sets the current Body realm and applies permanent health bonus if this is an advancement
+     */
+    public void setCurrentBodyRealm(CultivationRealm realm) {
+        CultivationRealm previousRealm = this.currentBodyRealm;
+        this.previousBodyRealm = previousRealm;
+        this.currentBodyRealm = realm;
+
+        // Reset breakthrough attempts when successfully advancing
+        this.bodyBreakthroughAttempts = 0;
+
+        // Apply permanent bonuses if this is an advancement
+        applyPermanentBonusesIfAdvancement(previousRealm, realm, CultivationType.BODY);
+
+        // Update cultivation limits based on new realm
+        updateCultivationLimits();
+
+        forceSync();
+
+        // Call realm advancement events
+        if (player != null && realm != null) {
+            realm.onRealmAdvancement(player, (IBodyCultivationData) this, previousRealm);
+        }
+    }
+
+    /**
+     * Applies permanent health bonus when advancing to a higher realm level.
+     * This ensures that special realm bonuses stick around permanently.
+     */
+    private void applyPermanentBonusesIfAdvancement(@Nullable CultivationRealm previousRealm,
+                                                    CultivationRealm newRealm,
+                                                    CultivationType cultivationType) {
+        if (player == null || newRealm == null) return;
+
+        try {
+            // Only apply bonus if this is a genuine advancement (higher realm level)
+            boolean isAdvancement = previousRealm == null || newRealm.getRealmLevel() > previousRealm.getRealmLevel();
+
+            if (isAdvancement) {
+                // Apply permanent health bonus
+                long healthBonus = newRealm.getBaseHealth();
+                if (healthBonus > 0) {
+                    PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+                    if (resourceAttachment != null) {
+                        resourceAttachment.addPermanentHealthBonus(healthBonus);
+
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent health from {} realm advancement: {} -> {}",
+                            player.getName().getString(),
+                            healthBonus,
+                            cultivationType.getDisplayName(),
+                            previousRealm != null ? previousRealm.getDisplayName() : "None",
+                            newRealm.getDisplayName());
+                    }
+                }
+
+                // Apply permanent attack damage bonus
+                double attackBonus = newRealm.getBaseAttackDamage();
+                if (attackBonus > 0) {
+                    PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+                    if (combatStatsAttachment != null) {
+                        combatStatsAttachment.addPermanentAttackDamageBonus(attackBonus);
+
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent attack damage from {} realm advancement: {} -> {}",
+                            player.getName().getString(),
+                            attackBonus,
+                            cultivationType.getDisplayName(),
+                            previousRealm != null ? previousRealm.getDisplayName() : "None",
+                            newRealm.getDisplayName());
+                    }
+                }
+
+                // Apply permanent movement speed bonus
+                double speedBonus = newRealm.getBaseMovementSpeed();
+                if (speedBonus > 0) {
+                    PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+                    if (combatStatsAttachment != null) {
+                        combatStatsAttachment.addPermanentMovementSpeedBonus(speedBonus);
+
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent movement speed from {} realm advancement: {} -> {}",
+                            player.getName().getString(),
+                            speedBonus,
+                            cultivationType.getDisplayName(),
+                            previousRealm != null ? previousRealm.getDisplayName() : "None",
+                            newRealm.getDisplayName());
+                    }
+                }
+
+                // Apply permanent jump height bonus
+                double jumpBonus = newRealm.getBaseJumpHeight();
+                if (jumpBonus > 0) {
+                    PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+                    if (combatStatsAttachment != null) {
+                        combatStatsAttachment.addPermanentJumpHeightBonus(jumpBonus);
+
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent jump height from {} realm advancement: {} -> {}",
+                            player.getName().getString(),
+                            jumpBonus,
+                            cultivationType.getDisplayName(),
+                            previousRealm != null ? previousRealm.getDisplayName() : "None",
+                            newRealm.getDisplayName());
+                    }
+                }
+
+                // Send comprehensive notification to player about all bonuses gained
+                if (player instanceof ServerPlayer serverPlayer) {
+                    StringBuilder bonusMessage = new StringBuilder("§6Permanent Bonuses Gained: §r");
+                    boolean hasBonus = false;
+
+                    if (healthBonus > 0) {
+                        bonusMessage.append("§a+").append(healthBonus).append(" Health§r");
+                        hasBonus = true;
+                    }
+
+                    if (attackBonus > 0) {
+                        if (hasBonus) bonusMessage.append(", ");
+                        bonusMessage.append("§c+").append(String.format("%.1f", attackBonus * 100)).append("% Attack§r");
+                        hasBonus = true;
+                    }
+
+                    if (speedBonus > 0) {
+                        if (hasBonus) bonusMessage.append(", ");
+                        bonusMessage.append("§b+").append(String.format("%.1f", speedBonus * 100)).append("% Speed§r");
+                        hasBonus = true;
+                    }
+
+                    if (jumpBonus > 0) {
+                        if (hasBonus) bonusMessage.append(", ");
+                        bonusMessage.append("§e+").append(String.format("%.1f", jumpBonus * 100)).append("% Jump§r");
+                        hasBonus = true;
+                    }
+
+                    if (hasBonus) {
+                        serverPlayer.sendSystemMessage(Component.literal(bonusMessage.toString()));
+                    }
+                }
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying permanent bonuses for player {}",
+                player.getName().getString(), e);
         }
     }
 

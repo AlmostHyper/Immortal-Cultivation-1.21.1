@@ -4,6 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.cultivation.SpiritualRootType;
 import net.hyper.immortalcultivation.cultivation.PhysiqueType;
+import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.network.server.OpenRaceSelectionSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
@@ -182,18 +183,33 @@ public class PlayerLoginHandler {
                 // IMPORTANT: Set player reference for realm calculations and combat stats
                 cultivationAttachment.setPlayer(player);
 
-                // Initialize Qi realm if null
+                // Ensure realms are updated after JSON loading (in case this is called after a reload)
+                cultivationAttachment.updateRealmsAfterJsonLoad();
+
+                // Initialize Qi realm if null or invalid
                 if (cultivationAttachment.getCurrentQiRealm() == null) {
                     ImmortalCultivation.LOGGER.warn("Player {} has null Qi realm, setting to default mortal realm",
                         player.getName().getString());
-                    cultivationAttachment.setCurrentQiRealm(ICModCultivationRealms.MORTAL);
+                    CultivationRealm mortalRealm = ICModCultivationRealms.get("mortal");
+                    if (mortalRealm != null) {
+                        cultivationAttachment.setCurrentQiRealm(mortalRealm);
+                    } else {
+                        ImmortalCultivation.LOGGER.error("Cannot find mortal realm for player {}! JSON system may not be loaded.",
+                            player.getName().getString());
+                    }
                 }
 
-                // Initialize Body realm if null
+                // Initialize Body realm if null or invalid
                 if (cultivationAttachment.getCurrentBodyRealm() == null) {
                     ImmortalCultivation.LOGGER.warn("Player {} has null Body realm, setting to default mortal realm",
                         player.getName().getString());
-                    cultivationAttachment.setCurrentBodyRealm(ICModCultivationRealms.MORTAL);
+                    CultivationRealm mortalRealm = ICModCultivationRealms.get("mortal");
+                    if (mortalRealm != null) {
+                        cultivationAttachment.setCurrentBodyRealm(mortalRealm);
+                    } else {
+                        ImmortalCultivation.LOGGER.error("Cannot find mortal realm for player {}! JSON system may not be loaded.",
+                            player.getName().getString());
+                    }
                 }
 
                 ImmortalCultivation.LOGGER.info("Player {} unified cultivation initialized - Qi: {} ({}/{}), Body: {} ({}/{}), Focus: {}, Bonuses: Qi +{}/sec, Body +{}/sec",
@@ -212,7 +228,7 @@ public class PlayerLoginHandler {
                     player.getName().getString());
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error initializing cultivation for player {}",
+            ImmortalCultivation.LOGGER.error("Error initializing cultivation attachment for player {}",
                 player.getName().getString(), e);
         }
     }

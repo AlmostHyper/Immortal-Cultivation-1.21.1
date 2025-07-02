@@ -1,0 +1,41 @@
+{
+  "basic_info": {
+    "id": "mortal",
+    "display_name": "Mortal",
+    "realm_level": 0,
+    "cultivation_stage": "Mortal",
+    "description": "Merely a mortal, unaware of the vast cultivation world. Through meditation and training, one can step onto the path of immortality."
+  },
+  "physical_stats": {
+    "base_health": 20,
+    "base_health_regeneration": 0.0,
+    "base_attack_damage": 0.0,
+    "base_movement_speed": 0.0,
+    "base_jump_height": 0.0
+  },
+  "cultivation_stats": {
+    "base_max_cultivation": 100,
+    "base_cultivation_rate": 0.005
+  },
+  "qi_stats": {
+    "base_max_qi": 0,
+    "base_qi_regeneration_rate": 0.0,
+    "base_circulating_qi_regeneration_rate": 0.0
+  },
+  "visual_properties": {
+    "realm_color": 8421504,
+    "particle_effect": "minecraft:cloud"
+  },
+  "progression": {
+    "previous_realms": [],
+    "next_realms": ["qi_condensation_l1"]
+  },
+  "features": {
+    "unlocked_abilities": [],
+    "realm_benefits": [
+      "Beginning of the cultivation journey",
+      "Can start accumulating cultivation"
+    ],
+    "available_techniques": []
+  }
+}

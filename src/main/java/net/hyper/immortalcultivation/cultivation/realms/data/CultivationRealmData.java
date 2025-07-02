@@ -15,6 +15,7 @@ public record CultivationRealmData(
     BasicInfo basicInfo,
     PhysicalStats physicalStats,
     CultivationStats cultivationStats,
+    QiStats qiStats,  // FIXED: Added missing QiStats field
     VisualProperties visualProperties,
     Progression progression,
     Features features,
@@ -27,6 +28,7 @@ public record CultivationRealmData(
             BasicInfo.CODEC.fieldOf("basic_info").forGetter(CultivationRealmData::basicInfo),
             PhysicalStats.CODEC.fieldOf("physical_stats").forGetter(CultivationRealmData::physicalStats),
             CultivationStats.CODEC.fieldOf("cultivation_stats").forGetter(CultivationRealmData::cultivationStats),
+            QiStats.CODEC.fieldOf("qi_stats").forGetter(CultivationRealmData::qiStats),  // FIXED: Added QiStats to codec
             VisualProperties.CODEC.fieldOf("visual_properties").forGetter(CultivationRealmData::visualProperties),
             Progression.CODEC.fieldOf("progression").forGetter(CultivationRealmData::progression),
             Features.CODEC.fieldOf("features").forGetter(CultivationRealmData::features),
@@ -50,9 +52,11 @@ public record CultivationRealmData(
 
     public long baseMaxCultivation() { return cultivationStats.baseMaxCultivation(); }
     public double baseCultivationRate() { return cultivationStats.baseCultivationRate(); }
-    public long baseMaxQi() { return cultivationStats.baseMaxQi(); }
-    public double baseQiRegenerationRate() { return cultivationStats.baseQiRegenerationRate(); }
-    public double baseCirculatingQiRegenerationRate() { return cultivationStats.baseCirculatingQiRegenerationRate(); }
+
+    // FIXED: These now correctly reference qiStats instead of cultivationStats
+    public long baseMaxQi() { return qiStats.baseMaxQi(); }
+    public double baseQiRegenerationRate() { return qiStats.baseQiRegenerationRate(); }
+    public double baseCirculatingQiRegenerationRate() { return qiStats.baseCirculatingQiRegenerationRate(); }
 
     public int realmColor() { return visualProperties.realmColor(); }
     public String particleEffect() { return visualProperties.particleEffect(); }
@@ -66,7 +70,7 @@ public record CultivationRealmData(
     public List<String> availableTechniques() { return features.availableTechniques(); }
 
     /**
-     * Basic realm identification and description information
+     * Basic information about a cultivation realm
      */
     public record BasicInfo(
         String id,
@@ -87,7 +91,7 @@ public record CultivationRealmData(
     }
 
     /**
-     * Physical enhancement statistics
+     * Physical stats provided by a cultivation realm
      */
     public record PhysicalStats(
         long baseHealth,
@@ -108,28 +112,39 @@ public record CultivationRealmData(
     }
 
     /**
-     * Cultivation and Qi-related statistics
+     * Cultivation-related stats for the realm
      */
     public record CultivationStats(
         long baseMaxCultivation,
-        double baseCultivationRate,
-        long baseMaxQi,
-        double baseQiRegenerationRate,
-        double baseCirculatingQiRegenerationRate
+        double baseCultivationRate
     ) {
         public static final Codec<CultivationStats> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                 Codec.LONG.fieldOf("base_max_cultivation").forGetter(CultivationStats::baseMaxCultivation),
-                Codec.DOUBLE.fieldOf("base_cultivation_rate").forGetter(CultivationStats::baseCultivationRate),
-                Codec.LONG.fieldOf("base_max_qi").forGetter(CultivationStats::baseMaxQi),
-                Codec.DOUBLE.fieldOf("base_qi_regeneration_rate").forGetter(CultivationStats::baseQiRegenerationRate),
-                Codec.DOUBLE.fieldOf("base_circulating_qi_regeneration_rate").forGetter(CultivationStats::baseCirculatingQiRegenerationRate)
+                Codec.DOUBLE.fieldOf("base_cultivation_rate").forGetter(CultivationStats::baseCultivationRate)
             ).apply(instance, CultivationStats::new)
         );
     }
 
     /**
-     * Visual appearance and effects
+     * Qi-related stats for the realm
+     */
+    public record QiStats(
+        long baseMaxQi,
+        double baseQiRegenerationRate,
+        double baseCirculatingQiRegenerationRate
+    ) {
+        public static final Codec<QiStats> CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                Codec.LONG.fieldOf("base_max_qi").forGetter(QiStats::baseMaxQi),
+                Codec.DOUBLE.fieldOf("base_qi_regeneration_rate").forGetter(QiStats::baseQiRegenerationRate),
+                Codec.DOUBLE.fieldOf("base_circulating_qi_regeneration_rate").forGetter(QiStats::baseCirculatingQiRegenerationRate)
+            ).apply(instance, QiStats::new)
+        );
+    }
+
+    /**
+     * Visual properties of the realm
      */
     public record VisualProperties(
         int realmColor,
@@ -138,15 +153,15 @@ public record CultivationRealmData(
     ) {
         public static final Codec<VisualProperties> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                Codec.INT.optionalFieldOf("realm_color", 0xFFFFFF).forGetter(VisualProperties::realmColor),
-                Codec.STRING.optionalFieldOf("particle_effect", "minecraft:enchant").forGetter(VisualProperties::particleEffect),
+                Codec.INT.fieldOf("realm_color").forGetter(VisualProperties::realmColor),
+                Codec.STRING.fieldOf("particle_effect").forGetter(VisualProperties::particleEffect),
                 ResourceLocation.CODEC.optionalFieldOf("realm_icon").forGetter(VisualProperties::realmIcon)
             ).apply(instance, VisualProperties::new)
         );
     }
 
     /**
-     * Realm progression and advancement paths
+     * Realm progression information
      */
     public record Progression(
         List<String> previousRealms,
@@ -161,7 +176,7 @@ public record CultivationRealmData(
     }
 
     /**
-     * Unlocked features, abilities, and techniques
+     * Features and benefits of the realm
      */
     public record Features(
         List<String> unlockedAbilities,
@@ -170,51 +185,43 @@ public record CultivationRealmData(
     ) {
         public static final Codec<Features> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                Codec.STRING.listOf().optionalFieldOf("unlocked_abilities", List.of()).forGetter(Features::unlockedAbilities),
-                Codec.STRING.listOf().optionalFieldOf("realm_benefits", List.of()).forGetter(Features::realmBenefits),
-                Codec.STRING.listOf().optionalFieldOf("available_techniques", List.of()).forGetter(Features::availableTechniques)
+                Codec.STRING.listOf().fieldOf("unlocked_abilities").forGetter(Features::unlockedAbilities),
+                Codec.STRING.listOf().fieldOf("realm_benefits").forGetter(Features::realmBenefits),
+                Codec.STRING.listOf().fieldOf("available_techniques").forGetter(Features::availableTechniques)
             ).apply(instance, Features::new)
         );
     }
 
     /**
-     * Special requirements for breakthrough or realm-specific conditions
+     * Special requirements for entering the realm (optional)
      */
     public record SpecialRequirements(
-        Optional<List<String>> requiredItems,
-        Optional<Integer> minimumTalentLevel,
-        Optional<Long> minimumTimeInRealm,
-        Optional<String> customRequirement
+        List<String> requiredItems,
+        List<String> requiredConditions,
+        Optional<String> specialEvent
     ) {
         public static final Codec<SpecialRequirements> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                Codec.STRING.listOf().optionalFieldOf("required_items").forGetter(SpecialRequirements::requiredItems),
-                Codec.INT.optionalFieldOf("minimum_talent_level").forGetter(SpecialRequirements::minimumTalentLevel),
-                Codec.LONG.optionalFieldOf("minimum_time_in_realm").forGetter(SpecialRequirements::minimumTimeInRealm),
-                Codec.STRING.optionalFieldOf("custom_requirement").forGetter(SpecialRequirements::customRequirement)
+                Codec.STRING.listOf().fieldOf("required_items").forGetter(SpecialRequirements::requiredItems),
+                Codec.STRING.listOf().fieldOf("required_conditions").forGetter(SpecialRequirements::requiredConditions),
+                Codec.STRING.optionalFieldOf("special_event").forGetter(SpecialRequirements::specialEvent)
             ).apply(instance, SpecialRequirements::new)
         );
     }
 
     /**
-     * Event configuration for realm advancement/exit
+     * Events that trigger when entering/exiting the realm (optional)
      */
     public record RealmEvents(
-        Optional<List<String>> advancementMessages,
-        Optional<List<String>> exitMessages,
-        Optional<String> advancementSound,
-        Optional<String> exitSound,
-        Optional<List<String>> advancementCommands,
-        Optional<List<String>> exitCommands
+        Optional<String> onEnterEvent,
+        Optional<String> onExitEvent,
+        Optional<String> onBreakthroughEvent
     ) {
         public static final Codec<RealmEvents> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
-                Codec.STRING.listOf().optionalFieldOf("advancement_messages").forGetter(RealmEvents::advancementMessages),
-                Codec.STRING.listOf().optionalFieldOf("exit_messages").forGetter(RealmEvents::exitMessages),
-                Codec.STRING.optionalFieldOf("advancement_sound").forGetter(RealmEvents::advancementSound),
-                Codec.STRING.optionalFieldOf("exit_sound").forGetter(RealmEvents::exitSound),
-                Codec.STRING.listOf().optionalFieldOf("advancement_commands").forGetter(RealmEvents::advancementCommands),
-                Codec.STRING.listOf().optionalFieldOf("exit_commands").forGetter(RealmEvents::exitCommands)
+                Codec.STRING.optionalFieldOf("on_enter_event").forGetter(RealmEvents::onEnterEvent),
+                Codec.STRING.optionalFieldOf("on_exit_event").forGetter(RealmEvents::onExitEvent),
+                Codec.STRING.optionalFieldOf("on_breakthrough_event").forGetter(RealmEvents::onBreakthroughEvent)
             ).apply(instance, RealmEvents::new)
         );
     }
