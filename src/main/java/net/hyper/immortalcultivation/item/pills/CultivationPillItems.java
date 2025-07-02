@@ -42,9 +42,10 @@ public class CultivationPillItems {
                         cultivation.addQiBonus(finalRateBonus, 0.0);
 
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        String rarityText = rarity != null ? rarity.getName() + " " : "";
 
                         player.sendSystemMessage(
-                            Component.literal("Qi cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                            Component.literal("Consumed " + rarityText + "Low Quality Qi Pill - Rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
@@ -100,8 +101,11 @@ public class CultivationPillItems {
 
                         cultivation.addQiBonus(finalRateBonus, 0.0);
 
+                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        String rarityText = rarity != null ? rarity.getName() + " " : "";
+
                         player.sendSystemMessage(
-                            Component.literal("Qi cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                            Component.literal("Consumed " + rarityText + "Medium Quality Qi Pill - Rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
@@ -153,8 +157,11 @@ public class CultivationPillItems {
 
                         cultivation.addQiBonus(finalRateBonus, 0.0);
 
+                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        String rarityText = rarity != null ? rarity.getName() + " " : "";
+
                         player.sendSystemMessage(
-                            Component.literal("Qi cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                            Component.literal("Consumed " + rarityText + "High Quality Qi Pill - Rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
@@ -206,8 +213,11 @@ public class CultivationPillItems {
 
                         cultivation.addQiBonus(finalRateBonus, 0.0);
 
+                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        String rarityText = rarity != null ? rarity.getName() + " " : "";
+
                         player.sendSystemMessage(
-                            Component.literal("Qi cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                            Component.literal("Consumed " + rarityText + "Top Quality Qi Pill - Rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
@@ -259,8 +269,11 @@ public class CultivationPillItems {
 
                         cultivation.addBodyBonus(finalRateBonus, 0.0);
 
+                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        String rarityText = rarity != null ? rarity.getName() + " " : "";
+
                         player.sendSystemMessage(
-                            Component.literal("Body cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                            Component.literal("Consumed " + rarityText + "Low Quality Body Pill - Rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.RED)
                         );
                     }
@@ -312,8 +325,11 @@ public class CultivationPillItems {
 
                         cultivation.addBodyBonus(finalRateBonus, 0.0);
 
+                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        String rarityText = rarity != null ? rarity.getName() + " " : "";
+
                         player.sendSystemMessage(
-                            Component.literal("Body cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                            Component.literal("Consumed " + rarityText + "Medium Quality Body Pill - Rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.RED)
                         );
                     }
@@ -365,8 +381,11 @@ public class CultivationPillItems {
 
                         cultivation.addBodyBonus(finalRateBonus, 0.0);
 
+                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        String rarityText = rarity != null ? rarity.getName() + " " : "";
+
                         player.sendSystemMessage(
-                            Component.literal("Body cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                            Component.literal("Consumed " + rarityText + "High Quality Body Pill - Rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.RED)
                         );
                     }
@@ -418,8 +437,11 @@ public class CultivationPillItems {
 
                         cultivation.addBodyBonus(finalRateBonus, 0.0);
 
+                        PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
+                        String rarityText = rarity != null ? rarity.getName() + " " : "";
+
                         player.sendSystemMessage(
-                            Component.literal("Body cultivation rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
+                            Component.literal("Consumed " + rarityText + "Top Quality Body Pill - Rate increased by " + String.format("%.3f", finalRateBonus) + "/sec")
                                 .withStyle(ChatFormatting.RED)
                         );
                     }

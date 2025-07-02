@@ -89,7 +89,8 @@ public class PillFurnaceBlock extends BaseEntityBlock {
         if (!level.isClientSide()) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof PillFurnaceBlockEntity pillFurnace) {
-                player.openMenu(pillFurnace);
+                // Use the standard player.openMenu() - this works in NeoForge 1.21.1
+                player.openMenu(pillFurnace, pos);
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide());

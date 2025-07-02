@@ -6,6 +6,7 @@ import net.hyper.immortalcultivation.registry.*;
 import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.ui.menus.PillFurnaceMenu;
 import net.hyper.immortalcultivation.block.crafting.PillFurnaceBlock;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -49,70 +50,18 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
     public static final int INPUT_SLOT_3 = 2;
     public static final int FUEL_SLOT = 3;
     public static final int SPIRIT_STONE_SLOT = 4;
-
-    // 5 Output slots - one for each rarity of the current pill
     public static final int OUTPUT_SLOT_COMMON = 5;
     public static final int OUTPUT_SLOT_UNCOMMON = 6;
     public static final int OUTPUT_SLOT_RARE = 7;
     public static final int OUTPUT_SLOT_EPIC = 8;
     public static final int OUTPUT_SLOT_LEGENDARY = 9;
-
     public static final int SLOT_COUNT = 10;
 
-    // Pill rarity tiers (within each quality level)
-    public enum PillRarity {
-        COMMON(0, "Common", 0.5, 1.0),          // 50% chance, 1x effectiveness
-        UNCOMMON(1, "Uncommon", 0.3, 1.25),     // 30% chance, 1.25x effectiveness
-        RARE(2, "Rare", 0.15, 1.5),             // 15% chance, 1.5x effectiveness
-        EPIC(3, "Epic", 0.04, 2.0),             // 4% chance, 2x effectiveness
-        LEGENDARY(4, "Legendary", 0.01, 3.0);   // 1% chance, 3x effectiveness
-
-        private final int tier;
-        private final String name;
-        private final double baseChance;
-        private final double effectMultiplier;
-
-        PillRarity(int tier, String name, double baseChance, double effectMultiplier) {
-            this.tier = tier;
-            this.name = name;
-            this.baseChance = baseChance;
-            this.effectMultiplier = effectMultiplier;
-        }
-
-        public int getTier() { return tier; }
-        public String getName() { return name; }
-        public double getBaseChance() { return baseChance; }
-        public double getEffectMultiplier() { return effectMultiplier; }
-
-        public int getOutputSlot() {
-            return switch (this) {
-                case COMMON -> OUTPUT_SLOT_COMMON;
-                case UNCOMMON -> OUTPUT_SLOT_UNCOMMON;
-                case RARE -> OUTPUT_SLOT_RARE;
-                case EPIC -> OUTPUT_SLOT_EPIC;
-                case LEGENDARY -> OUTPUT_SLOT_LEGENDARY;
-            };
-        }
-
-        public net.minecraft.ChatFormatting getColor() {
-            return switch (this) {
-                case COMMON -> net.minecraft.ChatFormatting.WHITE;
-                case UNCOMMON -> net.minecraft.ChatFormatting.GREEN;
-                case RARE -> net.minecraft.ChatFormatting.BLUE;
-                case EPIC -> net.minecraft.ChatFormatting.LIGHT_PURPLE;
-                case LEGENDARY -> net.minecraft.ChatFormatting.GOLD;
-            };
-        }
-    }
-
-    // Item handler for inventory
-    protected final ItemStackHandler itemHandler = new ItemStackHandler(SLOT_COUNT) {
+    // Item handling
+    private final ItemStackHandler itemHandler = new ItemStackHandler(SLOT_COUNT) {
         @Override
         protected void onContentsChanged(int slot) {
             setChanged();
-            if (level != null && !level.isClientSide()) {
-                level.sendBlockUpdated(getBlockPos(), getBlockState(), getBlockState(), 3);
-            }
         }
 
         @Override
@@ -130,16 +79,49 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
 
     // Processing state
     protected int progress = 0;
-    protected int maxProgress = 200;
+    protected int maxProgress = 200; // Base processing time
     protected int fuelTime = 0;
     protected int maxFuelTime = 0;
-    protected UUID lastPlayerUUID = null;
-
-    // Batch processing
     protected int batchSize = 1;
     protected int currentBatch = 0;
 
-    // Container data for GUI sync
+    // Player tracking for rarity calculations
+    @Nullable
+    protected UUID lastPlayerUUID;
+
+    // Rarity enum for pill outputs
+    public enum PillRarity {
+        COMMON(0, "Common", 0.4f, OUTPUT_SLOT_COMMON, ChatFormatting.WHITE, 1.0),
+        UNCOMMON(1, "Uncommon", 0.3f, OUTPUT_SLOT_UNCOMMON, ChatFormatting.GREEN, 1.5),
+        RARE(2, "Rare", 0.2f, OUTPUT_SLOT_RARE, ChatFormatting.BLUE, 2.0),
+        EPIC(3, "Epic", 0.08f, OUTPUT_SLOT_EPIC, ChatFormatting.LIGHT_PURPLE, 3.0),
+        LEGENDARY(4, "Legendary", 0.02f, OUTPUT_SLOT_LEGENDARY, ChatFormatting.GOLD, 5.0);
+
+        private final int level;
+        private final String name;
+        private final float baseChance;
+        private final int outputSlot;
+        private final ChatFormatting color;
+        private final double effectMultiplier;
+
+        PillRarity(int level, String name, float baseChance, int outputSlot, ChatFormatting color, double effectMultiplier) {
+            this.level = level;
+            this.name = name;
+            this.baseChance = baseChance;
+            this.outputSlot = outputSlot;
+            this.color = color;
+            this.effectMultiplier = effectMultiplier;
+        }
+
+        public int getLevel() { return level; }
+        public String getName() { return name; }
+        public float getBaseChance() { return baseChance; }
+        public int getOutputSlot() { return outputSlot; }
+        public ChatFormatting getColor() { return color; }
+        public double getEffectMultiplier() { return effectMultiplier; }
+    }
+
+    // Container data for client sync
     protected final ContainerData dataAccess = new ContainerData() {
         @Override
         public int get(int index) {
@@ -332,230 +314,179 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         player.sendSystemMessage(
             Component.literal("Batch complete! Refined " + batchSize + " ")
                 .append(pillName)
-                .append(":")
-                .withStyle(net.minecraft.ChatFormatting.GREEN)
+                .append(" pills:")
         );
 
         for (PillRarity rarity : PillRarity.values()) {
             int count = rarityCount[rarity.ordinal()];
             if (count > 0) {
                 player.sendSystemMessage(
-                    Component.literal("  " + count + "x ")
-                        .append(Component.literal(rarity.getName())
-                            .withStyle(rarity.getColor()))
+                    Component.literal("  " + count + " " + rarity.getName() + " quality")
                 );
             }
         }
     }
 
-    // Calculate maximum possible batches
+    // Calculate max possible batches based on available ingredients
     private int calculateMaxBatches(PillFurnaceRecipe recipe) {
         ItemStack input1 = itemHandler.getStackInSlot(INPUT_SLOT_1);
         ItemStack input2 = itemHandler.getStackInSlot(INPUT_SLOT_2);
         ItemStack input3 = itemHandler.getStackInSlot(INPUT_SLOT_3);
+        ItemStack spiritStone = itemHandler.getStackInSlot(SPIRIT_STONE_SLOT);
 
-        int batches = Integer.MAX_VALUE;
+        int batch1 = input1.getCount() / recipe.getInput1Count();
+        int batch2 = input2.isEmpty() ? Integer.MAX_VALUE : input2.getCount() / recipe.getInput2Count();
+        int batch3 = input3.isEmpty() ? Integer.MAX_VALUE : input3.getCount() / recipe.getInput3Count();
+        int batchSpirit = recipe.requiresSpiritStone() ? spiritStone.getCount() : Integer.MAX_VALUE;
 
-        if (recipe.getInput1Count() > 0) {
-            batches = Math.min(batches, input1.getCount() / recipe.getInput1Count());
-        }
-        if (recipe.getInput2Count() > 0 && !input2.isEmpty()) {
-            batches = Math.min(batches, input2.getCount() / recipe.getInput2Count());
-        }
-        if (recipe.getInput3Count() > 0 && !input3.isEmpty()) {
-            batches = Math.min(batches, input3.getCount() / recipe.getInput3Count());
-        }
-
-        if (recipe.requiresSpiritStone()) {
-            ItemStack spiritStone = itemHandler.getStackInSlot(SPIRIT_STONE_SLOT);
-            batches = Math.min(batches, spiritStone.getCount());
-        }
-
-        return Math.max(0, batches);
+        return Math.min(Math.min(Math.min(batch1, batch2), batch3), batchSpirit);
     }
 
-    // Calculate pill rarity based on multiple factors
+    // Check if we can stack pills together
+    private boolean canStackPills(ItemStack existing, ItemStack newStack) {
+        return ItemStack.isSameItemSameComponents(existing, newStack) &&
+            existing.getCount() + newStack.getCount() <= existing.getMaxStackSize();
+    }
+
+    // Calculate pill rarity based on player cultivation and other factors
     private PillRarity calculatePillRarity(PillFurnaceRecipe recipe) {
         RandomSource random = level.random;
-        double roll = random.nextDouble();
+        float totalChance = 0.0f;
+        float roll = random.nextFloat();
 
-        // Get modifiers
-        double cultivationModifier = getCultivationModifier();
-        double spiritStoneModifier = getSpiritStoneModifier();
-        double furnaceTierModifier = getTierSuccessModifier();
-        double daoModifier = getDaoModifier();
+        // Get player cultivation bonus if available
+        float cultivationBonus = getCultivationBonus();
+        float spiritStoneBonus = getSpiritStoneBonus();
+        float tierBonus = (float) getTierSuccessModifier();
 
-        // Calculate cumulative chances
-        double totalModifier = cultivationModifier * spiritStoneModifier * furnaceTierModifier * daoModifier;
+        // Calculate cumulative chances with bonuses
+        for (PillRarity rarity : PillRarity.values()) {
+            float adjustedChance = rarity.getBaseChance() * (1 + cultivationBonus + spiritStoneBonus + tierBonus);
+            totalChance += adjustedChance;
 
-        // Build cumulative probability distribution
-        double cumulative = 0.0;
-        PillRarity[] rarities = PillRarity.values();
-
-        // Start from highest rarity and work down
-        for (int i = rarities.length - 1; i >= 0; i--) {
-            PillRarity rarity = rarities[i];
-            double chance = rarity.getBaseChance() * totalModifier;
-
-            // Cap individual rarity chances
-            if (rarity == PillRarity.LEGENDARY) {
-                chance = Math.min(chance, 0.15); // Max 15% for Legendary
-            } else if (rarity == PillRarity.EPIC) {
-                chance = Math.min(chance, 0.25); // Max 25% for Epic
-            }
-
-            cumulative += chance;
-            if (roll < cumulative) {
+            if (roll <= totalChance) {
                 return rarity;
             }
         }
 
-        return PillRarity.COMMON; // Default to common
+        return PillRarity.COMMON; // Fallback
     }
 
-    // Create a pill item with rarity stored in NBT
-    private ItemStack createPillWithRarity(ItemStack basePill, PillRarity rarity) {
-        ItemStack result = basePill.copy();
+    // Get cultivation bonus from last player
+    private float getCultivationBonus() {
+        if (lastPlayerUUID != null && level instanceof Level serverLevel) {
+            Player player = serverLevel.getPlayerByUUID(lastPlayerUUID);
+            if (player != null) {
+                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION);
+                if (cultivation != null) {
+                    long qiCultivation = cultivation.getCurrentQiCultivation();
+                    // Simple bonus: 1% per 1000 cultivation points, max 20%
+                    return Math.min(qiCultivation / 100000.0f, 0.2f);
+                }
+            }
+        }
+        return 0.0f;
+    }
 
-        // Store rarity in CustomData using DataComponents (FIXED)
-        CompoundTag tag = result.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
-        tag.putString("PillRarity", rarity.name());
-        tag.putDouble("EffectMultiplier", rarity.getEffectMultiplier());
-        result.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    // Get spirit stone bonus
+    private float getSpiritStoneBonus() {
+        ItemStack spiritStone = itemHandler.getStackInSlot(SPIRIT_STONE_SLOT);
+        if (!spiritStone.isEmpty()) {
+            // Different spirit stone qualities provide different bonuses
+            if (spiritStone.is(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())) {
+                return 0.15f; // 15% bonus
+            } else if (spiritStone.is(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())) {
+                return 0.10f; // 10% bonus
+            } else if (spiritStone.is(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())) {
+                return 0.05f; // 5% bonus
+            }
+        }
+        return 0.0f;
+    }
 
-        // Update display name to include rarity (FIXED)
-        Component baseName = basePill.getDisplayName();
-        Component rarityPrefix = Component.literal(rarity.getName() + " ")
-            .withStyle(rarity.getColor());
-        result.set(DataComponents.CUSTOM_NAME, rarityPrefix.copy().append(baseName));
+    // Create pill with specific rarity
+    private ItemStack createPillWithRarity(ItemStack baseResult, PillRarity rarity) {
+        ItemStack result = baseResult.copy();
+
+        // Set custom name with rarity
+        Component originalName = result.getHoverName();
+        Component rarityName = Component.literal(rarity.getName() + " ").append(originalName);
+        result.set(DataComponents.CUSTOM_NAME, rarityName);
+
+        // Add custom data to track rarity - using "PillRarity" key to match CultivationPillItems
+        CompoundTag customData = new CompoundTag();
+        customData.putString("PillRarity", rarity.name());
+        customData.putInt("RarityLevel", rarity.getLevel());
+        result.set(DataComponents.CUSTOM_DATA, CustomData.of(customData));
 
         return result;
     }
 
-    // Check if two pills can stack (same base item and rarity)
-    private boolean canStackPills(ItemStack stack1, ItemStack stack2) {
-        if (!ItemStack.isSameItem(stack1, stack2)) return false;
-
-        // Get custom data using DataComponents (FIXED)
-        CustomData customData1 = stack1.get(DataComponents.CUSTOM_DATA);
-        CustomData customData2 = stack2.get(DataComponents.CUSTOM_DATA);
-
-        if (customData1 == null || customData2 == null) return false;
-
-        CompoundTag tag1 = customData1.copyTag();
-        CompoundTag tag2 = customData2.copyTag();
-
-        String rarity1 = tag1.getString("PillRarity");
-        String rarity2 = tag2.getString("PillRarity");
-
-        return rarity1.equals(rarity2);
+    // Furnace tier system - override in subclasses
+    protected double getTierSuccessModifier() {
+        return 0.0; // Base furnace has no bonus
     }
 
-    // Get cultivation realm modifier
-    private double getCultivationModifier() {
-        if (lastPlayerUUID == null || level == null) return 1.0;
-
-        Player player = level.getPlayerByUUID(lastPlayerUUID);
-        if (player == null) return 1.0;
-
-        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        if (cultivation == null) return 1.0;
-
-        // Higher realms give better modifiers
-        int realmLevel = cultivation.getCurrentQiRealm().getRealmLevel();
-        return 1.0 + (realmLevel * 0.1); // +10% per realm level
+    protected int getTierSpeedModifier() {
+        return 1; // Base speed multiplier
     }
 
-    // Get spirit stone quality modifier
-    private double getSpiritStoneModifier() {
-        ItemStack spiritStone = itemHandler.getStackInSlot(SPIRIT_STONE_SLOT);
-        if (spiritStone.isEmpty()) return 1.0;
-
-        Item item = spiritStone.getItem();
-        if (item == ICModItems.TOP_QUALITY_SPIRIT_STONE.get()) {
-            return 2.0; // 100% bonus
-        } else if (item == ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()) {
-            return 1.5; // 50% bonus
-        } else if (item == ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()) {
-            return 1.25; // 25% bonus
-        } else if (item == ICModItems.LOW_QUALITY_SPIRIT_STONE.get()) {
-            return 1.1; // 10% bonus
-        }
-
-        return 1.0;
+    protected int getTierFuelEfficiency() {
+        return 100; // Base efficiency (100% = normal)
     }
 
-    // Get Dao modifier (placeholder)
-    private double getDaoModifier() {
-        return 1.0 + (level.random.nextDouble() * 0.2); // 0-20% bonus
-    }
-
-    // Track player interaction
-    @Override
-    public void startOpen(Player player) {
-        Container.super.startOpen(player);
-        lastPlayerUUID = player.getUUID();
-    }
-
-    // Process validation
+    // Processing logic
     private boolean canProcess() {
-        PillFurnaceRecipe recipe = getValidRecipe();
-        if (recipe == null) return false;
-
-        // Check if any output slot can accept results
-        for (PillRarity rarity : PillRarity.values()) {
-            int slot = rarity.getOutputSlot();
-            ItemStack outputSlot = itemHandler.getStackInSlot(slot);
-
-            if (outputSlot.isEmpty() || outputSlot.getCount() < outputSlot.getMaxStackSize()) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    // Get processing speed
-    public int getProcessingSpeed() {
-        int baseSpeed = getTierSpeedModifier();
-
-        ItemStack spiritStone = itemHandler.getStackInSlot(SPIRIT_STONE_SLOT);
-        if (!spiritStone.isEmpty()) {
-            Item item = spiritStone.getItem();
-            if (item == ICModItems.TOP_QUALITY_SPIRIT_STONE.get()) {
-                baseSpeed += 2;
-            } else if (item == ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()) {
-                baseSpeed += 1;
-            }
-        }
-
-        return baseSpeed;
-    }
-
-    private PillFurnaceRecipe getValidRecipe() {
-        if (level == null) return null;
-
-        PillFurnaceRecipeInput recipeInput = new PillFurnaceRecipeInput(
-            itemHandler.getStackInSlot(INPUT_SLOT_1),
-            itemHandler.getStackInSlot(INPUT_SLOT_2),
-            itemHandler.getStackInSlot(INPUT_SLOT_3)
-        );
-
-        RecipeManager recipeManager = level.getRecipeManager();
-        Optional<RecipeHolder<PillFurnaceRecipe>> recipe = recipeManager
-            .getRecipeFor(ICModRecipes.PILL_FURNACE_TYPE.get(), recipeInput, level);
-
-        return recipe.map(RecipeHolder::value).orElse(null);
+        return getValidRecipe() != null && hasRoomForOutput();
     }
 
     private boolean needsFuel() {
-        return true;
+        return getValidRecipe() != null;
     }
 
     private boolean isLit() {
         return fuelTime > 0;
     }
 
+    private int getProcessingSpeed() {
+        return getTierSpeedModifier();
+    }
+
+    // Get valid recipe for current inputs
+    @Nullable
+    private PillFurnaceRecipe getValidRecipe() {
+        if (level == null) return null;
+
+        SimpleContainer container = new SimpleContainer(3);
+        container.setItem(0, itemHandler.getStackInSlot(INPUT_SLOT_1));
+        container.setItem(1, itemHandler.getStackInSlot(INPUT_SLOT_2));
+        container.setItem(2, itemHandler.getStackInSlot(INPUT_SLOT_3));
+
+        PillFurnaceRecipeInput input = new PillFurnaceRecipeInput(
+            container.getItem(0),
+            container.getItem(1),
+            container.getItem(2)
+        );
+
+        RecipeManager recipeManager = level.getRecipeManager();
+        Optional<RecipeHolder<PillFurnaceRecipe>> recipe =
+            recipeManager.getRecipeFor(ICModRecipes.PILL_FURNACE_TYPE.get(), input, level);
+
+        return recipe.map(RecipeHolder::value).orElse(null);
+    }
+
+    // Check if there's room for output
+    private boolean hasRoomForOutput() {
+        for (int i = OUTPUT_SLOT_COMMON; i <= OUTPUT_SLOT_LEGENDARY; i++) {
+            ItemStack outputStack = itemHandler.getStackInSlot(i);
+            if (outputStack.isEmpty() || outputStack.getCount() < outputStack.getMaxStackSize()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Fuel system
     private int getFuelBurnTime(ItemStack fuel) {
         if (fuel.isEmpty()) return 0;
 
@@ -585,40 +516,24 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
 
     // Validation methods
     private boolean isValidInput(ItemStack stack) {
-        return !stack.isEmpty();
+        if (stack.isEmpty()) return false;
+        // Add your input validation logic here
+        return true; // For now, accept any item as input
     }
 
     private boolean isValidFuel(ItemStack stack) {
+        if (stack.isEmpty()) return false;
         return getFuelBurnTime(stack) > 0;
     }
 
     private boolean isValidSpiritStone(ItemStack stack) {
-        if (stack.isEmpty()) return true;
-        Item item = stack.getItem();
-        return item == ICModItems.LOW_QUALITY_SPIRIT_STONE.get() ||
-            item == ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get() ||
-            item == ICModItems.HIGH_QUALITY_SPIRIT_STONE.get() ||
-            item == ICModItems.TOP_QUALITY_SPIRIT_STONE.get();
+        if (stack.isEmpty()) return true; // Spirit stones are optional
+        return stack.is(ICModItems.LOW_QUALITY_SPIRIT_STONE.get()) ||
+            stack.is(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()) ||
+            stack.is(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get());
     }
 
-    // Furnace tier system
-    public int getFurnaceTier() {
-        return 0;
-    }
-
-    protected double getTierSuccessModifier() {
-        return 1.0;
-    }
-
-    protected int getTierSpeedModifier() {
-        return 1;
-    }
-
-    protected int getTierFuelEfficiency() {
-        return 100;
-    }
-
-    // Container implementation methods remain the same...
+    // Container implementation
     @Override
     public int getContainerSize() {
         return SLOT_COUNT;
@@ -693,8 +608,11 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         return new PillFurnaceMenu(containerId, inventory, this, dataAccess);
     }
 
+    // MenuProvider interface implementation - this is what gets called when using NetworkHooks.openScreen()
     @Override
-    public @Nullable AbstractContainerMenu createMenu(int i, Inventory inventory, Player player) {
-        return null;
+    public @Nullable AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+        // Track the player for cultivation bonuses
+        lastPlayerUUID = player.getUUID();
+        return new PillFurnaceMenu(containerId, inventory, this, dataAccess);
     }
 }

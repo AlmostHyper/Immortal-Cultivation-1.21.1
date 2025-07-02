@@ -16,8 +16,13 @@ public class PillFurnaceScreen extends AbstractContainerScreen<PillFurnaceMenu> 
 
     public PillFurnaceScreen(PillFurnaceMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageHeight = 166; // Standard height to match your texture
-        this.inventoryLabelY = this.imageHeight - 94; // Standard position for inventory label
+
+        // Fixed: Set correct dimensions to match your 176x182 texture
+        this.imageWidth = 176;   // Width matches your texture
+        this.imageHeight = 182;  // Height matches your texture (was 166, now 182)
+
+        // Adjust inventory label position for the taller texture
+        this.inventoryLabelY = this.imageHeight - 94; // Position relative to new height
     }
 
     @Override
@@ -31,15 +36,20 @@ public class PillFurnaceScreen extends AbstractContainerScreen<PillFurnaceMenu> 
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         RenderSystem.setShader(GameRenderer::getPositionTexShader);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.setShaderTexture(0, TEXTURE);
 
         int x = (this.width - this.imageWidth) / 2;
         int y = (this.height - this.imageHeight) / 2;
 
-        // Draw main GUI - your texture already contains all the slot outlines and decorations
-        guiGraphics.blit(TEXTURE, x, y, 0, 0, this.imageWidth, this.imageHeight);
+        // Draw main GUI - using the 6-parameter blit method to specify exact texture and render sizes
+        // This tells Minecraft: "render this texture at exactly these dimensions, don't scale it"
+        guiGraphics.blit(TEXTURE,
+            x, y,                           // Screen position
+            0, 0,                           // Texture position (top-left corner)
+            this.imageWidth, this.imageHeight,  // Render size (how big to draw it)
+            this.imageWidth, this.imageHeight   // Texture size (actual texture dimensions)
+        );
 
-        // Draw vertical progress arrow (pointing down)
+        // Draw vertical progress arrow (pointing down) - adjust position if needed
         if (this.menu.isCrafting()) {
             int progress = this.menu.getScaledProgress();
             // Draw progress arrow filling from top to bottom

@@ -3,7 +3,6 @@ package net.hyper.immortalcultivation.registry;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.ui.menus.PillFurnaceMenu;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.flag.FeatureFlags;
 import net.minecraft.world.inventory.MenuType;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
