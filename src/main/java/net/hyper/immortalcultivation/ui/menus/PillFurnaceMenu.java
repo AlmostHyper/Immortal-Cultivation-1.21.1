@@ -18,39 +18,39 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
     // ===== SLOT POSITION CONSTANTS - ADJUST THESE EASILY =====
 
     // Input slots (top row)
-    private static final int INPUT_1_X = 58;
-    private static final int INPUT_1_Y = 17;
-    private static final int INPUT_2_X = 82;
-    private static final int INPUT_2_Y = 17;
-    private static final int INPUT_3_X = 106;
-    private static final int INPUT_3_Y = 17;
+    private static final int INPUT_1_X = 53;
+    private static final int INPUT_1_Y = 27;
+    private static final int INPUT_2_X = 80;
+    private static final int INPUT_2_Y = 18;
+    private static final int INPUT_3_X = 107;
+    private static final int INPUT_3_Y = 27;
 
     // Special slots (middle row)
-    private static final int SPIRIT_STONE_X = 58;
-    private static final int SPIRIT_STONE_Y = 40;
-    private static final int FUEL_X = 106;
-    private static final int FUEL_Y = 40;
+    private static final int SPIRIT_STONE_X = 144;
+    private static final int SPIRIT_STONE_Y = 44;
+    private static final int FUEL_X = 16;
+    private static final int FUEL_Y = 44;
 
     // Output slots (bottom row)
-    private static final int OUTPUT_COMMON_X = 36;
-    private static final int OUTPUT_COMMON_Y = 61;
-    private static final int OUTPUT_UNCOMMON_X = 60;
-    private static final int OUTPUT_UNCOMMON_Y = 61;
-    private static final int OUTPUT_RARE_X = 82;
-    private static final int OUTPUT_RARE_Y = 61;
-    private static final int OUTPUT_EPIC_X = 106;
-    private static final int OUTPUT_EPIC_Y = 61;
-    private static final int OUTPUT_LEGENDARY_X = 130;
-    private static final int OUTPUT_LEGENDARY_Y = 61;
+    private static final int OUTPUT_COMMON_X = 26;
+    private static final int OUTPUT_COMMON_Y = 72;
+    private static final int OUTPUT_UNCOMMON_X = 53;
+    private static final int OUTPUT_UNCOMMON_Y = 72;
+    private static final int OUTPUT_RARE_X = 80;
+    private static final int OUTPUT_RARE_Y = 72;
+    private static final int OUTPUT_EPIC_X = 107;
+    private static final int OUTPUT_EPIC_Y = 72;
+    private static final int OUTPUT_LEGENDARY_X = 134;
+    private static final int OUTPUT_LEGENDARY_Y = 72;
 
     // Player inventory positions and spacing (adjust these to match your texture)
     private static final int PLAYER_INVENTORY_START_X = 8;
-    private static final int PLAYER_INVENTORY_START_Y = 92;
+    private static final int PLAYER_INVENTORY_START_Y = 104;
     private static final int PLAYER_INVENTORY_SLOT_SPACING_X = 18;  // Horizontal spacing between slots
-    private static final int PLAYER_INVENTORY_SLOT_SPACING_Y = 20;  // Vertical spacing between rows
+    private static final int PLAYER_INVENTORY_SLOT_SPACING_Y = 18;  // Vertical spacing between rows
 
     private static final int PLAYER_HOTBAR_START_X = 8;
-    private static final int PLAYER_HOTBAR_START_Y = 156;
+    private static final int PLAYER_HOTBAR_START_Y = 162;
     private static final int PLAYER_HOTBAR_SLOT_SPACING_X = 18;     // Horizontal spacing for hotbar
 
     // ===========================================================
@@ -295,20 +295,24 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
     // Helper methods to check item validity
     private boolean isValidInput(ItemStack stack) {
         // TODO: Implement proper checks for pill ingredients
+        // For now, check if item has cultivation-related tags or is in ingredient list
         return !stack.isEmpty();
     }
 
     private boolean isValidFuel(ItemStack stack) {
         // TODO: Implement proper fuel checking
+        // Check for items that can be used as spiritual fuel
         return !stack.isEmpty();
     }
 
     private boolean isValidSpiritStone(ItemStack stack) {
-        // TODO: Check if item has spirit stone tag
+        // TODO: Check if item has spirit stone tag or is valid spirit stone
+        // This should check your mod's spirit stone items
         return !stack.isEmpty();
     }
 
-    // Getters for GUI to access progress data
+    // ===== GETTERS FOR GUI ACCESS =====
+
     public int getProgress() {
         return this.data.get(0);
     }
@@ -341,11 +345,65 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
         return getFuelTime() > 0;
     }
 
-    // For GUI rendering
+    /**
+     * Checks if a spirit stone is present and actively enhancing the refinement process
+     */
+    public boolean hasActiveSpiritStone() {
+        // Check if spirit stone slot has an item and if it's currently being used
+        if (this.blockEntity != null) {
+            IItemHandler itemHandler = this.blockEntity.getItemHandler(null);
+            if (itemHandler != null) {
+                ItemStack spiritStone = itemHandler.getStackInSlot(PillFurnaceBlockEntity.SPIRIT_STONE_SLOT);
+                // Return true if there's a spirit stone and the furnace is active
+                return !spiritStone.isEmpty() && (isCrafting() || isBurning());
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets the quality enhancement level from the spirit stone (if any)
+     */
+    public int getSpiritStoneLevel() {
+        if (this.blockEntity != null) {
+            IItemHandler itemHandler = this.blockEntity.getItemHandler(null);
+            if (itemHandler != null) {
+                ItemStack spiritStone = itemHandler.getStackInSlot(PillFurnaceBlockEntity.SPIRIT_STONE_SLOT);
+                if (!spiritStone.isEmpty()) {
+                    // TODO: Implement spirit stone level detection based on your item system
+                    // For now, return a basic level
+                    return 1;
+                }
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Checks if a specific rarity output should be highlighted
+     */
+    public boolean shouldHighlightRarity(int rarityIndex) {
+        // This method can be expanded based on your pill crafting logic
+        // For example, highlight based on current recipe or spirit stone effects
+        if (!isCrafting()) return false;
+
+        int spiritLevel = getSpiritStoneLevel();
+        int progress = getProgress();
+        int maxProgress = getMaxProgress();
+
+        // Example logic: highlight rarities based on progress and spirit stone level
+        if (progress > maxProgress * 0.8f) { // Near completion
+            return rarityIndex <= spiritLevel; // Highlight up to spirit stone level
+        }
+
+        return false;
+    }
+
+    // For GUI rendering - calculate scaled progress for visual elements
     public int getScaledProgress() {
         int maxProgress = getMaxProgress();
         int progress = getProgress();
-        int progressArrowHeight = 16; // Height of vertical progress arrow (adjust to match your arrow height)
+        int progressArrowHeight = 16; // Height of vertical progress arrow
 
         return maxProgress != 0 && progress != 0 ? progress * progressArrowHeight / maxProgress : 0;
     }
@@ -356,5 +414,43 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
         int fuelFlameHeight = 14; // Height of fuel flame in GUI
 
         return maxFuel != 0 ? fuel * fuelFlameHeight / maxFuel : 0;
+    }
+
+    /**
+     * Gets the current refinement efficiency (0.0 to 1.0)
+     * Influenced by spirit stones and other factors
+     */
+    public float getRefinementEfficiency() {
+        float baseEfficiency = 0.7f; // Base 70% efficiency
+
+        if (hasActiveSpiritStone()) {
+            int spiritLevel = getSpiritStoneLevel();
+            baseEfficiency += spiritLevel * 0.1f; // +10% per spirit stone level
+        }
+
+        return Math.min(1.0f, baseEfficiency);
+    }
+
+    /**
+     * Gets the expected pill quality distribution for tooltips
+     */
+    public float[] getQualityDistribution() {
+        float efficiency = getRefinementEfficiency();
+
+        // Base distribution favors lower qualities
+        float[] distribution = {0.4f, 0.3f, 0.2f, 0.08f, 0.02f}; // Common to Legendary
+
+        // Spirit stones shift distribution toward higher qualities
+        if (hasActiveSpiritStone()) {
+            int spiritLevel = getSpiritStoneLevel();
+            // Shift probability toward higher rarities
+            for (int i = distribution.length - 1; i > 0; i--) {
+                float shift = distribution[i - 1] * 0.1f * spiritLevel;
+                distribution[i] += shift;
+                distribution[i - 1] -= shift;
+            }
+        }
+
+        return distribution;
     }
 }
