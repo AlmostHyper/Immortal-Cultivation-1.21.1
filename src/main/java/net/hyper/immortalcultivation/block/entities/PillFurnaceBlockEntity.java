@@ -225,14 +225,18 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
     }
 
     // Main processing logic
+    // Main processing logic - FIXED: Only consume fuel when actively processing
     public static void tick(Level level, BlockPos pos, BlockState state, PillFurnaceBlockEntity entity) {
         if (level.isClientSide()) return;
 
         boolean changed = false;
         boolean wasLit = entity.isLit();
 
-        // Check and consume fuel if needed
-        if (entity.needsFuel() && !entity.isLit()) {
+        // Check if we can process a recipe
+        boolean canProcess = entity.canProcess();
+
+        // Only start fuel consumption if we can actually process something
+        if (canProcess && !entity.isLit() && entity.needsFuel()) {
             ItemStack fuelStack = entity.itemHandler.getStackInSlot(FUEL_SLOT);
             if (!fuelStack.isEmpty()) {
                 int burnTime = entity.getFuelBurnTime(fuelStack);
@@ -244,23 +248,22 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
             }
         }
 
-        // Process recipe if we have fuel and a valid recipe
-        if (entity.isLit() && entity.canProcess()) {
+        // Process recipe if we have fuel and can process
+        if (entity.isLit() && canProcess) {
             entity.progress++;
             int processSpeed = entity.getProcessingSpeed();
             if (entity.progress >= entity.maxProgress / processSpeed) {
                 entity.processBatch();
                 changed = true;
             }
-        } else if (!entity.canProcess()) {
-            entity.progress = 0;
-            entity.currentBatch = 0;
-        }
 
-        // Consume fuel time
-        if (entity.fuelTime > 0) {
+            // FIXED: Only consume fuel when actively processing
             entity.fuelTime--;
             changed = true;
+        } else if (!canProcess) {
+            // Reset progress if we can't process
+            entity.progress = 0;
+            entity.currentBatch = 0;
         }
 
         // Update block state if lit status changed
