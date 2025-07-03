@@ -6,21 +6,25 @@ import net.hyper.immortalcultivation.registry.*;
 import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.ui.menus.PillFurnaceMenu;
 import net.hyper.immortalcultivation.block.crafting.PillFurnaceBlock;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
-import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -34,7 +38,6 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
@@ -51,21 +54,22 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
     public static final int SPIRIT_STONE_SLOT = 4;
 
     // 5 Output slots - one for each rarity of the current pill
-    public static final int OUTPUT_SLOT_COMMON = 5;
-    public static final int OUTPUT_SLOT_UNCOMMON = 6;
-    public static final int OUTPUT_SLOT_RARE = 7;
-    public static final int OUTPUT_SLOT_EPIC = 8;
-    public static final int OUTPUT_SLOT_LEGENDARY = 9;
+    public static final int OUTPUT_SLOT_MORTAL = 5;
+    public static final int OUTPUT_SLOT_PROFOUND = 6;
+    public static final int OUTPUT_SLOT_DIVINE = 7;
+    public static final int OUTPUT_SLOT_CELESTIAL = 8;
+    public static final int OUTPUT_SLOT_HEAVENLY = 9;
 
     public static final int SLOT_COUNT = 10;
 
     // Pill rarity tiers (within each quality level)
     public enum PillRarity {
-        COMMON(0, "Common", 0.5, 1.0),          // 50% chance, 1x effectiveness
-        UNCOMMON(1, "Uncommon", 0.3, 1.25),     // 30% chance, 1.25x effectiveness
-        RARE(2, "Rare", 0.15, 1.5),             // 15% chance, 1.5x effectiveness
-        EPIC(3, "Epic", 0.04, 2.0),             // 4% chance, 2x effectiveness
-        LEGENDARY(4, "Legendary", 0.01, 3.0);   // 1% chance, 3x effectiveness
+        MORTAL(0, "Mortal", 0.7, 1.0),          // 70% chance, 1x effectiveness
+        PROFOUND(1, "Profound", 0.2, 1.25),     // 20% chance, 1.25x effectiveness
+        DIVINE(2, "Divine", 0.08, 1.5),             // 8% chance, 1.5x effectiveness
+        CELESTIAL(3, "Celestial", 0.019, 2.0),            // 1.9% chance, 2x effectiveness
+        HEAVENLY(4, "Heavenly", 0.001, 3.0);    // 0.1% chance, 3x effectiveness
+
 
         private final int tier;
         private final String name;
@@ -86,21 +90,21 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
 
         public int getOutputSlot() {
             return switch (this) {
-                case COMMON -> OUTPUT_SLOT_COMMON;
-                case UNCOMMON -> OUTPUT_SLOT_UNCOMMON;
-                case RARE -> OUTPUT_SLOT_RARE;
-                case EPIC -> OUTPUT_SLOT_EPIC;
-                case LEGENDARY -> OUTPUT_SLOT_LEGENDARY;
+                case MORTAL -> OUTPUT_SLOT_MORTAL;
+                case PROFOUND -> OUTPUT_SLOT_PROFOUND;
+                case DIVINE -> OUTPUT_SLOT_DIVINE;
+                case CELESTIAL -> OUTPUT_SLOT_CELESTIAL;
+                case HEAVENLY -> OUTPUT_SLOT_HEAVENLY;
             };
         }
 
         public net.minecraft.ChatFormatting getColor() {
             return switch (this) {
-                case COMMON -> net.minecraft.ChatFormatting.WHITE;
-                case UNCOMMON -> net.minecraft.ChatFormatting.GREEN;
-                case RARE -> net.minecraft.ChatFormatting.BLUE;
-                case EPIC -> net.minecraft.ChatFormatting.LIGHT_PURPLE;
-                case LEGENDARY -> net.minecraft.ChatFormatting.GOLD;
+                case MORTAL -> net.minecraft.ChatFormatting.WHITE;
+                case PROFOUND -> net.minecraft.ChatFormatting.GREEN;
+                case DIVINE -> net.minecraft.ChatFormatting.BLUE;
+                case CELESTIAL -> net.minecraft.ChatFormatting.LIGHT_PURPLE;
+                case HEAVENLY -> net.minecraft.ChatFormatting.GOLD;
             };
         }
     }
@@ -121,8 +125,8 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
                 case INPUT_SLOT_1, INPUT_SLOT_2, INPUT_SLOT_3 -> isValidInput(stack);
                 case FUEL_SLOT -> isValidFuel(stack);
                 case SPIRIT_STONE_SLOT -> isValidSpiritStone(stack);
-                case OUTPUT_SLOT_COMMON, OUTPUT_SLOT_UNCOMMON, OUTPUT_SLOT_RARE,
-                     OUTPUT_SLOT_EPIC, OUTPUT_SLOT_LEGENDARY -> false; // Output only
+                case OUTPUT_SLOT_MORTAL, OUTPUT_SLOT_PROFOUND, OUTPUT_SLOT_DIVINE,
+                     OUTPUT_SLOT_CELESTIAL, OUTPUT_SLOT_HEAVENLY -> false; // Output only
                 default -> false;
             };
         }
@@ -298,22 +302,31 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
             itemHandler.extractItem(SPIRIT_STONE_SLOT, batchSize, false);
         }
 
-        // Process each pill in the batch
+        // Process each pill in the batch with success/failure mechanics
         for (int i = 0; i < batchSize; i++) {
-            PillRarity rarity = calculatePillRarity(recipe);
-            ItemStack result = createPillWithRarity(recipe.getResult(), rarity);
+            // Calculate success chance for this attempt
+            double successChance = calculateRecipeSuccessChance(recipe);
+            boolean recipeSuccess = level.random.nextDouble() < successChance;
 
-            // Add to appropriate output slot
-            int outputSlot = rarity.getOutputSlot();
-            ItemStack existingOutput = itemHandler.getStackInSlot(outputSlot);
+            if (recipeSuccess) {
+                // SUCCESS: Create the pill with rarity
+                PillRarity rarity = calculatePillRarity(recipe);
+                ItemStack result = createPillWithRarity(recipe.getResult(), rarity);
 
-            if (existingOutput.isEmpty()) {
-                itemHandler.setStackInSlot(outputSlot, result);
-            } else if (canStackPills(existingOutput, result)) {
-                existingOutput.grow(result.getCount());
+                // Add to appropriate output slot
+                int outputSlot = rarity.getOutputSlot();
+                ItemStack existingOutput = itemHandler.getStackInSlot(outputSlot);
+
+                if (existingOutput.isEmpty()) {
+                    itemHandler.setStackInSlot(outputSlot, result);
+                } else if (canStackPills(existingOutput, result)) {
+                    existingOutput.grow(result.getCount());
+                }
+
+                rarityCount[rarity.ordinal()]++;
+            } else {
+                playFailureEffects();
             }
-
-            rarityCount[rarity.ordinal()]++;
         }
 
         // Send batch complete message
@@ -327,6 +340,78 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         // Reset progress
         progress = 0;
         currentBatch = 0;
+    }
+
+    private void playFailureEffects() {
+        if (level == null || level.isClientSide()) return;
+
+        ServerLevel serverLevel = (ServerLevel) level;
+
+        // Get furnace position for particle spawn location
+        double x = worldPosition.getX() + 0.5;
+        double y = worldPosition.getY() + 1.2; // Slightly above the furnace
+        double z = worldPosition.getZ() + 0.5;
+
+        // Failure smoke - dark smoke rising from furnace
+        serverLevel.sendParticles(
+            ParticleTypes.LARGE_SMOKE,
+            x, y, z,
+            8, // particle count
+            0.3, 0.1, 0.3, // spread (x, y, z)
+            0.02 // speed
+        );
+
+        // Ash particles - lighter particles floating around
+        serverLevel.sendParticles(
+            ParticleTypes.WHITE_ASH,
+            x, y, z,
+            5,
+            0.4, 0.2, 0.4,
+            0.01
+        );
+
+        // Small explosion/puff effect at furnace opening
+        serverLevel.sendParticles(
+            ParticleTypes.POOF,
+            x, y - 0.3, z,
+            3,
+            0.2, 0.1, 0.2,
+            0.05
+        );
+
+        // Play failure sound effect
+        serverLevel.playSound(
+            null, // source player (null = all nearby players hear it)
+            worldPosition,
+            SoundEvents.FIRE_EXTINGUISH, // Sizzling failure sound
+            SoundSource.BLOCKS,
+            0.8f, // volume
+            0.7f  // pitch (lower = more ominous)
+        );
+
+        // Optional: Additional atmospheric sound
+        serverLevel.playSound(
+            null,
+            worldPosition,
+            SoundEvents.GENERIC_EXTINGUISH_FIRE,
+            SoundSource.BLOCKS,
+            0.5f,
+            0.5f
+        );
+    }
+
+    private double calculateRecipeSuccessChance(PillFurnaceRecipe recipe) {
+        // Start with the recipe's base success chance
+        double baseChance = recipe.getBaseSuccessChance();
+
+        // Get all the same modifiers used for rarity calculation
+        double cultivationModifier = getCultivationModifier();
+        double spiritStoneModifier = getSpiritStoneModifier();
+        double furnaceTierModifier = getTierSuccessModifier();
+
+        // Apply modifiers to success chance (but cap it at 95% to maintain some risk)
+        double finalChance = baseChance * cultivationModifier * spiritStoneModifier * furnaceTierModifier;
+        return finalChance;
     }
 
     // Send detailed batch completion message
@@ -398,10 +483,9 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         double cultivationModifier = getCultivationModifier();
         double spiritStoneModifier = getSpiritStoneModifier();
         double furnaceTierModifier = getTierSuccessModifier();
-        double daoModifier = getDaoModifier();
 
         // Calculate cumulative chances
-        double totalModifier = cultivationModifier * spiritStoneModifier * furnaceTierModifier * daoModifier;
+        double totalModifier = cultivationModifier * spiritStoneModifier * furnaceTierModifier;
 
         // Build cumulative probability distribution
         double cumulative = 0.0;
@@ -413,9 +497,9 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
             double chance = rarity.getBaseChance() * totalModifier;
 
             // Cap individual rarity chances
-            if (rarity == PillRarity.LEGENDARY) {
+            if (rarity == PillRarity.HEAVENLY) {
                 chance = Math.min(chance, 0.15); // Max 15% for Legendary
-            } else if (rarity == PillRarity.EPIC) {
+            } else if (rarity == PillRarity.CELESTIAL) {
                 chance = Math.min(chance, 0.25); // Max 25% for Epic
             }
 
@@ -425,7 +509,7 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
             }
         }
 
-        return PillRarity.COMMON; // Default to common
+        return PillRarity.MORTAL; // Default to common
     }
 
     // Create a pill item with rarity stored in NBT
@@ -501,9 +585,11 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
     }
 
     // Get Dao modifier (placeholder)
+    /*
     private double getDaoModifier() {
         return 1.0 + (level.random.nextDouble() * 0.2); // 0-20% bonus
     }
+    /**/
 
     // Track player interaction
     @Override
@@ -725,5 +811,66 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
     @Override
     public @Nullable AbstractContainerMenu createMenu(int i, Inventory inventory, Player player) {
         return new PillFurnaceMenu(i, inventory, this, dataAccess);
+    }
+
+    private void awardCraftingExperience(PillFurnaceRecipe recipe, PillRarity rarity, Player player, boolean isFirstTimeRecipe) {
+        if (player == null) return;
+
+        // Base experience calculation
+        double baseSuccessChance = recipe.getBaseSuccessChance();
+        int baseExp = calculateBaseExperience(baseSuccessChance);
+
+        // Rarity multiplier
+        double rarityMultiplier = getRarityExperienceMultiplier(rarity);
+
+        // First-time recipe bonus (like vanilla recipe book)
+        double firstTimeMultiplier = isFirstTimeRecipe ? 2.0 : 1.0;
+
+        // Furnace tier bonus (better furnaces give more exp)
+        double tierMultiplier = 1.0 + (getFurnaceTier() * 0.2); // +20% per tier
+
+        // Calculate final experience
+        int finalExp = (int) Math.ceil(baseExp * rarityMultiplier * firstTimeMultiplier * tierMultiplier);
+
+        // Cap experience at reasonable maximum (prevent exploits)
+        finalExp = Math.min(finalExp, 100);
+
+        // Award the experience
+        player.giveExperiencePoints(finalExp);
+
+        // Enhanced sound and visual feedback
+        playExperienceEffects(player, rarity, finalExp, isFirstTimeRecipe);
+    }
+
+    private int calculateBaseExperience(double successChance) {
+        if (successChance <= 0.1) return 20;
+        if (successChance <= 0.2) return 15;
+        if (successChance <= 0.4) return 10;
+        if (successChance <= 0.6) return 7;
+        if (successChance <= 0.8) return 5;
+        return 3;
+    }
+
+    private double getRarityExperienceMultiplier(PillRarity rarity) {
+        return switch (rarity) {
+            case MORTAL -> 1.0;
+            case PROFOUND -> 1.5;
+            case DIVINE -> 2.0;
+            case CELESTIAL -> 3.0;
+            case HEAVENLY -> 5.0;
+        };
+    }
+
+    private void playExperienceEffects(Player player, PillRarity rarity, int expAmount, boolean isFirstTime) {
+        // Base experience pickup sound
+        float pitch = 1.0f + (rarity.getTier() * 0.1f);
+        player.level().playSound(null, player.blockPosition(),
+            SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.8f, pitch);
+
+        // Special effects for high rarity or first time
+        if (rarity.getTier() >= 3 || isFirstTime) { // Epic+ or first time
+            player.level().playSound(null, player.blockPosition(),
+                SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 0.3f, 1.5f);
+        }
     }
 }

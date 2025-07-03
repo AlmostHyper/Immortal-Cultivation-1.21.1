@@ -82,8 +82,8 @@ public class CultivationPillItems {
             @Override
             public boolean isFoil(ItemStack stack) {
                 PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
-                return rarity == PillFurnaceBlockEntity.PillRarity.EPIC ||
-                    rarity == PillFurnaceBlockEntity.PillRarity.LEGENDARY;
+                return rarity == PillFurnaceBlockEntity.PillRarity.CELESTIAL ||
+                    rarity == PillFurnaceBlockEntity.PillRarity.HEAVENLY;
             }
         };
     }
@@ -138,8 +138,8 @@ public class CultivationPillItems {
             @Override
             public boolean isFoil(ItemStack stack) {
                 PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
-                return rarity == PillFurnaceBlockEntity.PillRarity.EPIC ||
-                    rarity == PillFurnaceBlockEntity.PillRarity.LEGENDARY;
+                return rarity == PillFurnaceBlockEntity.PillRarity.CELESTIAL ||
+                    rarity == PillFurnaceBlockEntity.PillRarity.HEAVENLY;
             }
         };
     }
@@ -194,8 +194,8 @@ public class CultivationPillItems {
             @Override
             public boolean isFoil(ItemStack stack) {
                 PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
-                return rarity == PillFurnaceBlockEntity.PillRarity.EPIC ||
-                    rarity == PillFurnaceBlockEntity.PillRarity.LEGENDARY;
+                return rarity == PillFurnaceBlockEntity.PillRarity.CELESTIAL ||
+                    rarity == PillFurnaceBlockEntity.PillRarity.HEAVENLY;
             }
         };
     }
@@ -306,8 +306,8 @@ public class CultivationPillItems {
             @Override
             public boolean isFoil(ItemStack stack) {
                 PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
-                return rarity == PillFurnaceBlockEntity.PillRarity.EPIC ||
-                    rarity == PillFurnaceBlockEntity.PillRarity.LEGENDARY;
+                return rarity == PillFurnaceBlockEntity.PillRarity.CELESTIAL ||
+                    rarity == PillFurnaceBlockEntity.PillRarity.HEAVENLY;
             }
         };
     }
@@ -362,8 +362,8 @@ public class CultivationPillItems {
             @Override
             public boolean isFoil(ItemStack stack) {
                 PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
-                return rarity == PillFurnaceBlockEntity.PillRarity.EPIC ||
-                    rarity == PillFurnaceBlockEntity.PillRarity.LEGENDARY;
+                return rarity == PillFurnaceBlockEntity.PillRarity.CELESTIAL ||
+                    rarity == PillFurnaceBlockEntity.PillRarity.HEAVENLY;
             }
         };
     }
@@ -418,8 +418,8 @@ public class CultivationPillItems {
             @Override
             public boolean isFoil(ItemStack stack) {
                 PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
-                return rarity == PillFurnaceBlockEntity.PillRarity.EPIC ||
-                    rarity == PillFurnaceBlockEntity.PillRarity.LEGENDARY;
+                return rarity == PillFurnaceBlockEntity.PillRarity.CELESTIAL ||
+                    rarity == PillFurnaceBlockEntity.PillRarity.HEAVENLY;
             }
         };
     }

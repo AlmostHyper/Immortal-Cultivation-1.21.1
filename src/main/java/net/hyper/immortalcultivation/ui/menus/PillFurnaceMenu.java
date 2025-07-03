@@ -11,7 +11,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.items.IItemHandler;
-import net.neoforged.neoforge.items.ItemStackHandler;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
 public class PillFurnaceMenu extends AbstractContainerMenu {
@@ -156,35 +155,35 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
         this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.FUEL_SLOT, FUEL_X, FUEL_Y));
 
         // Output slots (bottom row) - these are output-only
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_COMMON, OUTPUT_COMMON_X, OUTPUT_COMMON_Y) {
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_MORTAL, OUTPUT_COMMON_X, OUTPUT_COMMON_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
             }
         });
 
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_UNCOMMON, OUTPUT_UNCOMMON_X, OUTPUT_UNCOMMON_Y) {
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_PROFOUND, OUTPUT_UNCOMMON_X, OUTPUT_UNCOMMON_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
             }
         });
 
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_RARE, OUTPUT_RARE_X, OUTPUT_RARE_Y) {
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_DIVINE, OUTPUT_RARE_X, OUTPUT_RARE_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
             }
         });
 
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_EPIC, OUTPUT_EPIC_X, OUTPUT_EPIC_Y) {
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_CELESTIAL, OUTPUT_EPIC_X, OUTPUT_EPIC_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
             }
         });
 
-        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_LEGENDARY, OUTPUT_LEGENDARY_X, OUTPUT_LEGENDARY_Y) {
+        this.addSlot(new SlotItemHandler(itemHandler, PillFurnaceBlockEntity.OUTPUT_SLOT_HEAVENLY, OUTPUT_LEGENDARY_X, OUTPUT_LEGENDARY_Y) {
             @Override
             public boolean mayPlace(ItemStack stack) {
                 return false; // Output only
