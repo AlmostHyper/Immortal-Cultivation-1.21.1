@@ -88,7 +88,7 @@ public record CultivationFocusTogglePacket() implements CustomPacketPayload {
 
                     } else {
                         // On cooldown
-                        long remainingTicks = 72000 - (serverPlayer.level().getGameTime() - cultivation.getLastFocusChangeTime());
+                        long remainingTicks = 24000 - (serverPlayer.level().getGameTime() - cultivation.getLastFocusChangeTime());
                         long remainingMinutes = remainingTicks / 1200; // 20 ticks per second, 60 seconds per minute
 
                         Component message = Component.literal("⏳ Focus change on cooldown! ")

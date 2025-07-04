@@ -1,0 +1,42 @@
+{
+  "basic_info": {
+    "id": "foundation_establishment_early",
+    "display_name": "Early Foundation Establishment",
+    "realm_level": 11,
+    "cultivation_stage": "Foundation Establishment",
+    "description": "The first step in true cultivation. Practitioners begin to sense and gather Qi, slowly condensing it within their dantian. The body is tempered and enhanced beyond mortal limits."
+  },
+  "physical_stats": {
+    "base_health": 50,
+    "base_health_regeneration": 0.005,
+    "base_attack_damage": 0.5,
+    "base_movement_speed": 0.2,
+    "base_jump_height": 0.2
+  },
+  "cultivation_stats": {
+    "base_max_cultivation": 25000,
+    "base_cultivation_rate": 0.02
+  },
+  "qi_stats": {
+    "base_max_qi": 500,
+    "base_qi_regeneration_rate": 0.5,
+    "base_circulating_qi_regeneration_rate": 9.0
+  },
+  "visual_properties": {
+    "realm_color": 5635925,
+    "particle_effect": "minecraft:enchant"
+  },
+  "progression": {
+    "previous_realms": ["qi_condensation_l9", "qi_condensation_l10"],
+    "next_realms": ["foundation_establishment_middle", "perfect_foundation_establishment_middle"]
+  },
+  "features": {
+    "unlocked_abilities": [],
+    "realm_benefits": [
+      "+50 Health",
+      "+50% Attack Damage",
+      "+20% Movement Speed"
+    ],
+    "available_techniques": []
+  }
+}

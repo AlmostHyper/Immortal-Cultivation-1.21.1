@@ -35,9 +35,7 @@
     "realm_benefits": [
       "+5 Health",
       "+10% Attack Damage",
-      "+5% Movement Speed",
-      "Qi storage and regeneration",
-      "Enhanced physical capabilities"
+      "+5% Movement Speed"
     ],
     "available_techniques": []
   }

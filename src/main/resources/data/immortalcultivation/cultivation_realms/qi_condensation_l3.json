@@ -15,7 +15,7 @@
   },
   "cultivation_stats": {
     "base_max_cultivation": 1000,
-    "base_cultivation_rate": 0.02
+    "base_cultivation_rate": 0.01
   },
   "qi_stats": {
     "base_max_qi": 30,
