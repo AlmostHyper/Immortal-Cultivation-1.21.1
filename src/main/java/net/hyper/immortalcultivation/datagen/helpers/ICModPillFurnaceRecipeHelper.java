@@ -17,8 +17,8 @@ public class ICModPillFurnaceRecipeHelper {
         // Low Quality Qi Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.LOW_QUALITY_QI_CULTIVATION_PILL.get())
             .input1(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
-            .input2(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
-            .input3(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .input2(Items.REDSTONE)
+            .input3(Items.LAPIS_LAZULI)
             .requiresSpiritStone(false)
             .successChance(0.8)
             .unlockedBy("has_low_quality_spirit_stone", helper.has(ICModItems.LOW_QUALITY_SPIRIT_STONE.get()))
@@ -59,8 +59,8 @@ public class ICModPillFurnaceRecipeHelper {
         // Low Quality Body Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.LOW_QUALITY_BODY_CULTIVATION_PILL.get())
             .input1(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
-            .input2(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
-            .input3(ICModItems.LOW_QUALITY_SPIRIT_STONE.get())
+            .input2(Items.REDSTONE)
+            .input3(Items.IRON_INGOT)
             .requiresSpiritStone(false)
             .successChance(0.8)
             .unlockedBy("has_low_quality_spirit_stone", helper.has(ICModItems.LOW_QUALITY_SPIRIT_STONE.get()))

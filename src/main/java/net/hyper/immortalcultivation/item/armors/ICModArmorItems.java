@@ -14,7 +14,7 @@ import net.minecraft.world.level.Level;
 
 import java.util.List;
 import java.util.Map;
-
+/*
 public class ICModArmorItems extends ArmorItem {
     private static final Map<Holder<ArmorMaterial>, List<MobEffectInstance>> MATERIAL_TO_EFFECT_MAP =
         (new ImmutableMap.Builder<Holder<ArmorMaterial>, List<MobEffectInstance>>())
@@ -101,4 +101,4 @@ public class ICModArmorItems extends ArmorItem {
 
         return !boots.isEmpty() && !leggings.isEmpty() && !chestplate.isEmpty() && !helmet.isEmpty();
     }
-}
+} */

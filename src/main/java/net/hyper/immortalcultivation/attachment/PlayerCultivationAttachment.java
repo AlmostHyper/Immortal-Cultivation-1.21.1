@@ -671,106 +671,82 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             boolean isAdvancement = previousRealm == null || newRealm.getRealmLevel() > previousRealm.getRealmLevel();
 
             if (isAdvancement) {
-                // Apply permanent health bonus
+                // Get the realm's defined bonus values from JSON data
                 long healthBonus = newRealm.getBaseHealth();
+                double attackBonus = newRealm.getBaseAttackDamage();
+                double speedBonus = newRealm.getBaseMovementSpeed();
+                double jumpBonus = newRealm.getBaseJumpHeight();
+
+                // Apply permanent health bonus
                 if (healthBonus > 0) {
                     PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
                     if (resourceAttachment != null) {
                         resourceAttachment.addPermanentHealthBonus(healthBonus);
 
-                        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent health from {} realm advancement: {} -> {}",
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{} PERMANENT health from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
                             healthBonus,
                             cultivationType.getDisplayName(),
-                            previousRealm != null ? previousRealm.getDisplayName() : "None",
                             newRealm.getDisplayName());
                     }
                 }
 
                 // Apply permanent attack damage bonus
-                double attackBonus = newRealm.getBaseAttackDamage();
                 if (attackBonus > 0) {
                     PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
                     if (combatStatsAttachment != null) {
                         combatStatsAttachment.addPermanentAttackDamageBonus(attackBonus);
 
-                        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent attack damage from {} realm advancement: {} -> {}",
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{}% PERMANENT attack damage from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
-                            attackBonus,
+                            attackBonus * 100,
                             cultivationType.getDisplayName(),
-                            previousRealm != null ? previousRealm.getDisplayName() : "None",
                             newRealm.getDisplayName());
                     }
                 }
 
                 // Apply permanent movement speed bonus
-                double speedBonus = newRealm.getBaseMovementSpeed();
                 if (speedBonus > 0) {
                     PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
                     if (combatStatsAttachment != null) {
                         combatStatsAttachment.addPermanentMovementSpeedBonus(speedBonus);
 
-                        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent movement speed from {} realm advancement: {} -> {}",
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{}% PERMANENT movement speed from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
-                            speedBonus,
+                            speedBonus * 100,
                             cultivationType.getDisplayName(),
-                            previousRealm != null ? previousRealm.getDisplayName() : "None",
                             newRealm.getDisplayName());
                     }
                 }
 
                 // Apply permanent jump height bonus
-                double jumpBonus = newRealm.getBaseJumpHeight();
                 if (jumpBonus > 0) {
                     PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
                     if (combatStatsAttachment != null) {
                         combatStatsAttachment.addPermanentJumpHeightBonus(jumpBonus);
 
-                        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent jump height from {} realm advancement: {} -> {}",
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{}% PERMANENT jump height from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
-                            jumpBonus,
+                            jumpBonus * 100,
                             cultivationType.getDisplayName(),
-                            previousRealm != null ? previousRealm.getDisplayName() : "None",
                             newRealm.getDisplayName());
                     }
                 }
 
-                // Send comprehensive notification to player about all bonuses gained
+                // Send a comprehensive message to the player about their permanent gains
                 if (player instanceof ServerPlayer serverPlayer) {
-                    StringBuilder bonusMessage = new StringBuilder("§6Permanent Bonuses Gained: §r");
-                    boolean hasBonus = false;
+                    Component gainMessage = Component.literal("§6✦ PERMANENT CULTIVATION GAINS ✦")
+                        .append(Component.literal("\n§f" + cultivationType.getDisplayName() + " breakthrough to " + newRealm.getDisplayName() + ":"))
+                        .append(Component.literal("\n§c❤ +" + healthBonus + " Permanent Health"))
+                        .append(Component.literal("\n§4⚔ +" + String.format("%.1f%%", attackBonus * 100) + " Permanent Attack Damage"))
+                        .append(Component.literal("\n§b⚡ +" + String.format("%.1f%%", speedBonus * 100) + " Permanent Movement Speed"))
+                        .append(Component.literal("\n§a⏫ +" + String.format("%.1f%%", jumpBonus * 100) + " Permanent Jump Height"));
 
-                    if (healthBonus > 0) {
-                        bonusMessage.append("§a+").append(healthBonus).append(" Health§r");
-                        hasBonus = true;
-                    }
-
-                    if (attackBonus > 0) {
-                        if (hasBonus) bonusMessage.append(", ");
-                        bonusMessage.append("§c+").append(String.format("%.1f", attackBonus * 100)).append("% Attack§r");
-                        hasBonus = true;
-                    }
-
-                    if (speedBonus > 0) {
-                        if (hasBonus) bonusMessage.append(", ");
-                        bonusMessage.append("§b+").append(String.format("%.1f", speedBonus * 100)).append("% Speed§r");
-                        hasBonus = true;
-                    }
-
-                    if (jumpBonus > 0) {
-                        if (hasBonus) bonusMessage.append(", ");
-                        bonusMessage.append("§e+").append(String.format("%.1f", jumpBonus * 100)).append("% Jump§r");
-                        hasBonus = true;
-                    }
-
-                    if (hasBonus) {
-                        serverPlayer.sendSystemMessage(Component.literal(bonusMessage.toString()));
-                    }
+                    serverPlayer.sendSystemMessage(gainMessage);
                 }
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying permanent bonuses for player {}",
-                player.getName().getString(), e);
+            ImmortalCultivation.LOGGER.error("Error applying permanent bonuses for realm advancement", e);
         }
     }
 
@@ -1535,7 +1511,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             REALM_DATA_CODEC.fieldOf("realms").forGetter(PlayerCultivationAttachment::getRealmData),
             CULTIVATION_PROGRESS_CODEC.fieldOf("cultivation").forGetter(PlayerCultivationAttachment::getCultivationProgress),
             Codec.STRING.optionalFieldOf("focus", "QI").forGetter(attachment -> attachment.currentFocus.name()),
-            Codec.LONG.optionalFieldOf("focus_change_time", -72000L).forGetter(attachment -> attachment.lastFocusChangeTime),
+            Codec.LONG.optionalFieldOf("focus_change_time", -24000L).forGetter(attachment -> attachment.lastFocusChangeTime),
             BREAKTHROUGH_DATA_CODEC.fieldOf("breakthrough").forGetter(PlayerCultivationAttachment::getBreakthroughData),
             Codec.LONG.optionalFieldOf("time_qi_realm", 0L).forGetter(attachment -> attachment.timeInCurrentQiRealm),
             Codec.LONG.optionalFieldOf("time_body_realm", 0L).forGetter(attachment -> attachment.timeInCurrentBodyRealm),

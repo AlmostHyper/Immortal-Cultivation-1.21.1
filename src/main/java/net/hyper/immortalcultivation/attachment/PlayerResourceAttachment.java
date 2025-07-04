@@ -73,24 +73,74 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     // === NEW: Permanent Health Bonus System ===
 
     /**
-     * Adds a permanent health bonus (from realm breakthrough).
-     * This bonus persists even if the player's realm changes.
+     * Enhanced permanent health bonus method with better tracking
      */
     public void addPermanentHealthBonus(long healthBonus) {
-        if (healthBonus <= 0) return;
+        if (healthBonus <= 0) {
+            ImmortalCultivation.LOGGER.info("Skipping health bonus addition - bonus <= 0: {}", healthBonus);
+            return;
+        }
+
+        long oldBonus = this.permanentHealthBonus;
+        long oldMaxHealth = this.maxHealth;
+        long oldCurrentHealth = this.currentHealth;
 
         this.permanentHealthBonus += healthBonus;
 
         // Recalculate max health with new bonus
-        recalculateMaxHealth();
+        long newMaxHealth = getMaxHealth();
 
-        // Heal to full when gaining permanent health
-        this.currentHealth = this.maxHealth;
+        ImmortalCultivation.LOGGER.info("=== HEALTH BONUS DEBUG ===");
+        ImmortalCultivation.LOGGER.info("Adding health bonus: +{}", healthBonus);
+        ImmortalCultivation.LOGGER.info("Old permanent bonus: {}", oldBonus);
+        ImmortalCultivation.LOGGER.info("New permanent bonus: {}", this.permanentHealthBonus);
+        ImmortalCultivation.LOGGER.info("Old max health: {}", oldMaxHealth);
+        ImmortalCultivation.LOGGER.info("New max health: {}", newMaxHealth);
+
+        // Heal to full when gaining permanent health (common in Xianxia)
+        if (newMaxHealth > oldMaxHealth) {
+            this.currentHealth = newMaxHealth;
+            this.maxHealth = newMaxHealth;
+            ImmortalCultivation.LOGGER.info("Healed to full: {} current health", this.currentHealth);
+        }
 
         updateVanillaHealthBar();
+        forceSync(); // Force immediate sync to client
 
-        ImmortalCultivation.LOGGER.info("Player gained +{} permanent health (total bonus: +{})",
-            healthBonus, this.permanentHealthBonus);
+        ImmortalCultivation.LOGGER.info("Player gained +{} permanent health from JSON realm (total bonus: +{}, new max health: {})",
+            healthBonus, this.permanentHealthBonus, newMaxHealth);
+        ImmortalCultivation.LOGGER.info("=== END HEALTH BONUS DEBUG ===");
+    }
+
+    /**
+     * Sets the permanent health bonus (used by sync packet)
+     * This is called during client synchronization
+     */
+    public void setPermanentHealthBonus(long bonus) {
+        this.permanentHealthBonus = Math.max(0, bonus);
+        // Don't recalculate here - this is called during sync
+    }
+
+    /**
+     * Resets the permanent health bonus to zero (for debugging/admin purposes)
+     */
+    public void resetPermanentHealthBonus() {
+        this.permanentHealthBonus = 0L;
+        recalculateMaxHealth();
+        updateVanillaHealthBar();
+
+        ImmortalCultivation.LOGGER.info("Reset permanent health bonus to 0");
+    }
+
+    /**
+     * Forces a complete health recalculation and synchronization
+     */
+    public void forceHealthRecalculation() {
+        recalculateMaxHealth();
+        updateVanillaHealthBar();
+        forceSync();
+
+        ImmortalCultivation.LOGGER.info("Forced complete health recalculation");
     }
 
     /**
@@ -134,35 +184,21 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
+    /**
+     * Calculate base max health using ONLY permanent bonuses from breakthroughs.
+     * Current realm no longer directly affects health - only breakthrough achievements do.
+     * This ensures all cultivation gains are permanent and never lost.
+     */
     @Override
     public long getBaseMaxHealth() {
-        Player player = getPlayerSafe();
-        if (player == null) {
-            return MORTAL_BASE_HEALTH + permanentHealthBonus;
-        }
-
-        try {
-            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivationAttachment == null) return MORTAL_BASE_HEALTH + permanentHealthBonus;
-
-            // Health is COMBINED from both cultivation paths (keeping your existing logic)
-            long qiRealmHealth = cultivationAttachment.getCurrentQiRealm().getBaseHealth();
-            long bodyRealmHealth = cultivationAttachment.getCurrentBodyRealm().getBaseHealth();
-
-            // If both are at mortal level (20 health each), don't double count the base
-            if (qiRealmHealth == 20 && bodyRealmHealth == 20) {
-                return MORTAL_BASE_HEALTH + permanentHealthBonus; // Still just a mortal + permanent bonuses
-            }
-
-            // Otherwise, add the bonuses from both paths + permanent bonuses
-            long totalBonus = Math.max(0, qiRealmHealth - 20) + Math.max(0, bodyRealmHealth - 20);
-            return MORTAL_BASE_HEALTH + totalBonus + permanentHealthBonus;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating base max health", e);
-            return MORTAL_BASE_HEALTH + permanentHealthBonus;
-        }
+        // Base mortal health + all accumulated permanent bonuses from JSON-defined realm breakthroughs
+        return MORTAL_BASE_HEALTH + permanentHealthBonus;
     }
 
+    /**
+     * Calculate final max health with small cultivation progress bonuses.
+     * The main health comes from permanent bonuses, with minor bonuses from cultivation progress.
+     */
     @Override
     public long getMaxHealth() {
         long baseMaxHealth = getBaseMaxHealth();
@@ -175,7 +211,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         try {
             PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (cultivation != null) {
-                // Small cultivation bonus to health
+                // Small additional bonuses from cultivation progress (not realm-based)
                 long qiCultivationBonus = (long)(cultivation.getCurrentQiCultivation() * 0.0005);
                 long bodyCultivationBonus = (long)(cultivation.getCurrentBodyCultivation() * 0.001);
                 return baseMaxHealth + qiCultivationBonus + bodyCultivationBonus;
@@ -799,6 +835,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (player instanceof ServerPlayer serverPlayer) {
             ResourceSyncPacket packet = new ResourceSyncPacket(
                 currentHealth, maxHealth,
+                permanentHealthBonus,  // NEW: Include permanent health bonus
                 currentQi, maxQi,
                 currentBody, maxBody,
                 isPlayerMeditating

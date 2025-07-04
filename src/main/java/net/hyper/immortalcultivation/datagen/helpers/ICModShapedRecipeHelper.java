@@ -7,6 +7,7 @@ import net.minecraft.data.recipes.RecipeCategory;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.data.recipes.ShapedRecipeBuilder;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.Blocks;
 
 public class ICModShapedRecipeHelper {
 
@@ -14,10 +15,10 @@ public class ICModShapedRecipeHelper {
         buildSpiritStoneRecipes(recipeOutput, helper);
         buildToolRecipes(recipeOutput, helper);
         buildArmorRecipes(recipeOutput, helper);
+        buildPillFurnaceRecipes(recipeOutput, helper);
     }
 
     private static void buildSpiritStoneRecipes(RecipeOutput recipeOutput, ICModRecipeProvider.RecipeHelper helper) {
-        // === SPIRIT STONES === //
 
         ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
             .pattern("LLL")
@@ -565,6 +566,18 @@ public class ICModShapedRecipeHelper {
             .pattern("S S")
             .define('S', ICModItems.SKY_IRON_INGOT.get())
             .unlockedBy("has_sky_iron_ingot", helper.has(ICModItems.SKY_IRON_INGOT))
+            .save(recipeOutput);
+    }
+
+    private static void buildPillFurnaceRecipes(RecipeOutput recipeOutput, ICModRecipeProvider.RecipeHelper helper) {
+        ShapedRecipeBuilder.shaped(RecipeCategory.MISC, ICModBlocks.PILL_FURNACE_BLOCK.get())
+            .pattern("III")
+            .pattern("ISI")
+            .pattern("CCC")
+            .define('I', Items.IRON_INGOT)
+            .define('S', ICModBlocks.LOW_QUALITY_SPIRIT_STONE_BLOCK.get())
+            .define('C', Blocks.COPPER_BLOCK)
+            .unlockedBy("has_copper_ingot", helper.has(Items.COPPER_INGOT))
             .save(recipeOutput);
     }
 }

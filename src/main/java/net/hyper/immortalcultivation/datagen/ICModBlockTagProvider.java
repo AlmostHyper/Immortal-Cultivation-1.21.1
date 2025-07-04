@@ -77,13 +77,17 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
             // Ores
             .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.WOOD_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
 
             // Deepslate Ores
+            .add(ICModBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_STONE_TOOL)
             // Spirit Stones
@@ -101,13 +105,17 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
             // Ores
             .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.WOOD_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
 
             // Deepslate Ores
+            .add(ICModBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_GOLD_TOOL)
             // Spirit Stones
@@ -125,13 +133,17 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
             // Ores
             .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.METAL_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
+            .add(ICModBlocks.WOOD_ASPECTED_ORE_BLOCK.get())
             .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
 
             // Deepslate Ores
+            .add(ICModBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
             .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
+            .add(ICModBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
 
         tag(BlockTags.INCORRECT_FOR_IRON_TOOL)
             // Spirit Stones
@@ -143,15 +155,10 @@ public class ICModBlockTagProvider extends BlockTagsProvider {
             .add(ICModBlocks.TOP_QUALITY_SPIRIT_STONE_COMPRESSED_BLOCK.get())
 
             // Ores
-            .add(ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get())
-            .add(ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get())
-            .add(ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get())
-            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get())
+            .add(ICModBlocks.SKY_IRON_ORE_BLOCK.get());
 
             // Deepslate Ores
-            .add(ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get())
-            .add(ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get());
+
 
         tag(BlockTags.INCORRECT_FOR_DIAMOND_TOOL)
             // Spirit Stones

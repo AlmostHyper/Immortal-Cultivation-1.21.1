@@ -11,13 +11,14 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Sync packet for unified resource data.
+ * Enhanced sync packet for unified resource data including permanent health bonus.
  * Replaces: HealthSyncPacket, QiSyncPacket, and BodySyncPacket
  */
 public record ResourceSyncPacket(
     // Health
     long currentHealth,
     long maxHealth,
+    long permanentHealthBonus,  // NEW: Include permanent health bonus
 
     // Qi Energy
     long currentQi,
@@ -45,6 +46,7 @@ public record ResourceSyncPacket(
         // Health
         ByteBufCodecs.VAR_LONG.encode(buf, packet.currentHealth);
         ByteBufCodecs.VAR_LONG.encode(buf, packet.maxHealth);
+        ByteBufCodecs.VAR_LONG.encode(buf, packet.permanentHealthBonus); // NEW
 
         // Qi
         ByteBufCodecs.VAR_LONG.encode(buf, packet.currentQi);
@@ -63,6 +65,7 @@ public record ResourceSyncPacket(
             // Health
             ByteBufCodecs.VAR_LONG.decode(buf),
             ByteBufCodecs.VAR_LONG.decode(buf),
+            ByteBufCodecs.VAR_LONG.decode(buf), // NEW: permanent health bonus
 
             // Qi
             ByteBufCodecs.VAR_LONG.decode(buf),
@@ -88,7 +91,8 @@ public record ResourceSyncPacket(
             PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
 
             if (resources != null) {
-                // Apply health
+                // Apply health data including permanent bonus
+                resources.setPermanentHealthBonus(packet.permanentHealthBonus); // NEW
                 resources.setMaxHealth(packet.maxHealth);
                 resources.setCurrentHealth(packet.currentHealth);
 

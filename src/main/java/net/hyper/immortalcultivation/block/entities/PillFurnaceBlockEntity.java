@@ -288,7 +288,7 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
 
         // Calculate batch size based on available ingredients
         int possibleBatches = calculateMaxBatches(recipe);
-        batchSize = Math.min(possibleBatches, 5); // Max 5 batches at once
+        batchSize = Math.min(possibleBatches, 1);
 
         // Track rarity distribution for this batch
         int[] rarityCount = new int[PillRarity.values().length];

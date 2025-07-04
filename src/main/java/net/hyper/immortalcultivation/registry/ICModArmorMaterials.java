@@ -25,60 +25,60 @@ public class ICModArmorMaterials {
             Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
                 map.put(ArmorItem.Type.BOOTS, 3);
                 map.put(ArmorItem.Type.LEGGINGS, 6);
-                map.put(ArmorItem.Type.CHESTPLATE, 8);
+                map.put(ArmorItem.Type.CHESTPLATE, 7);
                 map.put(ArmorItem.Type.HELMET, 3);
                 map.put(ArmorItem.Type.BODY, 4);
             }), 19, SoundEvents.ARMOR_EQUIP_IRON, () -> Ingredient.of(ICModItems.EARTH_ASPECTED_INGOT.get()),
             List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "earth_aspected"))),
-            2, 0));
+            1, 0));
 
     public static final Holder<ArmorMaterial> FIRE_ASPECTED =
         REGISTRY.register("fire_aspected", () -> new ArmorMaterial(
             Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
                 map.put(ArmorItem.Type.BOOTS, 3);
                 map.put(ArmorItem.Type.LEGGINGS, 6);
-                map.put(ArmorItem.Type.CHESTPLATE, 8);
+                map.put(ArmorItem.Type.CHESTPLATE, 7);
                 map.put(ArmorItem.Type.HELMET, 3);
                 map.put(ArmorItem.Type.BODY, 4);
             }), 19, SoundEvents.ARMOR_EQUIP_IRON, () -> Ingredient.of(ICModItems.FIRE_ASPECTED_INGOT.get()),
             List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "fire_aspected"))),
-            2, 0));
+            1, 0));
 
     public static final Holder<ArmorMaterial> METAL_ASPECTED =
         REGISTRY.register("metal_aspected", () -> new ArmorMaterial(
             Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
                 map.put(ArmorItem.Type.BOOTS, 3);
                 map.put(ArmorItem.Type.LEGGINGS, 6);
-                map.put(ArmorItem.Type.CHESTPLATE, 8);
+                map.put(ArmorItem.Type.CHESTPLATE, 7);
                 map.put(ArmorItem.Type.HELMET, 3);
                 map.put(ArmorItem.Type.BODY, 4);
             }), 19, SoundEvents.ARMOR_EQUIP_IRON, () -> Ingredient.of(ICModItems.METAL_ASPECTED_INGOT.get()),
             List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "metal_aspected"))),
-            2, 0));
+            1, 0));
 
     public static final Holder<ArmorMaterial> WATER_ASPECTED =
         REGISTRY.register("water_aspected", () -> new ArmorMaterial(
             Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
                 map.put(ArmorItem.Type.BOOTS, 3);
                 map.put(ArmorItem.Type.LEGGINGS, 6);
-                map.put(ArmorItem.Type.CHESTPLATE, 8);
+                map.put(ArmorItem.Type.CHESTPLATE, 7);
                 map.put(ArmorItem.Type.HELMET, 3);
                 map.put(ArmorItem.Type.BODY, 4);
             }), 19, SoundEvents.ARMOR_EQUIP_IRON, () -> Ingredient.of(ICModItems.WATER_ASPECTED_INGOT.get()),
             List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "water_aspected"))),
-            2, 0));
+            1, 0));
 
     public static final Holder<ArmorMaterial> WOOD_ASPECTED =
         REGISTRY.register("wood_aspected", () -> new ArmorMaterial(
             Util.make(new EnumMap<>(ArmorItem.Type.class), map -> {
                 map.put(ArmorItem.Type.BOOTS, 3);
                 map.put(ArmorItem.Type.LEGGINGS, 6);
-                map.put(ArmorItem.Type.CHESTPLATE, 8);
+                map.put(ArmorItem.Type.CHESTPLATE, 7);
                 map.put(ArmorItem.Type.HELMET, 3);
                 map.put(ArmorItem.Type.BODY, 4);
             }), 19, SoundEvents.ARMOR_EQUIP_IRON, () -> Ingredient.of(ICModItems.WOOD_ASPECTED_INGOT.get()),
             List.of(new ArmorMaterial.Layer(ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "wood_aspected"))),
-            0, 0));
+            1, 0));
 
     public static final Holder<ArmorMaterial> SKY_IRON =
         REGISTRY.register("sky_iron", () -> new ArmorMaterial(
