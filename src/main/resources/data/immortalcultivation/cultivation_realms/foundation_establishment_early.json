@@ -8,7 +8,7 @@
   },
   "physical_stats": {
     "base_health": 50,
-    "base_health_regeneration": 0.005,
+    "base_health_regeneration": 0.05,
     "base_attack_damage": 0.5,
     "base_movement_speed": 0.2,
     "base_jump_height": 0.2

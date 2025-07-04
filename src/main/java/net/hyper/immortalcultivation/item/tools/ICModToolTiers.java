@@ -23,5 +23,5 @@ public class ICModToolTiers {
             999, 4f, 2.5f, 19, () -> Ingredient.of(ICModItems.WOOD_ASPECTED_INGOT));
 
     public static final Tier SKY_IRON = new SimpleTier(ICModTags.Blocks.NEEDS_SKY_IRON_TOOL,
-        3247, 4f, 4f, 28, () -> Ingredient.of(ICModItems.SKY_IRON_INGOT));
+        3247, 4f, 4.5f, 28, () -> Ingredient.of(ICModItems.SKY_IRON_INGOT));
 }

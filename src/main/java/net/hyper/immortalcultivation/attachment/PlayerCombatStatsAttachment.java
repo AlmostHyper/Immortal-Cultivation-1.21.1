@@ -186,34 +186,24 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
      */
     public double getEffectiveAttackDamageMultiplier() {
         try {
-            if (player == null) {
-                return 1.0 + permanentAttackDamageBonus + attackDamageBonus;
+            // Only use permanent bonuses (which already include all breakthrough bonuses) + temporary bonuses
+            // Do NOT add current realm bonuses as that would be double-counting
+            double total = 1.0 + permanentAttackDamageBonus + attackDamageBonus;
+
+            if (player != null) {
+                ImmortalCultivation.LOGGER.debug("Calculated attack multiplier for {}: permanent={}, temporary={}, total={}",
+                    player.getName().getString(), permanentAttackDamageBonus, attackDamageBonus, total);
             }
-
-            // Get current realm bonuses (these are NOT permanent, they're current realm effects)
-            PlayerCultivationAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            double realmAttackBonus = 0.0;
-
-            if (realmAttachment != null) {
-                // Combine both realms as requested
-                double qiRealmAttack = realmAttachment.getCurrentQiRealm().getBaseAttackDamage();
-                double bodyRealmAttack = realmAttachment.getCurrentBodyRealm().getBaseAttackDamage();
-                realmAttackBonus = qiRealmAttack + bodyRealmAttack;
-            }
-
-            // Combine permanent + temporary + current realm bonuses
-            double total = 1.0 + permanentAttackDamageBonus + attackDamageBonus + realmAttackBonus;
-
-            ImmortalCultivation.LOGGER.debug("Calculated attack multiplier for {}: permanent={}, temporary={}, realm={}, total={}",
-                player.getName().getString(), permanentAttackDamageBonus, attackDamageBonus, realmAttackBonus, total);
 
             return total;
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error calculating effective attack damage for player: {}",
-                player != null ? player.getName().getString() : "NULL", e);
-            return 1.0 + permanentAttackDamageBonus + attackDamageBonus;
+                player != null ? player.getName().getString() : "null", e);
+            return 1.0;
         }
     }
+
+
 
     // === MOVEMENT SPEED BONUSES ===
 

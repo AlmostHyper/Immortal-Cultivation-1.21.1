@@ -673,6 +673,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             if (isAdvancement) {
                 // Get the realm's defined bonus values from JSON data
                 long healthBonus = newRealm.getBaseHealth();
+                double healthRegenBonus = newRealm.getBaseHealthRegeneration();
                 double attackBonus = newRealm.getBaseAttackDamage();
                 double speedBonus = newRealm.getBaseMovementSpeed();
                 double jumpBonus = newRealm.getBaseJumpHeight();
@@ -686,6 +687,20 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                         ImmortalCultivation.LOGGER.info("Player {} gained +{} PERMANENT health from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
                             healthBonus,
+                            cultivationType.getDisplayName(),
+                            newRealm.getDisplayName());
+                    }
+                }
+
+                // NEW: Apply permanent health regeneration bonus
+                if (healthRegenBonus > 0) {
+                    PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+                    if (resourceAttachment != null) {
+                        resourceAttachment.addPermanentHealthRegenBonus(healthRegenBonus);
+
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec PERMANENT health regen from {} realm advancement to {} (JSON-defined bonus)",
+                            player.getName().getString(),
+                            String.format("%.3f", healthRegenBonus),
                             cultivationType.getDisplayName(),
                             newRealm.getDisplayName());
                     }

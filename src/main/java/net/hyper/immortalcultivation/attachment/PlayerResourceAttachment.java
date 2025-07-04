@@ -31,6 +31,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     // NEW: Permanent health bonuses from realm breakthroughs
     private long permanentHealthBonus = 0L;
+    private double permanentHealthRegenBonus = 0.0;
 
     private long currentHealth = MORTAL_BASE_HEALTH;
     private long maxHealth = MORTAL_BASE_HEALTH;
@@ -246,22 +247,8 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public double getBaseHealthRegenerationRate() {
-        Player player = getPlayerSafe();
-        if (player == null) return 0.1;
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation == null) return 0.1;
-
-            // FIXED: Combine both realms instead of taking highest
-            double qiRegen = cultivation.getCurrentQiRealm().getBaseHealthRegeneration();
-            double bodyRegen = cultivation.getCurrentBodyRealm().getBaseHealthRegeneration();
-
-            return qiRegen + bodyRegen;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting health regen rate", e);
-            return 0.1;
-        }
+        // Use accumulated permanent bonuses instead of current realm values
+        return permanentHealthRegenBonus;
     }
 
     @Override
@@ -306,6 +293,49 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
 
         return baseCirculatingRate;
+    }
+
+    /**
+     * Adds a permanent health regeneration bonus (from realm breakthrough).
+     * This bonus persists even if the player's realm changes.
+     */
+    public void addPermanentHealthRegenBonus(double healthRegenBonus) {
+        if (healthRegenBonus <= 0) {
+            ImmortalCultivation.LOGGER.info("Skipping health regen bonus addition - bonus <= 0: {}", healthRegenBonus);
+            return;
+        }
+
+        double oldBonus = this.permanentHealthRegenBonus;
+        this.permanentHealthRegenBonus += healthRegenBonus;
+
+        forceSync(); // Force immediate sync to client
+
+        ImmortalCultivation.LOGGER.info("Player gained +{}/sec permanent health regen from JSON realm (total bonus: +{}/sec)",
+            healthRegenBonus, this.permanentHealthRegenBonus);
+
+        if (player instanceof ServerPlayer serverPlayer) {
+            ImmortalCultivation.LOGGER.info("Added {}/sec permanent health regen bonus to player {} (total permanent: +{}/sec)",
+                String.format("%.3f", healthRegenBonus),
+                serverPlayer.getName().getString(),
+                String.format("%.3f", permanentHealthRegenBonus));
+        }
+    }
+
+    /**
+     * Gets the total permanent health regeneration bonus accumulated from breakthroughs
+     */
+    public double getPermanentHealthRegenBonus() {
+        return permanentHealthRegenBonus;
+    }
+
+    /**
+     * Resets the permanent health regen bonus to zero (for debugging/admin purposes)
+     */
+    public void resetPermanentHealthRegenBonus() {
+        this.permanentHealthRegenBonus = 0.0;
+
+        ImmortalCultivation.LOGGER.info("Reset permanent health regen bonus to 0 for player {}",
+            player != null ? player.getName().getString() : "unknown");
     }
 
     @Override
@@ -857,6 +887,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
             Codec.LONG.fieldOf("permanent_health_bonus").forGetter(d -> d.permanentHealthBonus),
             Codec.LONG.fieldOf("current_health").forGetter(d -> d.currentHealth),
             Codec.LONG.fieldOf("max_health").forGetter(d -> d.maxHealth),
+            Codec.DOUBLE.fieldOf("permanent_health_regen").forGetter(d -> d.permanentHealthRegenBonus),
             Codec.DOUBLE.fieldOf("health_regen_fraction").forGetter(d -> d.healthRegenFraction),
             Codec.LONG.fieldOf("current_qi").forGetter(d -> d.currentQi),
             Codec.LONG.fieldOf("max_qi").forGetter(d -> d.maxQi),
@@ -870,15 +901,16 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     private static PlayerResourceAttachment decode(
         long permanentHealthBonus,
-        long currentHealth, long maxHealth, double healthFraction,
+        long currentHealth, long maxHealth, double permanentHealthRegenBonus, double healthFraction,
         long currentQi, long maxQi, double qiFraction,
         long currentBody, long maxBody, double bodyFraction,
         boolean meditating) {
 
         PlayerResourceAttachment data = new PlayerResourceAttachment();
-        data.permanentHealthBonus = permanentHealthBonus; // NEW: Load permanent health bonus
+        data.permanentHealthBonus = permanentHealthBonus;
         data.currentHealth = currentHealth;
         data.maxHealth = maxHealth;
+        data.permanentHealthRegenBonus = permanentHealthRegenBonus;  // FIXED: Load the health regen bonus
         data.healthRegenFraction = healthFraction;
         data.currentQi = currentQi;
         data.maxQi = maxQi;

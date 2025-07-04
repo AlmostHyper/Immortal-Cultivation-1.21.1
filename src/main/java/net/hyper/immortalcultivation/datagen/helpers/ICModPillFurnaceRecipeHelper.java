@@ -27,8 +27,8 @@ public class ICModPillFurnaceRecipeHelper {
         // Medium Quality Qi Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL.get())
             .input1(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
-            .input2(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
-            .input3(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
+            .input2(Items.REDSTONE)
+            .input3(Items.QUARTZ)
             .requiresSpiritStone(false)
             .successChance(0.6)
             .unlockedBy("has_medium_quality_spirit_stone", helper.has(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()))
@@ -37,8 +37,8 @@ public class ICModPillFurnaceRecipeHelper {
         // High Quality Qi Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.HIGH_QUALITY_QI_CULTIVATION_PILL.get())
             .input1(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
-            .input2(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
-            .input3(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
+            .input2(Items.REDSTONE)
+            .input3(Items.END_CRYSTAL)
             .requiresSpiritStone(false)
             .successChance(0.4)
             .unlockedBy("has_high_quality_spirit_stone", helper.has(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()))
@@ -69,8 +69,8 @@ public class ICModPillFurnaceRecipeHelper {
         // Medium Quality Body Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL.get())
             .input1(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
-            .input2(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
-            .input3(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get())
+            .input2(Items.REDSTONE)
+            .input3(Items.NETHER_BRICK)
             .requiresSpiritStone(false)
             .successChance(0.6)
             .unlockedBy("has_medium_quality_spirit_stone", helper.has(ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()))
@@ -79,8 +79,8 @@ public class ICModPillFurnaceRecipeHelper {
         // High Quality Body Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.HIGH_QUALITY_BODY_CULTIVATION_PILL.get())
             .input1(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
-            .input2(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
-            .input3(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get())
+            .input2(Items.REDSTONE)
+            .input3(Items.NETHERITE_INGOT)
             .requiresSpiritStone(false)
             .successChance(0.4)
             .unlockedBy("has_high_quality_spirit_stone", helper.has(ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()))

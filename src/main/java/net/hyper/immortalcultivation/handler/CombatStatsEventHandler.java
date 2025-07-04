@@ -408,18 +408,21 @@ public class CombatStatsEventHandler {
         // Use the helper method to ensure player reference is set
         PlayerCombatStatsAttachment combatStats = PlayerCombatStatsAttachment.getOrCreate(player);
 
-        // Get the effective attack bonus
-        double attackMultiplier = combatStats.getEffectiveAttackDamageMultiplier();
-        double bonusPercent = (attackMultiplier - 1.0) * 100;
+        // FIXED: Use display method for client-side tooltips instead of server-side effective method
+        double attackBonus = combatStats.getDisplayAttackBonus();
+        double bonusPercent = attackBonus * 100;
 
         // Debug logging to track what's happening
-        ImmortalCultivation.LOGGER.debug("Tooltip for {} - Multiplier: {}, Bonus: {}%, Player: {}, ClientSide: {}",
-            stack.getDisplayName().getString(), attackMultiplier, bonusPercent,
+        ImmortalCultivation.LOGGER.debug("Tooltip for {} - Display Bonus: {}%, Player: {}, ClientSide: {}",
+            stack.getDisplayName().getString(), bonusPercent,
             player.getName().getString(), player.level().isClientSide());
 
         if (bonusPercent <= 0.1) { // Small threshold for floating point precision
             return;
         }
+
+        // Calculate attack multiplier for damage calculation
+        double attackMultiplier = 1.0 + attackBonus;
 
         // Get the weapon's base damage
         double baseDamage = 0;
@@ -508,7 +511,6 @@ public class CombatStatsEventHandler {
                 stack.getDisplayName().getString(), totalDamage);
         }
     }
-
 
     private static void addCultivationModifier(ItemStack stack, double bonus) {
         CompoundTag tag = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
