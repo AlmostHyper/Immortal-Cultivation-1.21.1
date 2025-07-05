@@ -35,7 +35,7 @@ public class CultivationPillItems {
 
     // === QI CULTIVATION PILLS ===
 
-    // Low Quality Qi Cultivation Pill (for Mortal -> Qi Condensation)
+    // Low Quality Qi Cultivation Pill
     public static Supplier<Item> LOW_QUALITY_QI_CULTIVATION_PILL() {
         return () -> new BaseConsumableItem(new Item.Properties().stacksTo(64)) {
             @Override
@@ -86,7 +86,7 @@ public class CultivationPillItems {
             @Override
             public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
                 addQiPillTooltip(stack, context, tooltip, "Low", ChatFormatting.GRAY,
-                    "Mortal Realm", LOW_QUALITY_BASE_RATE, this);
+                    "Qi Condensation", LOW_QUALITY_BASE_RATE, this);
             }
 
             @Override
@@ -98,7 +98,7 @@ public class CultivationPillItems {
         };
     }
 
-    // Medium Quality Qi Cultivation Pill (for Qi Condensation progression)
+    // Medium Quality Qi Cultivation Pill
     public static Supplier<Item> MEDIUM_QUALITY_QI_CULTIVATION_PILL() {
         return () -> new BaseConsumableItem(new Item.Properties().stacksTo(64)) {
             @Override
@@ -144,7 +144,7 @@ public class CultivationPillItems {
             @Override
             public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
                 addQiPillTooltip(stack, context, tooltip, "Medium", ChatFormatting.GREEN,
-                    "Qi Condensation", MEDIUM_QUALITY_BASE_RATE, this);
+                    "Foundation Establishment", MEDIUM_QUALITY_BASE_RATE, this);
             }
 
             @Override
@@ -156,7 +156,7 @@ public class CultivationPillItems {
         };
     }
 
-    // High Quality Qi Cultivation Pill (for Foundation Establishment)
+    // High Quality Qi Cultivation Pill
     public static Supplier<Item> HIGH_QUALITY_QI_CULTIVATION_PILL() {
         return () -> new BaseConsumableItem(new Item.Properties().stacksTo(32)) {
             @Override
@@ -186,7 +186,7 @@ public class CultivationPillItems {
             @Override
             public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
                 addQiPillTooltip(stack, context, tooltip, "High", ChatFormatting.BLUE,
-                    "Foundation Establishment", HIGH_QUALITY_BASE_RATE, this);
+                    "Core Formation", HIGH_QUALITY_BASE_RATE, this);
             }
 
             @Override
@@ -198,7 +198,7 @@ public class CultivationPillItems {
         };
     }
 
-    // Top Quality Qi Cultivation Pill (for Core Formation+)
+    // Top Quality Qi Cultivation Pill
     public static Supplier<Item> TOP_QUALITY_QI_CULTIVATION_PILL() {
         return () -> new BaseConsumableItem(new Item.Properties().stacksTo(16)) {
             @Override
@@ -228,7 +228,7 @@ public class CultivationPillItems {
             @Override
             public void appendHoverText(ItemStack stack, Item.TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
                 addQiPillTooltip(stack, context, tooltip, "Top", ChatFormatting.LIGHT_PURPLE,
-                    "Core Formation+", TOP_QUALITY_BASE_RATE, this);
+                    "Nascent Soul", TOP_QUALITY_BASE_RATE, this);
             }
 
             @Override
