@@ -12,6 +12,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,16 +20,20 @@ import java.util.List;
 /**
  * Enhanced breakthrough interface supporting multiple breakthrough types with different success rates.
  * Shows detailed success rate breakdowns and allows players to choose their breakthrough strategy.
+ * Responsive design that adapts to screen size and implements scrolling when needed.
  */
 public class CultivationBreakthroughScreen extends Screen {
-    // Layout constants for enhanced interface
-    private static final int WINDOW_WIDTH = 480;
-    private static final int WINDOW_HEIGHT = 600;
+    // Dynamic layout constants
+    private static final int BASE_WINDOW_WIDTH = 480;
+    private static final int MIN_WINDOW_HEIGHT = 400;
+    private static final int MAX_WINDOW_HEIGHT = 700;
+    private static final int HEADER_HEIGHT = 120; // Reduced to give more space for buttons
 
     // Visual organization
     private static final int SECTION_SPACING = 20;
     private static final int LINE_HEIGHT = 14;
-    private static final int OPTION_BUTTON_HEIGHT = 90; // Increased for more info
+    private static final int OPTION_BUTTON_HEIGHT = 90;
+    private static final int SCROLL_SPEED = 15;
 
     // Color scheme for breakthrough types
     private static final int QI_COLOR = 0xFF87CEEB;
@@ -49,8 +54,28 @@ public class CultivationBreakthroughScreen extends Screen {
     private PlayerResourceAttachment resourceAttachment;
     private PlayerTalentAttachment talentAttachment;
 
-    private int windowX, windowY;
-    private List<EnhancedBreakthroughOptionButton> breakthroughButtons = new ArrayList<>();
+    // Layout variables
+    private int windowX, windowY, windowWidth, windowHeight;
+    private int scrollableContentHeight;
+    private int scrollOffset = 0;
+    private int maxScrollOffset = 0;
+    private int contentAreaHeight;
+
+    private List<BreakthroughButtonData> buttonDataList = new ArrayList<>();
+
+    // Data class to store button information
+    private static class BreakthroughButtonData {
+        final PlayerCultivationAttachment.BreakthroughOption option;
+        final int virtualY; // Y position in virtual coordinate system
+        final PlayerCultivationAttachment.CultivationType sectionType;
+
+        BreakthroughButtonData(PlayerCultivationAttachment.BreakthroughOption option, int virtualY,
+                               PlayerCultivationAttachment.CultivationType sectionType) {
+            this.option = option;
+            this.virtualY = virtualY;
+            this.sectionType = sectionType;
+        }
+    }
 
     public CultivationBreakthroughScreen() {
         super(Component.literal("Cultivation Breakthrough Analysis"));
@@ -60,11 +85,7 @@ public class CultivationBreakthroughScreen extends Screen {
     protected void init() {
         super.init();
 
-        // Center the window
-        windowX = (width - WINDOW_WIDTH) / 2;
-        windowY = (height - WINDOW_HEIGHT) / 2;
-
-        // Gather cultivation data
+        // Gather cultivation data first
         if (minecraft.player != null) {
             cultivationAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             resourceAttachment = minecraft.player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
@@ -75,80 +96,132 @@ public class CultivationBreakthroughScreen extends Screen {
             }
         }
 
+        // Calculate window dimensions and content
+        calculateWindowDimensions();
         setupBreakthroughInterface();
     }
 
-    private void setupBreakthroughInterface() {
-        breakthroughButtons.clear();
+    private void calculateWindowDimensions() {
+        // Use responsive width but limit to reasonable size
+        windowWidth = Math.min(BASE_WINDOW_WIDTH, Math.max(400, (int)(width * 0.8)));
+
+        // Calculate content requirements
+        calculateContentRequirements();
+
+        // Determine window height - give more space for content
+        int availableHeight = height - 80; // Reduced margin for more space
+        int desiredHeight = HEADER_HEIGHT + Math.min(scrollableContentHeight, 500) + 40; // Increased max content height
+        windowHeight = Mth.clamp(desiredHeight, MIN_WINDOW_HEIGHT, Math.min(MAX_WINDOW_HEIGHT, availableHeight));
+
+        // Calculate scrollable area
+        contentAreaHeight = windowHeight - HEADER_HEIGHT - 40;
+        maxScrollOffset = Math.max(0, scrollableContentHeight - contentAreaHeight);
+        scrollOffset = 0; // Always start at the top to show Qi options first
+
+        // Center the window
+        windowX = (width - windowWidth) / 2;
+        windowY = (height - windowHeight) / 2;
+    }
+
+    private void calculateContentRequirements() {
+        buttonDataList.clear();
+        scrollableContentHeight = 0;
 
         if (cultivationAttachment == null) {
-            createErrorInterface();
+            scrollableContentHeight = 60; // Error message
             return;
         }
 
-        // Close button
-        addRenderableWidget(Button.builder(Component.literal("Close"),
-                button -> onClose())
-            .bounds(windowX + WINDOW_WIDTH - 70, windowY + 10, 60, 20)
-            .build());
-
-        // Create enhanced breakthrough option buttons
-        createEnhancedBreakthroughOptions();
-    }
-
-    private void createEnhancedBreakthroughOptions() {
-        int buttonStartY = windowY + 200; // Leave more space for analysis
-        int currentY = buttonStartY;
-
-        // Get all available breakthrough options
         PlayerCultivationAttachment.BreakthroughOptions options = cultivationAttachment.getAllAvailableBreakthroughOptions();
+        int currentVirtualY = 0;
 
-        // Create Qi breakthrough section
+        // Qi section - Show ALL Qi options, regardless of availability
         if (!options.qiOptions().isEmpty()) {
-            currentY = createBreakthroughTypeSection(PlayerCultivationAttachment.CultivationType.QI, options.qiOptions(), currentY);
-            currentY += SECTION_SPACING;
+            currentVirtualY += 30; // Section header space
+
+            for (PlayerCultivationAttachment.BreakthroughOption option : options.qiOptions()) {
+                // Show ALL options, not just available ones
+                buttonDataList.add(new BreakthroughButtonData(option, currentVirtualY, PlayerCultivationAttachment.CultivationType.QI));
+                currentVirtualY += OPTION_BUTTON_HEIGHT + 8;
+            }
+            currentVirtualY += SECTION_SPACING;
         }
 
-        // Create Body breakthrough section
+        // Body section - Show ALL Body options, regardless of availability
         if (!options.bodyOptions().isEmpty()) {
-            currentY = createBreakthroughTypeSection(PlayerCultivationAttachment.CultivationType.BODY, options.bodyOptions(), currentY);
-        }
+            currentVirtualY += 30; // Section header space
 
-        // Show message if no options available
-        if (options.qiOptions().isEmpty() && options.bodyOptions().isEmpty()) {
-            createNoOptionsMessage(buttonStartY);
-        }
-    }
-
-    private int createBreakthroughTypeSection(PlayerCultivationAttachment.CultivationType cultivationType,
-                                              List<PlayerCultivationAttachment.BreakthroughOption> options, int startY) {
-        int currentY = startY;
-
-        // Reserve space for section header (rendered in render method)
-        currentY += 25;
-
-        // Create buttons for each breakthrough type
-        for (PlayerCultivationAttachment.BreakthroughOption option : options) {
-            if (option.available() || isNearBreakthrough(cultivationType)) {
-                EnhancedBreakthroughOptionButton button = new EnhancedBreakthroughOptionButton(
-                    windowX + 15, currentY,
-                    WINDOW_WIDTH - 30, OPTION_BUTTON_HEIGHT,
-                    option
-                );
-                breakthroughButtons.add(button);
-                addRenderableWidget(button);
-                currentY += OPTION_BUTTON_HEIGHT + 8;
+            for (PlayerCultivationAttachment.BreakthroughOption option : options.bodyOptions()) {
+                // Show ALL options, not just available ones
+                buttonDataList.add(new BreakthroughButtonData(option, currentVirtualY, PlayerCultivationAttachment.CultivationType.BODY));
+                currentVirtualY += OPTION_BUTTON_HEIGHT + 8;
             }
         }
 
-        return currentY;
+        // Handle empty options
+        if (options.qiOptions().isEmpty() && options.bodyOptions().isEmpty()) {
+            currentVirtualY = 60; // Space for "no options" message
+        }
+
+        scrollableContentHeight = currentVirtualY;
     }
 
-    private void createNoOptionsMessage(int startY) {
-        String message = determineNoOptionsReason();
-        addRenderableWidget(Button.builder(Component.literal(message), button -> {})
-            .bounds(windowX + 20, startY, WINDOW_WIDTH - 40, 40)
+    private void setupBreakthroughInterface() {
+        clearWidgets();
+
+        // Close button (always visible)
+        addRenderableWidget(Button.builder(Component.literal("Close"),
+                button -> onClose())
+            .bounds(windowX + windowWidth - 70, windowY + 10, 60, 20)
             .build());
+
+        // Create visible breakthrough buttons
+        createVisibleBreakthroughButtons();
+
+        // Create no options message if needed
+        if (buttonDataList.isEmpty() && cultivationAttachment != null) {
+            createNoOptionsMessage();
+        } else if (cultivationAttachment == null) {
+            createErrorInterface();
+        }
+    }
+
+    private void createVisibleBreakthroughButtons() {
+        int contentStartY = windowY + HEADER_HEIGHT + 20;
+
+        for (BreakthroughButtonData buttonData : buttonDataList) {
+            int screenY = contentStartY + buttonData.virtualY - scrollOffset;
+
+            // Create all buttons that could potentially be visible (more generous check)
+            if (screenY > windowY && screenY < windowY + windowHeight + OPTION_BUTTON_HEIGHT) {
+                EnhancedBreakthroughOptionButton button = new EnhancedBreakthroughOptionButton(
+                    windowX + 15, screenY,
+                    windowWidth - 30, OPTION_BUTTON_HEIGHT,
+                    buttonData.option
+                );
+                addRenderableWidget(button);
+            }
+        }
+    }
+
+    private boolean isButtonVisibleOnScreen(int buttonY) {
+        int contentTop = windowY + HEADER_HEIGHT + 15; // Slightly more generous
+        int contentBottom = windowY + windowHeight - 15; // Slightly more generous
+        int buttonBottom = buttonY + OPTION_BUTTON_HEIGHT;
+
+        // Button is visible if any part overlaps with content area
+        return buttonY <= contentBottom && buttonBottom >= contentTop;
+    }
+
+    private void createNoOptionsMessage() {
+        String message = determineNoOptionsReason();
+        int messageY = windowY + HEADER_HEIGHT + 40 - scrollOffset;
+
+        if (isButtonVisibleOnScreen(messageY)) {
+            addRenderableWidget(Button.builder(Component.literal(message), button -> {})
+                .bounds(windowX + 20, messageY, windowWidth - 40, 40)
+                .build());
+        }
     }
 
     private String determineNoOptionsReason() {
@@ -166,35 +239,61 @@ public class CultivationBreakthroughScreen extends Screen {
 
     private void createErrorInterface() {
         addRenderableWidget(Button.builder(Component.literal("Cultivation data not available"), button -> {})
-            .bounds(windowX + 20, windowY + 100, WINDOW_WIDTH - 40, 30)
+            .bounds(windowX + 20, windowY + 100, windowWidth - 40, 30)
             .build());
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        renderBackground(guiGraphics, mouseX, mouseY, partialTicks);
         renderWindowFrame(guiGraphics);
         renderEnhancedBreakthroughAnalysis(guiGraphics);
+
+        // Set up clipping for scrollable content with generous bounds
+        guiGraphics.enableScissor(
+            windowX + 10,
+            windowY + HEADER_HEIGHT + 15,
+            windowX + windowWidth - 10,
+            windowY + windowHeight - 15
+        );
+
         renderSectionHeaders(guiGraphics);
+
+        // Render widgets (buttons will be clipped)
         super.render(guiGraphics, mouseX, mouseY, partialTicks);
+
+        guiGraphics.disableScissor();
+
+        // Render scroll indicators
+        renderScrollIndicators(guiGraphics);
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
+        // Clean, non-blurry background
+        guiGraphics.fill(0, 0, width, height, 0xC0101010);
     }
 
     private void renderWindowFrame(GuiGraphics guiGraphics) {
-        // Semi-transparent overlay
-        guiGraphics.fill(0, 0, width, height, 0x80000000);
-
         // Main window background
-        guiGraphics.fill(windowX, windowY, windowX + WINDOW_WIDTH, windowY + WINDOW_HEIGHT, 0xFF2C2C2C);
+        guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF1A1A1A);
 
         // Window border
-        guiGraphics.fill(windowX - 1, windowY - 1, windowX + WINDOW_WIDTH + 1, windowY, 0xFFFFFFFF);
-        guiGraphics.fill(windowX - 1, windowY + WINDOW_HEIGHT, windowX + WINDOW_WIDTH + 1, windowY + WINDOW_HEIGHT + 1, 0xFFFFFFFF);
-        guiGraphics.fill(windowX - 1, windowY, windowX, windowY + WINDOW_HEIGHT, 0xFFFFFFFF);
-        guiGraphics.fill(windowX + WINDOW_WIDTH, windowY, windowX + WINDOW_WIDTH + 1, windowY + WINDOW_HEIGHT, 0xFFFFFFFF);
+        guiGraphics.fill(windowX - 2, windowY - 2, windowX + windowWidth + 2, windowY - 1, 0xFF4A4A4A);
+        guiGraphics.fill(windowX - 2, windowY + windowHeight + 1, windowX + windowWidth + 2, windowY + windowHeight + 2, 0xFF4A4A4A);
+        guiGraphics.fill(windowX - 2, windowY - 1, windowX - 1, windowY + windowHeight + 1, 0xFF4A4A4A);
+        guiGraphics.fill(windowX + windowWidth + 1, windowY - 1, windowX + windowWidth + 2, windowY + windowHeight + 1, 0xFF4A4A4A);
 
-        // Enhanced title
+        // Title
         Component title = Component.literal("Enhanced Breakthrough Analysis").withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
         int titleWidth = font.width(title);
-        guiGraphics.drawString(font, title, windowX + (WINDOW_WIDTH - titleWidth) / 2, windowY + 15, 0xFFFFFFFF);
+        guiGraphics.drawString(font, title, windowX + (windowWidth - titleWidth) / 2, windowY + 15, 0xFFFFFFFF);
+
+        // Separator line
+        guiGraphics.fill(windowX + 10, windowY + 35, windowX + windowWidth - 10, windowY + 36, 0xFF4A4A4A);
+
+        // Content area separator
+        guiGraphics.fill(windowX + 10, windowY + HEADER_HEIGHT + 10, windowX + windowWidth - 10, windowY + HEADER_HEIGHT + 11, 0xFF333333);
     }
 
     private void renderEnhancedBreakthroughAnalysis(GuiGraphics guiGraphics) {
@@ -202,7 +301,7 @@ public class CultivationBreakthroughScreen extends Screen {
 
         int currentY = windowY + 40;
 
-        // Current cultivation status
+        // Current cultivation status - more compact
         String qiInfo = String.format("Qi: %s (%.1f%%)",
             cultivationAttachment.getCurrentQiRealm().getDisplayName(),
             cultivationAttachment.getQiProgress() * 100);
@@ -212,112 +311,126 @@ public class CultivationBreakthroughScreen extends Screen {
             cultivationAttachment.getBodyProgress() * 100);
 
         guiGraphics.drawString(font, qiInfo, windowX + 15, currentY, QI_COLOR);
-        guiGraphics.drawString(font, bodyInfo, windowX + 15, currentY + LINE_HEIGHT, BODY_COLOR);
-
-        currentY += LINE_HEIGHT * 3;
+        guiGraphics.drawString(font, bodyInfo, windowX + 250, currentY, BODY_COLOR); // Side by side
+        currentY += LINE_HEIGHT + 4;
 
         // Focus information
-        String focusInfo = String.format("Current Focus: %s (+5%% breakthrough bonus)",
+        String focusInfo = String.format("Focus: %s (+5%% bonus)",
             cultivationAttachment.getCurrentFocus().getDisplayName());
         guiGraphics.drawString(font, focusInfo, windowX + 15, currentY, 0xFFFFFFFF);
+        currentY += LINE_HEIGHT + 4;
 
-        currentY += LINE_HEIGHT * 2;
+        // Debug info about breakthrough options
+        PlayerCultivationAttachment.BreakthroughOptions options = cultivationAttachment.getAllAvailableBreakthroughOptions();
+        String debugInfo = String.format("Options: Qi(%d) Body(%d)", options.qiOptions().size(), options.bodyOptions().size());
+        guiGraphics.drawString(font, debugInfo, windowX + 15, currentY, 0xFF888888);
+        currentY += LINE_HEIGHT + 4;
 
-        // Enhanced breakthrough analysis
-        renderEnhancedBreakthroughReadiness(guiGraphics, currentY);
-    }
+        // Compact breakthrough type info
+        String typeInfo = "Types: Minor(50%) • Major(30%) • Special(20%) • Boundary(10%)";
+        guiGraphics.drawString(font, typeInfo, windowX + 15, currentY, 0xFFAAAAAA);
+        currentY += LINE_HEIGHT + 4;
 
-    private void renderEnhancedBreakthroughReadiness(GuiGraphics guiGraphics, int startY) {
-        int currentY = startY;
+        // Compact bonuses
+        List<String> allBonuses = new ArrayList<>();
 
-        // Header
-        guiGraphics.drawString(font, "Breakthrough Type Analysis:", windowX + 15, currentY, 0xFFD4AF37);
-        currentY += LINE_HEIGHT * 2;
-
-        // Type explanations
-        String[] typeExplanations = {
-            "Minor (50% base): Standard realm advancement",
-            "Major (30% base): Significant progression",
-            "Special (20% base): Unique cultivation paths",
-            "Boundary (10% base): Major stage transitions"
-        };
-
-        int[] typeColors = {MINOR_COLOR, MAJOR_COLOR, SPECIAL_COLOR, BOUNDARY_COLOR};
-
-        for (int i = 0; i < typeExplanations.length; i++) {
-            guiGraphics.drawString(font, typeExplanations[i], windowX + 15, currentY, typeColors[i]);
-            currentY += LINE_HEIGHT;
-        }
-
-        currentY += LINE_HEIGHT;
-
-        // Show current bonuses
-        guiGraphics.drawString(font, "Current Bonuses:", windowX + 15, currentY, 0xFFD4AF37);
-        currentY += LINE_HEIGHT;
-
-        // Show attempt bonuses for each type
+        // Attempt bonuses
         long qiAttempts = cultivationAttachment.getQiBreakthroughAttempts();
         long bodyAttempts = cultivationAttachment.getBodyBreakthroughAttempts();
+        if (qiAttempts > 0) allBonuses.add(String.format("Qi Fails +%d%%", (int)(qiAttempts * 5)));
+        if (bodyAttempts > 0) allBonuses.add(String.format("Body Fails +%d%%", (int)(bodyAttempts * 5)));
 
-        if (qiAttempts > 0 || bodyAttempts > 0) {
-            String qiAttemptInfo = String.format("  Qi failed attempts: %d (+%d%% all types)", qiAttempts, (int)(qiAttempts * 5));
-            String bodyAttemptInfo = String.format("  Body failed attempts: %d (+%d%% all types)", bodyAttempts, (int)(bodyAttempts * 5));
-
-            guiGraphics.drawString(font, qiAttemptInfo, windowX + 15, currentY, ATTEMPT_COLOR);
-            currentY += LINE_HEIGHT;
-            guiGraphics.drawString(font, bodyAttemptInfo, windowX + 15, currentY, ATTEMPT_COLOR);
-            currentY += LINE_HEIGHT;
-        }
-
-        // Show talent bonuses if applicable
+        // Talent bonuses
         if (talentAttachment != null) {
             if (talentAttachment.hasSpiritualRootAssigned()) {
                 float multiplier = talentAttachment.getSpiritualRootMultiplier();
-                double bonus = (multiplier - 1.0) * 20; // 20% per multiplier point
-                String talentInfo = String.format("  Spiritual Root: +%.0f%% Qi breakthroughs", bonus);
-                guiGraphics.drawString(font, talentInfo, windowX + 15, currentY, 0xFFADD8E6);
-                currentY += LINE_HEIGHT;
+                double bonus = (multiplier - 1.0) * 20;
+                allBonuses.add(String.format("Qi Talent +%.0f%%", bonus));
             }
-
             if (talentAttachment.hasPhysiqueAssigned()) {
                 float multiplier = talentAttachment.getPhysiqueMultiplier();
-                double bonus = (multiplier - 1.0) * 20; // 20% per multiplier point
-                String talentInfo = String.format("  Physique: +%.0f%% Body breakthroughs", bonus);
-                guiGraphics.drawString(font, talentInfo, windowX + 15, currentY, 0xFFADD8E6);
-                currentY += LINE_HEIGHT;
+                double bonus = (multiplier - 1.0) * 20;
+                allBonuses.add(String.format("Body Talent +%.0f%%", bonus));
             }
+        }
+
+        if (!allBonuses.isEmpty()) {
+            String bonusInfo = "Bonuses: " + String.join(" • ", allBonuses);
+            guiGraphics.drawString(font, bonusInfo, windowX + 15, currentY, 0xFFADD8E6);
         }
     }
 
     private void renderSectionHeaders(GuiGraphics guiGraphics) {
-        if (cultivationAttachment == null) return;
+        if (cultivationAttachment == null || buttonDataList.isEmpty()) return;
 
-        int headerY = windowY + 225;
+        int contentStartY = windowY + HEADER_HEIGHT + 20;
 
-        // Qi section header
-        boolean qiSectionExists = hasAvailableBreakthroughs(PlayerCultivationAttachment.CultivationType.QI);
-        if (qiSectionExists) {
-            Component qiHeader = Component.literal("▲ QI CULTIVATION BREAKTHROUGH OPTIONS ▲").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
+        // Track which sections we need to render
+        boolean hasQiSection = buttonDataList.stream().anyMatch(data -> data.sectionType == PlayerCultivationAttachment.CultivationType.QI);
+        boolean hasBodySection = buttonDataList.stream().anyMatch(data -> data.sectionType == PlayerCultivationAttachment.CultivationType.BODY);
+
+        if (hasQiSection) {
+            int headerY = contentStartY + 5 - scrollOffset;
+            Component qiHeader = Component.literal("▲ QI BREAKTHROUGH OPTIONS ▲").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD);
             int qiHeaderWidth = font.width(qiHeader);
-            guiGraphics.drawString(font, qiHeader, windowX + (WINDOW_WIDTH - qiHeaderWidth) / 2, headerY, QI_COLOR);
-
-            // Calculate Y position for body section
-            int qiOptionsCount = cultivationAttachment.getBreakthroughOptionsForType(PlayerCultivationAttachment.CultivationType.QI).size();
-            headerY += 25 + (qiOptionsCount * (OPTION_BUTTON_HEIGHT + 8)) + SECTION_SPACING;
+            guiGraphics.drawString(font, qiHeader, windowX + (windowWidth - qiHeaderWidth) / 2, headerY, QI_COLOR);
         }
 
-        // Body section header
-        boolean bodySectionExists = hasAvailableBreakthroughs(PlayerCultivationAttachment.CultivationType.BODY);
-        if (bodySectionExists) {
-            Component bodyHeader = Component.literal("▲ BODY CULTIVATION BREAKTHROUGH OPTIONS ▲").withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
+        if (hasBodySection) {
+            // Find where body section starts
+            int bodyStartY = 0;
+            for (BreakthroughButtonData data : buttonDataList) {
+                if (data.sectionType == PlayerCultivationAttachment.CultivationType.BODY) {
+                    bodyStartY = data.virtualY - 25; // Account for header space
+                    break;
+                }
+            }
+
+            int headerY = contentStartY + bodyStartY + 5 - scrollOffset;
+            Component bodyHeader = Component.literal("▲ BODY BREAKTHROUGH OPTIONS ▲").withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
             int bodyHeaderWidth = font.width(bodyHeader);
-            guiGraphics.drawString(font, bodyHeader, windowX + (WINDOW_WIDTH - bodyHeaderWidth) / 2, headerY, BODY_COLOR);
+            guiGraphics.drawString(font, bodyHeader, windowX + (windowWidth - bodyHeaderWidth) / 2, headerY, BODY_COLOR);
         }
     }
 
-    private boolean hasAvailableBreakthroughs(PlayerCultivationAttachment.CultivationType type) {
-        return cultivationAttachment.getBreakthroughOptionsForType(type).stream()
-            .anyMatch(option -> option.available() || isNearBreakthrough(type));
+    private void renderScrollIndicators(GuiGraphics guiGraphics) {
+        if (maxScrollOffset <= 0) return;
+
+        int scrollBarX = windowX + windowWidth - 12;
+        int scrollBarTop = windowY + HEADER_HEIGHT + 25;
+        int scrollBarHeight = contentAreaHeight - 10;
+
+        // Scroll track
+        guiGraphics.fill(scrollBarX, scrollBarTop, scrollBarX + 8, scrollBarTop + scrollBarHeight, 0xFF333333);
+
+        // Scroll thumb
+        int thumbHeight = Math.max(20, (int)((double)contentAreaHeight * scrollBarHeight / scrollableContentHeight));
+        int thumbY = scrollBarTop + (int)((double)scrollOffset / maxScrollOffset * (scrollBarHeight - thumbHeight));
+
+        guiGraphics.fill(scrollBarX + 1, thumbY, scrollBarX + 7, thumbY + thumbHeight, 0xFF888888);
+
+        // Scroll arrows or indicators
+        if (scrollOffset > 0) {
+            guiGraphics.drawString(font, "▲", windowX + windowWidth - 15, windowY + HEADER_HEIGHT + 15, 0xFFFFFFFF);
+        }
+        if (scrollOffset < maxScrollOffset) {
+            guiGraphics.drawString(font, "▼", windowX + windowWidth - 15, windowY + windowHeight - 25, 0xFFFFFFFF);
+        }
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (maxScrollOffset > 0) {
+            int oldScrollOffset = scrollOffset;
+            scrollOffset = Mth.clamp(scrollOffset - (int)(scrollY * SCROLL_SPEED), 0, maxScrollOffset);
+
+            if (oldScrollOffset != scrollOffset) {
+                // Rebuild the interface with new scroll position
+                setupBreakthroughInterface();
+                return true;
+            }
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     private boolean canAttemptBreakthrough(PlayerCultivationAttachment.CultivationType type) {
@@ -327,7 +440,6 @@ public class CultivationBreakthroughScreen extends Screen {
             cultivationAttachment.getQiProgress() : cultivationAttachment.getBodyProgress();
 
         boolean onCooldown = cultivationAttachment.isBreakthroughOnCooldown(type);
-
         return progress >= 1.0 && !onCooldown;
     }
 
@@ -364,19 +476,23 @@ public class CultivationBreakthroughScreen extends Screen {
         public void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
             boolean hovered = isHoveredOrFocused();
 
-            // Background with hover state
-            int bgColor = hovered ? 0xFF444444 : 0xFF2F2F2F;
-            if (!option.available()) bgColor = 0xFF1F1F1F;
+            // Background with hover state - different colors for available vs unavailable
+            int bgColor;
+            if (!option.available()) {
+                bgColor = hovered ? 0xFF333333 : 0xFF1F1F1F; // Darker for unavailable
+            } else {
+                bgColor = hovered ? 0xFF444444 : 0xFF2F2F2F; // Normal for available
+            }
 
             guiGraphics.fill(getX(), getY(), getX() + width, getY() + height, bgColor);
 
-            // Border with type-specific color
-            int borderColor = option.available() ? getBreakthroughTypeColor() : 0xFF666666;
+            // Border with type-specific color (dimmer if not available)
+            int borderColor = option.available() ? getBreakthroughTypeColor() : (getBreakthroughTypeColor() & 0x7F7F7F7F);
             renderBorder(guiGraphics, getX(), getY(), width, height, borderColor, 1);
 
             // Title with type name
             Component titleText = Component.literal(option.type().getDisplayName().toUpperCase())
-                .withStyle(option.available() ? ChatFormatting.WHITE : ChatFormatting.GRAY);
+                .withStyle(option.available() ? ChatFormatting.WHITE : ChatFormatting.DARK_GRAY);
             int titleWidth = font.width(titleText);
             guiGraphics.drawString(font, titleText,
                 getX() + (width - titleWidth) / 2,
@@ -388,7 +504,7 @@ public class CultivationBreakthroughScreen extends Screen {
             guiGraphics.drawString(font, targetText,
                 getX() + 8,
                 getY() + 25,
-                getCultivationTypeColor());
+                option.available() ? getCultivationTypeColor() : (getCultivationTypeColor() & 0x7F7F7F7F));
 
             // Success rate with detailed breakdown
             if (option.available()) {
@@ -428,6 +544,13 @@ public class CultivationBreakthroughScreen extends Screen {
                     getX() + 8,
                     getY() + 38,
                     NOT_READY_COLOR);
+
+                // Show what's needed to unlock
+                String requirementText = "Complete cultivation progress to unlock";
+                guiGraphics.drawString(font, requirementText,
+                    getX() + 8,
+                    getY() + 51,
+                    0xFF888888);
             }
         }
 
