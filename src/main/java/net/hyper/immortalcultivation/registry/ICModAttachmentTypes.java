@@ -16,6 +16,7 @@ public class ICModAttachmentTypes {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerResourceAttachment>> PLAYER_RESOURCES;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerTalentAttachment>> PLAYER_TALENTS;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerCombatStatsAttachment>> PLAYER_COMBAT_STATS;
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerPillConsumptionAttachment>> PLAYER_PILL_CONSUMPTION;
 
     static {
         PLAYER_RACE = REGISTRY.register("player_race", () -> AttachmentType.builder(() -> new PlayerRaceAttachment()).serialize(PlayerRaceAttachment.CODEC).copyOnDeath().build());
@@ -23,6 +24,7 @@ public class ICModAttachmentTypes {
         PLAYER_RESOURCES = REGISTRY.register("player_resource", () -> AttachmentType.builder(() -> new PlayerResourceAttachment()).serialize(PlayerResourceAttachment.CODEC).copyOnDeath().build());
         PLAYER_TALENTS = REGISTRY.register("player_talent", () -> AttachmentType.builder(() -> new PlayerTalentAttachment()).serialize(PlayerTalentAttachment.CODEC).copyOnDeath().build());
         PLAYER_COMBAT_STATS = REGISTRY.register("player_combat_stats", () -> AttachmentType.builder(() -> new PlayerCombatStatsAttachment()).serialize(PlayerCombatStatsAttachment.CODEC).copyOnDeath().build());
+        PLAYER_PILL_CONSUMPTION = REGISTRY.register("player_pill_consumption", () -> AttachmentType.builder(() -> new PlayerPillConsumptionAttachment()).serialize(PlayerPillConsumptionAttachment.CODEC).copyOnDeath().build());
     }
 
     public static void register(IEventBus modBus) {

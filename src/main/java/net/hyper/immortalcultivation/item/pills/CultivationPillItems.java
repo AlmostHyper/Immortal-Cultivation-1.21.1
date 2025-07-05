@@ -1,6 +1,7 @@
 package net.hyper.immortalcultivation.item.pills;
 
 import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.attachment.PlayerPillConsumptionAttachment;
 import net.hyper.immortalcultivation.block.entities.PillFurnaceBlockEntity;
 import net.hyper.immortalcultivation.item.pills.PillConsumptionManager;
 import net.hyper.immortalcultivation.item.BaseConsumableItem;
@@ -40,19 +41,25 @@ public class CultivationPillItems {
             @Override
             protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
                 if (entity instanceof Player player && !level.isClientSide()) {
+                    // Get both attachments - cultivation for effects, pill consumption for tracking
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                    if (cultivation != null) {
+                    PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+                    if (cultivation != null && pillAttachment != null) {
                         double baseRateBonus = LOW_QUALITY_BASE_RATE;
                         double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        // NEW: Apply diminishing returns
+                        // Apply diminishing returns using the new pill attachment
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
-                        PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+                        PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
-                        // Use the new diminishing returns method
+                        // Apply cultivation effect
                         cultivation.addQiBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+
+                        // Sync pill consumption data to client for tooltip updates
+                        pillAttachment.forceSync();
 
                         // Enhanced message with diminishing returns info
                         String rarityText = rarity != null ? rarity.getName() + " " : "";
@@ -98,17 +105,19 @@ public class CultivationPillItems {
             protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                    if (cultivation != null) {
+                    PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+                    if (cultivation != null && pillAttachment != null) {
                         double baseRateBonus = MEDIUM_QUALITY_BASE_RATE;
                         double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        // NEW: Apply diminishing returns
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
-                        PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+                        PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                         cultivation.addQiBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        pillAttachment.forceSync();
 
                         // Enhanced message with diminishing returns info
                         String rarityText = rarity != null ? rarity.getName() + " " : "";
@@ -154,17 +163,19 @@ public class CultivationPillItems {
             protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                    if (cultivation != null) {
+                    PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+                    if (cultivation != null && pillAttachment != null) {
                         double baseRateBonus = HIGH_QUALITY_BASE_RATE;
                         double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        // NEW: Apply diminishing returns
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
-                        PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+                        PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                         cultivation.addQiBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "High Quality Qi Pill", rarity, finalRateBonus,
                             effectiveness, pillManager.getConsumptionCount(this, rarity), ChatFormatting.AQUA);
@@ -194,17 +205,19 @@ public class CultivationPillItems {
             protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                    if (cultivation != null) {
+                    PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+                    if (cultivation != null && pillAttachment != null) {
                         double baseRateBonus = TOP_QUALITY_BASE_RATE;
                         double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        // NEW: Apply diminishing returns
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
-                        PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+                        PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                         cultivation.addQiBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "Top Quality Qi Pill", rarity, finalRateBonus,
                             effectiveness, pillManager.getConsumptionCount(this, rarity), ChatFormatting.AQUA);
@@ -234,17 +247,19 @@ public class CultivationPillItems {
             protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                    if (cultivation != null) {
+                    PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+                    if (cultivation != null && pillAttachment != null) {
                         double baseRateBonus = LOW_QUALITY_BASE_RATE;
                         double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        // NEW: Apply diminishing returns
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
-                        PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+                        PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                         cultivation.addBodyBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "Low Quality Body Pill", rarity, finalRateBonus,
                             effectiveness, pillManager.getConsumptionCount(this, rarity), ChatFormatting.RED);
@@ -274,17 +289,19 @@ public class CultivationPillItems {
             protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                    if (cultivation != null) {
+                    PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+                    if (cultivation != null && pillAttachment != null) {
                         double baseRateBonus = MEDIUM_QUALITY_BASE_RATE;
                         double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        // NEW: Apply diminishing returns
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
-                        PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+                        PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                         cultivation.addBodyBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "Medium Quality Body Pill", rarity, finalRateBonus,
                             effectiveness, pillManager.getConsumptionCount(this, rarity), ChatFormatting.RED);
@@ -314,17 +331,19 @@ public class CultivationPillItems {
             protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                    if (cultivation != null) {
+                    PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+                    if (cultivation != null && pillAttachment != null) {
                         double baseRateBonus = HIGH_QUALITY_BASE_RATE;
                         double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        // NEW: Apply diminishing returns
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
-                        PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+                        PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                         cultivation.addBodyBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "High Quality Body Pill", rarity, finalRateBonus,
                             effectiveness, pillManager.getConsumptionCount(this, rarity), ChatFormatting.RED);
@@ -354,17 +373,19 @@ public class CultivationPillItems {
             protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
                 if (entity instanceof Player player && !level.isClientSide()) {
                     PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                    if (cultivation != null) {
+                    PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+                    if (cultivation != null && pillAttachment != null) {
                         double baseRateBonus = TOP_QUALITY_BASE_RATE;
                         double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, baseRateBonus);
 
-                        // NEW: Apply diminishing returns
                         PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
-                        PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+                        PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                         cultivation.addBodyBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "Top Quality Body Pill", rarity, finalRateBonus,
                             effectiveness, pillManager.getConsumptionCount(this, rarity), ChatFormatting.RED);
@@ -417,7 +438,7 @@ public class CultivationPillItems {
     }
 
     /**
-     * NEW: Helper method to send consumption messages with diminishing returns info
+     * Helper method to send consumption messages with diminishing returns info
      */
     private static void sendConsumptionMessage(Player player, String pillName, PillFurnaceBlockEntity.PillRarity rarity,
                                                double finalRate, double effectiveness, int consumptionCount, ChatFormatting color) {
@@ -440,10 +461,7 @@ public class CultivationPillItems {
     }
 
     /**
-     * NEW: Helper method to add Qi pill tooltips with comprehensive diminishing returns info
-     */
-    /**
-     * NEW: Helper method to add Qi pill tooltips with comprehensive diminishing returns info
+     * Helper method to add Qi pill tooltips with comprehensive diminishing returns info
      */
     private static void addQiPillTooltip(ItemStack stack, Item.TooltipContext context, List<Component> tooltip,
                                          String quality, ChatFormatting qualityColor, String realm, double baseRate, Item pillItem) {
@@ -467,9 +485,9 @@ public class CultivationPillItems {
         // Show diminishing returns info in tooltip
         Player player = getPlayerFromContext(context);
         if (player != null) {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null) {
-                PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+            PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+            if (pillAttachment != null) {
+                PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                 double effectiveness = pillManager.getNextConsumptionEffectiveness(pillItem, rarity);
                 int consumptionCount = pillManager.getConsumptionCount(pillItem, rarity);
                 double effectiveRate = rarityAdjustedRate * effectiveness;
@@ -524,7 +542,7 @@ public class CultivationPillItems {
     }
 
     /**
-     * NEW: Helper method to add Body pill tooltips with comprehensive diminishing returns info
+     * Helper method to add Body pill tooltips with comprehensive diminishing returns info
      */
     private static void addBodyPillTooltip(ItemStack stack, Item.TooltipContext context, List<Component> tooltip,
                                            String quality, ChatFormatting qualityColor, String realm, double baseRate, Item pillItem) {
@@ -548,9 +566,9 @@ public class CultivationPillItems {
         // Show diminishing returns info in tooltip
         Player player = getPlayerFromContext(context);
         if (player != null) {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null) {
-                PillConsumptionManager pillManager = cultivation.getPillConsumptionManager();
+            PlayerPillConsumptionAttachment pillAttachment = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+            if (pillAttachment != null) {
+                PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
                 double effectiveness = pillManager.getNextConsumptionEffectiveness(pillItem, rarity);
                 int consumptionCount = pillManager.getConsumptionCount(pillItem, rarity);
                 double effectiveRate = rarityAdjustedRate * effectiveness;

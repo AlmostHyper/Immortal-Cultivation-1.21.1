@@ -3,7 +3,6 @@ package net.hyper.immortalcultivation.attachment;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
-import net.hyper.immortalcultivation.item.pills.PillConsumptionManager;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.cultivation.realms.data.CultivationRealmData;
 import net.hyper.immortalcultivation.cultivation.realms.data.JsonCultivationRealm;
@@ -60,9 +59,6 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     private long maxBodyCultivation = 1000; // Start with default max
     private double bodyCultivationFraction = 0.0;
     private double bodyAccumulationRate = 0.0; // CRITICAL: This needs to be updated each tick
-
-    // === Pill Consumption Tracking (NEW) ===
-    private final PillConsumptionManager pillConsumptionManager = new PillConsumptionManager();
 
     public void startMeditation() {
 
@@ -210,16 +206,6 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         // Initialize max cultivation with safe defaults
         this.maxQiCultivation = getSafeMaxCultivation(currentQiRealm);
         this.maxBodyCultivation = getSafeMaxCultivation(currentBodyRealm);
-    }
-
-    /**
-     * Get the pill consumption manager for this player.
-     * This allows access to diminishing returns functionality.
-     *
-     * @return The pill consumption manager instance
-     */
-    public PillConsumptionManager getPillConsumptionManager() {
-        return pillConsumptionManager;
     }
 
     /**
@@ -861,6 +847,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     public void addQiBonusWithDiminishing(double additive, double multiplicative, double effectivenessMultiplier) {
         this.qiCultivationAdditiveBonus += additive * effectivenessMultiplier;
         this.qiCultivationMultiplicativeBonus += multiplicative * effectivenessMultiplier;
+
     }
 
     /**
@@ -874,6 +861,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     public void addBodyBonusWithDiminishing(double additive, double multiplicative, double effectivenessMultiplier) {
         this.bodyCultivationAdditiveBonus += additive * effectivenessMultiplier;
         this.bodyCultivationMultiplicativeBonus += multiplicative * effectivenessMultiplier;
+
     }
 
     /**
@@ -985,7 +973,6 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             currentFocus,
             qiCultivationAdditiveBonus,
             bodyCultivationAdditiveBonus,
-            // ADDED: Include breakthrough data in hash
             qiBreakthroughAttempts,
             bodyBreakthroughAttempts,
             qiBreakthroughCooldown,
@@ -1012,7 +999,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                 qiCultivationMultiplicativeBonus,
                 bodyCultivationAdditiveBonus,
                 bodyCultivationMultiplicativeBonus,
-                // ADDED: Include breakthrough data in sync packet
+                // Include breakthrough data in sync packet
                 qiBreakthroughAttempts,
                 bodyBreakthroughAttempts,
                 qiBreakthroughCooldown,
@@ -1023,7 +1010,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
 
             ICModNetwork.sendToPlayer(packet, serverPlayer);
 
-            ImmortalCultivation.LOGGER.debug("Synced cultivation data to client - Qi attempts: {}, Body attempts: {}",
+            ImmortalCultivation.LOGGER.debug("Synced cultivation data to client - Qi attempts: {}, Body attempts: {}, Pill data included",
                 qiBreakthroughAttempts, bodyBreakthroughAttempts);
         }
     }
@@ -1070,7 +1057,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                           CultivationType currentFocus,
                           double qiAdditiveBonus, double qiMultiplicativeBonus,
                           double bodyAdditiveBonus, double bodyMultiplicativeBonus,
-                          // ADDED: Breakthrough data parameters
+                          // Breakthrough data parameters
                           long qiBreakthroughAttempts, long bodyBreakthroughAttempts,
                           boolean qiBreakthroughCooldown, boolean bodyBreakthroughCooldown,
                           long lastQiBreakthroughAttempt, long lastBodyBreakthroughAttempt) {
@@ -1100,7 +1087,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         this.bodyCultivationAdditiveBonus = bodyAdditiveBonus;
         this.bodyCultivationMultiplicativeBonus = bodyMultiplicativeBonus;
 
-        // ADDED: Apply breakthrough data
+        // Apply breakthrough data
         this.qiBreakthroughAttempts = qiBreakthroughAttempts;
         this.bodyBreakthroughAttempts = bodyBreakthroughAttempts;
         this.qiBreakthroughCooldown = qiBreakthroughCooldown;
@@ -1108,7 +1095,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         this.lastQiBreakthroughAttempt = lastQiBreakthroughAttempt;
         this.lastBodyBreakthroughAttempt = lastBodyBreakthroughAttempt;
 
-        ImmortalCultivation.LOGGER.debug("Applied cultivation sync - Qi attempts: {}, Body attempts: {}",
+        ImmortalCultivation.LOGGER.debug("Applied cultivation sync - Qi attempts: {}, Body attempts: {}, Pill consumption data applied",
             qiBreakthroughAttempts, bodyBreakthroughAttempts);
     }
 
@@ -1119,7 +1106,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                           long qiCurrent, long qiMax, long bodyCurrent, long bodyMax,
                           CultivationType focus, double qiAdd, double qiMult, double bodyAdd, double bodyMult) {
 
-        // Call the new method with default breakthrough data
+        // Call the new method with default breakthrough data and empty pill consumption data
         applySync(qiRealmId, prevQiRealmId, bodyRealmId, prevBodyRealmId,
             qiCurrent, qiMax, bodyCurrent, bodyMax,
             focus, qiAdd, qiMult, bodyAdd, bodyMult,
@@ -1572,8 +1559,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             Codec.LONG.optionalFieldOf("time_body_realm", 0L).forGetter(attachment -> attachment.timeInCurrentBodyRealm),
             Codec.LONG.optionalFieldOf("total_qi_time", 0L).forGetter(attachment -> attachment.totalQiCultivationTime),
             Codec.LONG.optionalFieldOf("total_body_time", 0L).forGetter(attachment -> attachment.totalBodyCultivationTime),
-            BONUS_DATA_CODEC.fieldOf("bonuses").forGetter(PlayerCultivationAttachment::getBonusData),
-            CompoundTag.CODEC.optionalFieldOf("pill_consumption", new CompoundTag()).forGetter(PlayerCultivationAttachment::getPillConsumptionData)
+            BONUS_DATA_CODEC.fieldOf("bonuses").forGetter(PlayerCultivationAttachment::getBonusData)
         ).apply(instance, PlayerCultivationAttachment::decode)
     );
 
@@ -1609,16 +1595,11 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         );
     }
 
-    // NEW: Helper method for pill consumption data
-    private CompoundTag getPillConsumptionData() {
-        return pillConsumptionManager.serializeNBT();
-    }
-
     // Decode method for creating instances from saved data (UPDATED)
     private static PlayerCultivationAttachment decode(
         RealmData realms, CultivationProgress progress, String focus, long focusTime,
         BreakthroughData breakthrough, long timeQi, long timeBody,
-        long totalQi, long totalBody, BonusData bonuses, CompoundTag pillConsumptionData) {
+        long totalQi, long totalBody, BonusData bonuses) {
 
         PlayerCultivationAttachment data = new PlayerCultivationAttachment();
 
@@ -1667,9 +1648,6 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         data.qiCultivationMultiplicativeBonus = bonuses.qiMultiplicative;
         data.bodyCultivationAdditiveBonus = bonuses.bodyAdditive;
         data.bodyCultivationMultiplicativeBonus = bonuses.bodyMultiplicative;
-
-        // NEW: Restore pill consumption data
-        data.pillConsumptionManager.deserializeNBT(pillConsumptionData);
 
         return data;
     }

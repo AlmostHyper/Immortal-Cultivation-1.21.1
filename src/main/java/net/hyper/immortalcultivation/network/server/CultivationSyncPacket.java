@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.network.server;
 import io.netty.buffer.ByteBuf;
 import net.hyper.immortalcultivation.attachment.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -14,7 +15,7 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
  * Sync packet for unified cultivation data.
  * Replaces: RealmSyncPacket, QiCultivationSyncPacket, BodyCultivationSyncPacket,
  * CultivationFocusSyncPacket, and CultivationBonusSyncPacket
- * UPDATED: Now includes breakthrough data for complete synchronization
+ * UPDATED: Now includes breakthrough data and pill consumption data for complete synchronization
  */
 public record CultivationSyncPacket(
     // Realm data
@@ -38,7 +39,7 @@ public record CultivationSyncPacket(
     double bodyAdditiveBonus,
     double bodyMultiplicativeBonus,
 
-    // ADDED: Breakthrough data
+    // Breakthrough data
     long qiBreakthroughAttempts,
     long bodyBreakthroughAttempts,
     boolean qiBreakthroughCooldown,
@@ -64,7 +65,7 @@ public record CultivationSyncPacket(
             }
         );
 
-    // Manual implementation due to parameter limits (now 19 parameters)
+    // Manual implementation due to parameter limits (now 20 parameters)
     public static final StreamCodec<ByteBuf, CultivationSyncPacket> STREAM_CODEC = StreamCodec.of(
         CultivationSyncPacket::encode,
         CultivationSyncPacket::decode
@@ -92,7 +93,7 @@ public record CultivationSyncPacket(
         ByteBufCodecs.DOUBLE.encode(buf, packet.bodyAdditiveBonus);
         ByteBufCodecs.DOUBLE.encode(buf, packet.bodyMultiplicativeBonus);
 
-        // ADDED: Breakthrough data
+        // Breakthrough data
         ByteBufCodecs.VAR_LONG.encode(buf, packet.qiBreakthroughAttempts);
         ByteBufCodecs.VAR_LONG.encode(buf, packet.bodyBreakthroughAttempts);
         ByteBufCodecs.BOOL.encode(buf, packet.qiBreakthroughCooldown);
@@ -124,13 +125,14 @@ public record CultivationSyncPacket(
             ByteBufCodecs.DOUBLE.decode(buf),
             ByteBufCodecs.DOUBLE.decode(buf),
 
-            // ADDED: Breakthrough data
+            // Breakthrough data
             ByteBufCodecs.VAR_LONG.decode(buf),
             ByteBufCodecs.VAR_LONG.decode(buf),
             ByteBufCodecs.BOOL.decode(buf),
             ByteBufCodecs.BOOL.decode(buf),
             ByteBufCodecs.VAR_LONG.decode(buf),
             ByteBufCodecs.VAR_LONG.decode(buf)
+
         );
     }
 
@@ -145,7 +147,7 @@ public record CultivationSyncPacket(
             PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
 
             if (cultivation != null) {
-                // Apply all synced data including breakthrough data
+                // Apply all synced data including breakthrough data and pill consumption
                 cultivation.applySync(
                     packet.currentQiRealmId,
                     packet.previousQiRealmId,
@@ -160,7 +162,7 @@ public record CultivationSyncPacket(
                     packet.qiMultiplicativeBonus,
                     packet.bodyAdditiveBonus,
                     packet.bodyMultiplicativeBonus,
-                    // ADDED: Pass breakthrough data to applySync
+                    // Pass breakthrough data to applySync
                     packet.qiBreakthroughAttempts,
                     packet.bodyBreakthroughAttempts,
                     packet.qiBreakthroughCooldown,
