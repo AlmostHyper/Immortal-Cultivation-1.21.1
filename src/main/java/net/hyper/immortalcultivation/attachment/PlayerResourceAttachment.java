@@ -598,16 +598,26 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (player instanceof ServerPlayer serverPlayer) {
             try {
                 ResourceSyncPacket packet = new ResourceSyncPacket(
-                    currentHealth, maxHealth,
-                    permanentHealthBonus,
-                    permanentHealthRegenBonus,
-                    currentQi, maxQi,
-                    currentBody, maxBody
+                    // Current resource values (3 parameters) - CORRECT ORDER
+                    currentHealth,              // 1. long currentHealth
+                    currentQi,                  // 2. long currentQi
+                    currentBody,                // 3. long currentBody
+
+                    // ALL permanent bonuses (6 parameters) - THESE WERE MISSING!
+                    permanentHealthBonus,       // 7. long permanentHealthBonus
+                    permanentHealthRegenBonus,  // 8. double permanentHealthRegenBonus
+                    permanentMaxQiBonus,        // 9. long permanentMaxQiBonus
+                    permanentQiRegenBonus,      // 10. double permanentQiRegenBonus
+                    permanentMaxBodyBonus,      // 11. long permanentMaxBodyBonus
+                    permanentBodyRegenBonus     // 12. double permanentBodyRegenBonus
                 );
                 PacketDistributor.sendToPlayer(serverPlayer, packet);
 
-                ImmortalCultivation.LOGGER.debug("Synced resource data to client for player: {}",
-                    serverPlayer.getName().getString());
+                ImmortalCultivation.LOGGER.debug("Synced complete resource data to client for player: {} (Health: {}/{} +{}, Qi: {}/{} +{}, Body: {}/{} +{})",
+                    serverPlayer.getName().getString(),
+                    currentHealth, maxHealth, permanentHealthBonus,
+                    currentQi, maxQi, permanentMaxQiBonus,
+                    currentBody, maxBody, permanentMaxBodyBonus);
             } catch (Exception e) {
                 ImmortalCultivation.LOGGER.error("Error syncing resource data for player {}",
                     player.getName().getString(), e);

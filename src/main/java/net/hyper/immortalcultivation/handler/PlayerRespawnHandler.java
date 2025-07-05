@@ -3,285 +3,200 @@ package net.hyper.immortalcultivation.handler;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
+/**
+ * Handles RESPAWN-SPECIFIC logic for the cultivation system.
+ * This handler focuses ONLY on what should happen when a player dies and respawns,
+ * such as cultivation progress penalties and resource restoration.
+ *
+ * IMPORTANT: This works in conjunction with DimensionChangeHandler, which handles
+ * the technical aspects of player reference updates and data synchronization.
+ * This handler runs AFTER DimensionChangeHandler to apply respawn-specific changes.
+ *
+ * Compatible with the permanent additive stat system - only modifies temporary
+ * values like cultivation progress and current resources, never permanent bonuses.
+ */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class PlayerRespawnHandler {
 
-    @SubscribeEvent
+    /**
+     * Handle respawn-specific cultivation logic.
+     * Runs at LOWEST priority to ensure DimensionChangeHandler has already
+     * updated player references and synced base data.
+     */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
 
-        ImmortalCultivation.LOGGER.info("Player {} respawned, resetting unified attachment states",
+        ImmortalCultivation.LOGGER.info("Applying respawn penalties and restoration for player {}",
             player.getName().getString());
 
-        // Reset unified attachments in proper order
-        resetRaceAttachment(player);
-        resetCultivationAttachment(player);
-        resetResourceAttachment(player);
-        resetTalentAttachment(player);
-
-        // Re-sync all data to client
-        resyncAllAttachments(player);
-
-        ImmortalCultivation.LOGGER.info("Unified attachment reset complete for player {}",
-            player.getName().getString());
-    }
-
-    /**
-     * Reset race attachment - handles player race
-     */
-    private static void resetRaceAttachment(ServerPlayer player) {
         try {
-            PlayerRaceAttachment raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
-            if (raceAttachment != null) {
-                // IMPORTANT: Reset player reference after respawn
-                raceAttachment.setPlayer(player);
+            // Apply cultivation progress penalties (death should have consequences)
+            applyCultivationDeathPenalties(player);
 
-                // NOTE: Don't reset race itself - it is a permanent character trait!
-                // Race should persist through death and respawn
+            // Restore resources to full (respawn should heal you)
+            restoreResourcesOnRespawn(player);
 
-                ImmortalCultivation.LOGGER.info("Reset player {} race references - Race: {} (Qi: {}x, Body: {}x)",
-                    player.getName().getString(),
-                    raceAttachment.getRaceDisplayName(),
-                    raceAttachment.getQiMultiplier(),
-                    raceAttachment.getBodyMultiplier());
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null race attachment after respawn!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error resetting race for player {}",
-                player.getName().getString(), e);
-        }
-    }
+            // Send respawn message to player
+            sendRespawnMessage(player);
 
-    /**
-     * Reset cultivation attachment - handles realms, cultivation progress, focus, bonuses
-     */
-    private static void resetCultivationAttachment(ServerPlayer player) {
-        try {
-            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivationAttachment != null) {
-                // IMPORTANT: Reset player reference after respawn
-                cultivationAttachment.setPlayer(player);
-
-                // Calculate max values based on current realms
-                long maxQiCultivation = cultivationAttachment.getCurrentQiRealm().getBaseMaxCultivation();
-                long maxBodyCultivation = cultivationAttachment.getCurrentBodyRealm().getBaseMaxCultivation();
-
-                // Reset cultivation progress to safe values (don't lose all progress on death)
-                // Keep some progress to avoid complete loss
-                long preservedQiCultivation = Math.max(0, cultivationAttachment.getCurrentQiCultivation() - (maxQiCultivation / 10));
-                long preservedBodyCultivation = Math.max(0, cultivationAttachment.getCurrentBodyCultivation() - (maxBodyCultivation / 10));
-
-                cultivationAttachment.setCurrentQiCultivation(preservedQiCultivation);
-                cultivationAttachment.setCurrentBodyCultivation(preservedBodyCultivation);
-
-                // Reset cultivation fractions
-                cultivationAttachment.setRegenFraction(0.0);
-
-                // NOTE: Don't reset pill bonuses - they should persist through death!
-                // The bonuses from consumed pills are permanent character progression
-
-                ImmortalCultivation.LOGGER.info("Reset player {} cultivation - Qi: {}/{}, Body: {}/{}, Pill bonuses preserved",
-                    player.getName().getString(),
-                    preservedQiCultivation, maxQiCultivation,
-                    preservedBodyCultivation, maxBodyCultivation);
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null cultivation attachment after respawn!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error resetting cultivation for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Reset resource attachment - handles health, qi, body energy
-     */
-    private static void resetResourceAttachment(ServerPlayer player) {
-        try {
-            PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (resourceAttachment != null) {
-                // IMPORTANT: Reset player reference after respawn
-                resourceAttachment.setPlayer(player);
-
-                // Calculate max values based on current cultivation
-                long maxHealth = calculateMaxHealthForPlayer(player);
-                long maxQi = calculateMaxQiForPlayer(player);
-                long maxBody = calculateMaxBodyForPlayer(player);
-
-                // Reset to full resources on respawn
-                resourceAttachment.setCurrentHealth(maxHealth);
-                resourceAttachment.setMaxHealth(maxHealth);
-                resourceAttachment.setCurrentQi(maxQi);
-                resourceAttachment.setMaxQi(maxQi);
-                resourceAttachment.setCurrentBody(maxBody);
-                resourceAttachment.setMaxBody(maxBody);
-
-                // Reset regeneration fractions
-                resourceAttachment.setRegenFraction(0.0, 0.0, 0.0);
-
-                // Sync vanilla health bar
-                float healthPercentage = 1.0f; // Full health
-                player.setHealth(player.getMaxHealth() * healthPercentage);
-
-                ImmortalCultivation.LOGGER.info("Reset player {} resources - Health: {}/{}, Qi: {}/{}, Body: {}/{}",
-                    player.getName().getString(),
-                    maxHealth, maxHealth, maxQi, maxQi, maxBody, maxBody);
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null resource attachment after respawn!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error resetting resources for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Reset talent attachment - handles spiritual roots and physique
-     */
-    private static void resetTalentAttachment(ServerPlayer player) {
-        try {
-            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            if (talentAttachment != null) {
-                // IMPORTANT: Reset player reference after respawn
-                talentAttachment.setPlayer(player);
-
-                // NOTE: Don't reset talents themselves - they are permanent character traits!
-                // Talents (spiritual roots and physique) should persist through death
-
-                ImmortalCultivation.LOGGER.info("Reset player {} talent references - Spiritual Root: {} ({}x), Physique: {} ({}x)",
-                    player.getName().getString(),
-                    talentAttachment.getSpiritualRootDisplayName(),
-                    talentAttachment.getSpiritualRootMultiplier(),
-                    talentAttachment.getPhysiqueDisplayName(),
-                    talentAttachment.getPhysiqueMultiplier());
-            } else {
-                ImmortalCultivation.LOGGER.error("Player {} has null talent attachment after respawn!",
-                    player.getName().getString());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error resetting talents for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Re-sync all unified attachments to client
-     */
-    private static void resyncAllAttachments(ServerPlayer player) {
-        try {
-            ImmortalCultivation.LOGGER.info("Force syncing all unified attachments after respawn for player {}",
-                player.getName().getString());
-
-            // Sync cultivation attachment (realms, cultivation progress, focus, bonuses)
-            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivationAttachment != null) {
-                cultivationAttachment.setPlayer(player); // IMPORTANT: Reset player reference
-                cultivationAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Resynced cultivation attachment after respawn for player {}",
-                    player.getName().getString());
-            }
-
-            // Sync resource attachment (health, qi, body energy)
-            PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (resourceAttachment != null) {
-                resourceAttachment.setPlayer(player); // IMPORTANT: Reset player reference
-                resourceAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Resynced resource attachment after respawn for player {}",
-                    player.getName().getString());
-            }
-
-            // Sync talent attachment (spiritual roots, physique)
-            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            if (talentAttachment != null) {
-                talentAttachment.setPlayer(player); // IMPORTANT: Reset player reference
-                talentAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Resynced talent attachment after respawn for player {}",
-                    player.getName().getString());
-            }
-
-            // OPTIONAL: Sync combat stats if still using separate attachment
-            try {
-                PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-                if (combatStatsAttachment != null) {
-                    combatStatsAttachment.setPlayer(player);
-                    combatStatsAttachment.forceSync();
-                    ImmortalCultivation.LOGGER.debug("Resynced combat stats after respawn for player {}",
-                        player.getName().getString());
-                }
-            } catch (Exception e) {
-                // Combat stats might not exist in unified system
-                ImmortalCultivation.LOGGER.debug("Combat stats attachment not available (might be unified): {}",
-                    e.getMessage());
-            }
-
-            ImmortalCultivation.LOGGER.info("Successfully resynced all unified attachments after respawn for player {}",
+            ImmortalCultivation.LOGGER.info("Respawn processing complete for player {}",
                 player.getName().getString());
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error syncing unified attachments for player {}",
+            ImmortalCultivation.LOGGER.error("Error processing respawn for player {}",
                 player.getName().getString(), e);
         }
     }
 
-    // === Helper methods to calculate max values safely ===
-
-    private static long calculateMaxHealthForPlayer(ServerPlayer player) {
+    /**
+     * Apply cultivation progress penalties on death.
+     * In Xianxia tradition, death should have consequences but not completely destroy progress.
+     * This preserves permanent bonuses (pills, realm achievements) but reduces current progress.
+     */
+    private static void applyCultivationDeathPenalties(ServerPlayer player) {
         try {
-            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivationAttachment == null) return 20;
-
-            long qiRealmHealth = cultivationAttachment.getCurrentQiRealm().getBaseHealth();
-            long bodyRealmHealth = cultivationAttachment.getCurrentBodyRealm().getBaseHealth();
-
-            if (qiRealmHealth == 20 && bodyRealmHealth == 20) {
-                return 20; // Still mortal
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation == null) {
+                ImmortalCultivation.LOGGER.error("Player {} has null cultivation attachment during respawn!",
+                    player.getName().getString());
+                return;
             }
 
-            long qiBonus = Math.max(0, qiRealmHealth - 20);
-            long bodyBonus = Math.max(0, bodyRealmHealth - 20);
-            return 20 + qiBonus + bodyBonus;
+            // Calculate death penalties (lose 10% of current cultivation progress)
+            long currentQiCultivation = cultivation.getCurrentQiCultivation();
+            long currentBodyCultivation = cultivation.getCurrentBodyCultivation();
+
+            long maxQiCultivation = cultivation.getMaxQiCultivation();
+            long maxBodyCultivation = cultivation.getMaxBodyCultivation();
+
+            // Apply penalty: lose 10% of current progress, minimum 0
+            long qiPenalty = Math.max(0, currentQiCultivation / 10);
+            long bodyPenalty = Math.max(0, currentBodyCultivation / 10);
+
+            long newQiCultivation = Math.max(0, currentQiCultivation - qiPenalty);
+            long newBodyCultivation = Math.max(0, currentBodyCultivation - bodyPenalty);
+
+            // Apply the penalties
+            cultivation.setCurrentQiCultivation(newQiCultivation);
+            cultivation.setCurrentBodyCultivation(newBodyCultivation);
+
+            // Reset regeneration fractions to prevent accumulation issues
+            cultivation.setRegenFraction(0.0);
+
+            // IMPORTANT: Don't touch permanent bonuses (pills, realm achievements)
+            // Those should persist through death as they represent permanent character growth
+
+            // Log the penalties applied
+            if (qiPenalty > 0 || bodyPenalty > 0) {
+                ImmortalCultivation.LOGGER.info("Applied death penalties to player {} - Qi: -{} ({}/{}), Body: -{} ({}/{}))",
+                    player.getName().getString(),
+                    qiPenalty, newQiCultivation, maxQiCultivation,
+                    bodyPenalty, newBodyCultivation, maxBodyCultivation);
+            } else {
+                ImmortalCultivation.LOGGER.info("No death penalties applied to player {} (no progress to lose)",
+                    player.getName().getString());
+            }
+
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating max health", e);
-            return 20;
+            ImmortalCultivation.LOGGER.error("Error applying cultivation death penalties for player {}",
+                player.getName().getString(), e);
         }
     }
 
-    private static long calculateMaxQiForPlayer(ServerPlayer player) {
+    /**
+     * Restore all resources to full on respawn.
+     * Uses the attachment's own methods to ensure compatibility with the permanent additive system.
+     */
+    private static void restoreResourcesOnRespawn(ServerPlayer player) {
         try {
-            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivationAttachment == null) return 100;
+            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            if (resources == null) {
+                ImmortalCultivation.LOGGER.error("Player {} has null resource attachment during respawn!",
+                    player.getName().getString());
+                return;
+            }
 
-            long baseQi = cultivationAttachment.getCurrentQiRealm().getBaseMaxQi();
-            long cultivationBonus = (long)(cultivationAttachment.getCurrentQiCultivation() * 0.01);
-            return baseQi + cultivationBonus;
+            // Force recalculation of max values based on current permanent bonuses
+            // This ensures compatibility with the permanent additive system
+            resources.forceHealthRecalculation();
+
+            // Restore to full resources
+            resources.setCurrentHealth(resources.getMaxHealth());
+            resources.setCurrentQi(resources.getMaxQi());
+            resources.setCurrentBody(resources.getMaxBody());
+
+            // Reset regeneration fractions
+            resources.setRegenFraction(0.0);
+
+            // Update vanilla health bar to match our custom health system
+            // Calculate percentage of vanilla health to set
+            float vanillaHealthPercentage = Math.min(1.0f, (float) resources.getCurrentHealth() / (float) resources.getMaxHealth());
+            player.setHealth(player.getMaxHealth() * vanillaHealthPercentage);
+
+            ImmortalCultivation.LOGGER.info("Restored resources for player {} - Health: {}/{}, Qi: {}/{}, Body: {}/{}",
+                player.getName().getString(),
+                resources.getCurrentHealth(), resources.getMaxHealth(),
+                resources.getCurrentQi(), resources.getMaxQi(),
+                resources.getCurrentBody(), resources.getMaxBody());
+
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating max Qi", e);
-            return 100;
+            ImmortalCultivation.LOGGER.error("Error restoring resources for player {}",
+                player.getName().getString(), e);
         }
     }
 
-    private static long calculateMaxBodyForPlayer(ServerPlayer player) {
+    /**
+     * Send a respawn message to the player explaining what happened.
+     * This provides feedback about the death penalties and restoration.
+     */
+    private static void sendRespawnMessage(ServerPlayer player) {
         try {
-            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivationAttachment == null) return 100;
+            // Get current cultivation state for message
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation == null) return;
 
-            long baseBody = cultivationAttachment.getCurrentBodyRealm().getBaseMaxQi(); // Using same as Qi
-            long cultivationBonus = (long)(cultivationAttachment.getCurrentBodyCultivation() * 0.01);
-            return baseBody + cultivationBonus;
+            Component respawnMessage = Component.literal("⚰️ You have returned from the void... ⚰️\n")
+                .withStyle(ChatFormatting.DARK_PURPLE, ChatFormatting.BOLD)
+                .append(Component.literal("Your soul bears the scars of death, but your journey continues.\n")
+                    .withStyle(ChatFormatting.GRAY))
+                .append(Component.literal("• Some cultivation progress has been lost to the underworld\n")
+                    .withStyle(ChatFormatting.RED))
+                .append(Component.literal("• Your body and spirit have been restored to full strength\n")
+                    .withStyle(ChatFormatting.GREEN))
+                .append(Component.literal("• Permanent achievements remain with your soul\n")
+                    .withStyle(ChatFormatting.GOLD));
+
+            player.sendSystemMessage(respawnMessage);
+
+            // Show current cultivation state
+            Component cultivationState = Component.literal("Current State: ")
+                .withStyle(ChatFormatting.AQUA)
+                .append(Component.literal(String.format("Qi %s (%d/%d), Body %s (%d/%d)",
+                        cultivation.getCurrentQiRealm().getDisplayName(),
+                        cultivation.getCurrentQiCultivation(),
+                        cultivation.getMaxQiCultivation(),
+                        cultivation.getCurrentBodyRealm().getDisplayName(),
+                        cultivation.getCurrentBodyCultivation(),
+                        cultivation.getMaxBodyCultivation()))
+                    .withStyle(ChatFormatting.WHITE));
+
+            player.sendSystemMessage(cultivationState);
+
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating max Body", e);
-            return 100;
+            // Don't spam errors for cosmetic messages
+            ImmortalCultivation.LOGGER.debug("Error sending respawn message for player {}",
+                player.getName().getString());
         }
     }
 }
