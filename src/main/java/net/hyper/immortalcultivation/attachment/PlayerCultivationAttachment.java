@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.attachment;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
 import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
+import net.hyper.immortalcultivation.item.pills.PillConsumptionManager;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.cultivation.realms.data.CultivationRealmData;
 import net.hyper.immortalcultivation.cultivation.realms.data.JsonCultivationRealm;
@@ -59,6 +60,9 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     private long maxBodyCultivation = 1000; // Start with default max
     private double bodyCultivationFraction = 0.0;
     private double bodyAccumulationRate = 0.0; // CRITICAL: This needs to be updated each tick
+
+    // === Pill Consumption Tracking (NEW) ===
+    private final PillConsumptionManager pillConsumptionManager = new PillConsumptionManager();
 
     public void startMeditation() {
 
@@ -206,6 +210,16 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         // Initialize max cultivation with safe defaults
         this.maxQiCultivation = getSafeMaxCultivation(currentQiRealm);
         this.maxBodyCultivation = getSafeMaxCultivation(currentBodyRealm);
+    }
+
+    /**
+     * Get the pill consumption manager for this player.
+     * This allows access to diminishing returns functionality.
+     *
+     * @return The pill consumption manager instance
+     */
+    public PillConsumptionManager getPillConsumptionManager() {
+        return pillConsumptionManager;
     }
 
     /**
@@ -837,6 +851,32 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     }
 
     /**
+     * Enhanced addQiBonus that applies diminishing returns for pill consumption.
+     * This method should be used when consuming pills.
+     *
+     * @param additive Base additive bonus from the pill
+     * @param multiplicative Base multiplicative bonus from the pill
+     * @param effectivenessMultiplier Diminishing returns multiplier (from PillConsumptionManager)
+     */
+    public void addQiBonusWithDiminishing(double additive, double multiplicative, double effectivenessMultiplier) {
+        this.qiCultivationAdditiveBonus += additive * effectivenessMultiplier;
+        this.qiCultivationMultiplicativeBonus += multiplicative * effectivenessMultiplier;
+    }
+
+    /**
+     * Enhanced addBodyBonus that applies diminishing returns for pill consumption.
+     * This method should be used when consuming pills.
+     *
+     * @param additive Base additive bonus from the pill
+     * @param multiplicative Base multiplicative bonus from the pill
+     * @param effectivenessMultiplier Diminishing returns multiplier (from PillConsumptionManager)
+     */
+    public void addBodyBonusWithDiminishing(double additive, double multiplicative, double effectivenessMultiplier) {
+        this.bodyCultivationAdditiveBonus += additive * effectivenessMultiplier;
+        this.bodyCultivationMultiplicativeBonus += multiplicative * effectivenessMultiplier;
+    }
+
+    /**
      * Get the raw Qi additive bonus for display
      */
     public double getQiCultivationRawAdditiveBonus() {
@@ -1462,7 +1502,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         );
     }
 
-    // === Serialization with Codec ===
+    // === Serialization with Codec (UPDATED with Pill Consumption Data) ===
 
     // Sub-codec for realm data
     private record RealmData(String currentQiRealmId, String previousQiRealmId,
@@ -1520,7 +1560,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         ).apply(instance, BonusData::new)
     );
 
-    // Main codec using sub-codecs
+    // Main codec using sub-codecs (UPDATED with pill consumption)
     public static final Codec<PlayerCultivationAttachment> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
             REALM_DATA_CODEC.fieldOf("realms").forGetter(PlayerCultivationAttachment::getRealmData),
@@ -1532,7 +1572,8 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             Codec.LONG.optionalFieldOf("time_body_realm", 0L).forGetter(attachment -> attachment.timeInCurrentBodyRealm),
             Codec.LONG.optionalFieldOf("total_qi_time", 0L).forGetter(attachment -> attachment.totalQiCultivationTime),
             Codec.LONG.optionalFieldOf("total_body_time", 0L).forGetter(attachment -> attachment.totalBodyCultivationTime),
-            BONUS_DATA_CODEC.fieldOf("bonuses").forGetter(PlayerCultivationAttachment::getBonusData)
+            BONUS_DATA_CODEC.fieldOf("bonuses").forGetter(PlayerCultivationAttachment::getBonusData),
+            CompoundTag.CODEC.optionalFieldOf("pill_consumption", new CompoundTag()).forGetter(PlayerCultivationAttachment::getPillConsumptionData)
         ).apply(instance, PlayerCultivationAttachment::decode)
     );
 
@@ -1568,11 +1609,16 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         );
     }
 
-    // Decode method for creating instances from saved data
+    // NEW: Helper method for pill consumption data
+    private CompoundTag getPillConsumptionData() {
+        return pillConsumptionManager.serializeNBT();
+    }
+
+    // Decode method for creating instances from saved data (UPDATED)
     private static PlayerCultivationAttachment decode(
         RealmData realms, CultivationProgress progress, String focus, long focusTime,
         BreakthroughData breakthrough, long timeQi, long timeBody,
-        long totalQi, long totalBody, BonusData bonuses) {
+        long totalQi, long totalBody, BonusData bonuses, CompoundTag pillConsumptionData) {
 
         PlayerCultivationAttachment data = new PlayerCultivationAttachment();
 
@@ -1621,6 +1667,9 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         data.qiCultivationMultiplicativeBonus = bonuses.qiMultiplicative;
         data.bodyCultivationAdditiveBonus = bonuses.bodyAdditive;
         data.bodyCultivationMultiplicativeBonus = bonuses.bodyMultiplicative;
+
+        // NEW: Restore pill consumption data
+        data.pillConsumptionManager.deserializeNBT(pillConsumptionData);
 
         return data;
     }

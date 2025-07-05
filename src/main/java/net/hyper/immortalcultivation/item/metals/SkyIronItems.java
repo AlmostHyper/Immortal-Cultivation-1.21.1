@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.item.metals.realm1;
+package net.hyper.immortalcultivation.item.metals;
 
 import net.hyper.immortalcultivation.item.tools.ICModToolTiers;
 import net.hyper.immortalcultivation.registry.ICModArmorMaterials;

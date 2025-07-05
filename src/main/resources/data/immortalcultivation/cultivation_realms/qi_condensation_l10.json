@@ -11,7 +11,7 @@
     "base_health_regeneration": 0.002,
     "base_attack_damage": 0.2,
     "base_movement_speed": 0.1,
-    "base_jump_height": 0.1
+    "base_jump_height": 0.2
   },
   "cultivation_stats": {
     "base_max_cultivation": 10000,
@@ -35,7 +35,8 @@
     "realm_benefits": [
       "+15 Health",
       "+20% Attack Damage",
-      "+10% Movement Speed"
+      "+10% Movement Speed",
+      "+20% Jump Height"
     ],
     "available_techniques": []
   }

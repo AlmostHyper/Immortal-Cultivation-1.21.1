@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.registry;
 
 import net.hyper.immortalcultivation.item.crops.*;
-import net.hyper.immortalcultivation.item.metals.realm1.*;
+import net.hyper.immortalcultivation.item.metals.*;
 import net.hyper.immortalcultivation.item.pills.CultivationPillItems;
 import net.hyper.immortalcultivation.item.spirit_stones.*;
 import net.minecraft.world.item.*;
