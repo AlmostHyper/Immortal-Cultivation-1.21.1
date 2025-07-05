@@ -3,25 +3,24 @@ package net.hyper.immortalcultivation.attachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.network.server.CombatStatsSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
-import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import net.neoforged.neoforge.common.util.INBTSerializable;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 
 /**
- * Enhanced PlayerCombatStatsAttachment with permanent additive bonus system.
- * Tracks both permanent bonuses (from realm breakthroughs) and temporary bonuses.
+ * CORRECTED: PlayerCombatStatsAttachment using ONLY permanent additive bonuses.
+ * This system never calculates stats from "current realm" - only from accumulated permanent bonuses.
+ * Each JSON realm defines the permanent bonus you GET when reaching it, not base stats while in it.
  */
 public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag> {
 
@@ -34,7 +33,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     private static final String TAG_JUMP_HEIGHT_BONUS = "JumpHeightBonus";
     private static final String TAG_LAST_SYNC_TIME = "LastSyncTime";
 
-    // === PERMANENT BONUSES (from realm breakthroughs) ===
+    // === PERMANENT BONUSES (accumulated from realm breakthroughs) ===
     private double permanentAttackDamageBonus = 0.0;
     private double permanentMovementSpeedBonus = 0.0;
     private double permanentJumpHeightBonus = 0.0;
@@ -50,6 +49,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     private double displayJumpBonus = 0.0;
 
     // === INTERNAL TRACKING ===
+    @Nullable
     private Player player;
     private long lastSyncTime = 0;
     private boolean needsSync = false;
@@ -59,269 +59,222 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
 
     public PlayerCombatStatsAttachment() {}
 
+    /**
+     * CRITICAL: Set player reference for sync and calculation purposes.
+     * Must be called after dimension changes and during initialization.
+     */
     public void setPlayer(Player player) {
         this.player = player;
+        ImmortalCultivation.LOGGER.debug("Set player reference for {}: {}",
+            this.getClass().getSimpleName(),
+            player != null ? player.getName().getString() : "null");
     }
 
-    // === NEW: PERMANENT BONUS SYSTEM ===
+    @Nullable
+    protected Player getPlayerSafe() {
+        if (player != null && player.isAlive()) {
+            return player;
+        }
+        return null;
+    }
+
+    // === PERMANENT BONUS SYSTEM ===
 
     /**
-     * Adds a permanent attack damage bonus (from realm breakthrough).
-     * This bonus persists even if the player's realm changes.
+     * Adds a permanent attack damage bonus from realm breakthrough.
+     * This is the ONLY way attack damage increases in your system.
      */
     public void addPermanentAttackDamageBonus(double attackBonus) {
-        if (attackBonus <= 0) return;
+        if (attackBonus <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive attack damage bonus: {}", attackBonus);
+            return;
+        }
 
         this.permanentAttackDamageBonus += attackBonus;
         markForSync();
 
-        ImmortalCultivation.LOGGER.info("Player gained +{} permanent attack damage (total bonus: +{})",
-            attackBonus, this.permanentAttackDamageBonus);
-
-        if (player instanceof ServerPlayer serverPlayer) {
-            ImmortalCultivation.LOGGER.info("Added {}% permanent attack damage bonus to player {} (total permanent: +{}%)",
-                String.format("%.1f", attackBonus * 100),
-                serverPlayer.getName().getString(),
-                String.format("%.1f", permanentAttackDamageBonus * 100));
-        }
+        ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent attack damage from realm breakthrough (total: +{}%)",
+            player != null ? player.getName().getString() : "unknown",
+            String.format("%.1f", attackBonus * 100),
+            String.format("%.1f", this.permanentAttackDamageBonus * 100));
     }
 
     /**
-     * Adds a permanent movement speed bonus (from realm breakthrough).
+     * Adds a permanent movement speed bonus from realm breakthrough.
+     * This is the ONLY way movement speed increases in your system.
      */
     public void addPermanentMovementSpeedBonus(double speedBonus) {
-        if (speedBonus <= 0) return;
+        if (speedBonus <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive movement speed bonus: {}", speedBonus);
+            return;
+        }
 
         this.permanentMovementSpeedBonus += speedBonus;
         markForSync();
 
-        ImmortalCultivation.LOGGER.info("Player gained +{} permanent movement speed (total bonus: +{})",
-            speedBonus, this.permanentMovementSpeedBonus);
-
-        if (player instanceof ServerPlayer serverPlayer) {
-            ImmortalCultivation.LOGGER.info("Added {}% permanent movement speed bonus to player {} (total permanent: +{}%)",
-                String.format("%.1f", speedBonus * 100),
-                serverPlayer.getName().getString(),
-                String.format("%.1f", permanentMovementSpeedBonus * 100));
-        }
+        ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent movement speed from realm breakthrough (total: +{}%)",
+            player != null ? player.getName().getString() : "unknown",
+            String.format("%.1f", speedBonus * 100),
+            String.format("%.1f", this.permanentMovementSpeedBonus * 100));
     }
 
     /**
-     * Adds a permanent jump height bonus (from realm breakthrough).
+     * Adds a permanent jump height bonus from realm breakthrough.
+     * This is the ONLY way jump height increases in your system.
      */
     public void addPermanentJumpHeightBonus(double jumpBonus) {
-        if (jumpBonus <= 0) return;
+        if (jumpBonus <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive jump height bonus: {}", jumpBonus);
+            return;
+        }
 
         this.permanentJumpHeightBonus += jumpBonus;
         markForSync();
 
-        ImmortalCultivation.LOGGER.info("Player gained +{} permanent jump height (total bonus: +{})",
-            jumpBonus, this.permanentJumpHeightBonus);
-
-        if (player instanceof ServerPlayer serverPlayer) {
-            ImmortalCultivation.LOGGER.info("Added {}% permanent jump height bonus to player {} (total permanent: +{}%)",
-                String.format("%.1f", jumpBonus * 100),
-                serverPlayer.getName().getString(),
-                String.format("%.1f", permanentJumpHeightBonus * 100));
-        }
+        ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent jump height from realm breakthrough (total: +{}%)",
+            player != null ? player.getName().getString() : "unknown",
+            String.format("%.1f", jumpBonus * 100),
+            String.format("%.1f", this.permanentJumpHeightBonus * 100));
     }
 
-    /**
-     * Gets the total permanent attack damage bonus accumulated from breakthroughs
-     */
+    // === GETTERS FOR PERMANENT BONUSES ===
+
     public double getPermanentAttackDamageBonus() {
         return permanentAttackDamageBonus;
     }
 
-    /**
-     * Gets the total permanent movement speed bonus accumulated from breakthroughs
-     */
     public double getPermanentMovementSpeedBonus() {
         return permanentMovementSpeedBonus;
     }
 
-    /**
-     * Gets the total permanent jump height bonus accumulated from breakthroughs
-     */
     public double getPermanentJumpHeightBonus() {
         return permanentJumpHeightBonus;
     }
 
-    // === ATTACK DAMAGE BONUSES ===
+    // === SETTERS FOR SYNC PACKETS ===
 
-    /**
-     * Get current temporary attack damage bonus
-     */
+    public void setPermanentAttackDamageBonus(double bonus) {
+        this.permanentAttackDamageBonus = Math.max(0.0, bonus);
+    }
+
+    public void setPermanentMovementSpeedBonus(double bonus) {
+        this.permanentMovementSpeedBonus = Math.max(0.0, bonus);
+    }
+
+    public void setPermanentJumpHeightBonus(double bonus) {
+        this.permanentJumpHeightBonus = Math.max(0.0, bonus);
+    }
+
+    // === TEMPORARY BONUS METHODS ===
+
     public double getAttackDamageBonus() {
         return attackDamageBonus;
     }
 
-    /**
-     * Add temporary attack damage bonus
-     */
     public void addAttackDamageBonus(double bonus) {
         if (bonus > 0) {
             this.attackDamageBonus += bonus;
             markForSync();
 
-            if (player instanceof ServerPlayer serverPlayer) {
-                ImmortalCultivation.LOGGER.info("Added {}% temporary attack damage bonus to player {} (total temporary: +{}%)",
-                    String.format("%.1f", bonus * 100),
-                    serverPlayer.getName().getString(),
-                    String.format("%.1f", attackDamageBonus * 100));
-            }
+            ImmortalCultivation.LOGGER.debug("Added {}% temporary attack damage bonus to player {} (total temporary: +{}%)",
+                String.format("%.1f", bonus * 100),
+                player != null ? player.getName().getString() : "unknown",
+                String.format("%.1f", attackDamageBonus * 100));
         }
     }
 
-    /**
-     * Set temporary attack damage bonus directly
-     */
     public void setAttackDamageBonus(double bonus) {
         this.attackDamageBonus = Math.max(0, bonus);
         markForSync();
     }
 
-    /**
-     * Get effective attack damage multiplier including all bonuses
-     */
-    public double getEffectiveAttackDamageMultiplier() {
-        try {
-            // Only use permanent bonuses (which already include all breakthrough bonuses) + temporary bonuses
-            // Do NOT add current realm bonuses as that would be double-counting
-            double total = 1.0 + permanentAttackDamageBonus + attackDamageBonus;
-
-            if (player != null) {
-                ImmortalCultivation.LOGGER.debug("Calculated attack multiplier for {}: permanent={}, temporary={}, total={}",
-                    player.getName().getString(), permanentAttackDamageBonus, attackDamageBonus, total);
-            }
-
-            return total;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating effective attack damage for player: {}",
-                player != null ? player.getName().getString() : "null", e);
-            return 1.0;
-        }
-    }
-
-
-
-    // === MOVEMENT SPEED BONUSES ===
-
-    /**
-     * Get current temporary movement speed bonus
-     */
     public double getMovementSpeedBonus() {
         return movementSpeedBonus;
     }
 
-    /**
-     * Add temporary movement speed bonus
-     */
     public void addMovementSpeedBonus(double bonus) {
         if (bonus > 0) {
             this.movementSpeedBonus += bonus;
             markForSync();
 
-            if (player instanceof ServerPlayer serverPlayer) {
-                ImmortalCultivation.LOGGER.info("Added {}% temporary movement speed bonus to player {} (total temporary: +{}%)",
-                    String.format("%.1f", bonus * 100),
-                    serverPlayer.getName().getString(),
-                    String.format("%.1f", movementSpeedBonus * 100));
-            }
+            ImmortalCultivation.LOGGER.debug("Added {}% temporary movement speed bonus to player {} (total temporary: +{}%)",
+                String.format("%.1f", bonus * 100),
+                player != null ? player.getName().getString() : "unknown",
+                String.format("%.1f", movementSpeedBonus * 100));
         }
     }
 
-    /**
-     * Set temporary movement speed bonus directly
-     */
     public void setMovementSpeedBonus(double bonus) {
         this.movementSpeedBonus = Math.max(0, bonus);
         markForSync();
     }
 
-    /**
-     * Get effective movement speed multiplier including all bonuses
-     */
-    public double getEffectiveMovementSpeedMultiplier() {
-        try {
-            if (player == null) {
-                return permanentMovementSpeedBonus + movementSpeedBonus;
-            }
-
-            PlayerCultivationAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            double realmSpeedBonus = 0.0;
-
-            if (realmAttachment != null) {
-                // Combine both realms as requested
-                double qiRealmSpeed = realmAttachment.getCurrentQiRealm().getBaseMovementSpeed();
-                double bodyRealmSpeed = realmAttachment.getCurrentBodyRealm().getBaseMovementSpeed();
-                realmSpeedBonus = qiRealmSpeed + bodyRealmSpeed;
-            }
-
-            return permanentMovementSpeedBonus + movementSpeedBonus + realmSpeedBonus;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating effective movement speed for player", e);
-            return permanentMovementSpeedBonus + movementSpeedBonus;
-        }
-    }
-
-    // === JUMP HEIGHT BONUSES ===
-
-    /**
-     * Get current temporary jump height bonus
-     */
     public double getJumpHeightBonus() {
         return jumpHeightBonus;
     }
 
-    /**
-     * Add temporary jump height bonus
-     */
     public void addJumpHeightBonus(double bonus) {
         if (bonus > 0) {
             this.jumpHeightBonus += bonus;
             markForSync();
 
-            if (player instanceof ServerPlayer serverPlayer) {
-                ImmortalCultivation.LOGGER.info("Added {}% temporary jump height bonus to player {} (total temporary: +{}%)",
-                    String.format("%.1f", bonus * 100),
-                    serverPlayer.getName().getString(),
-                    String.format("%.1f", jumpHeightBonus * 100));
-            }
+            ImmortalCultivation.LOGGER.debug("Added {}% temporary jump height bonus to player {} (total temporary: +{}%)",
+                String.format("%.1f", bonus * 100),
+                player != null ? player.getName().getString() : "unknown",
+                String.format("%.1f", jumpHeightBonus * 100));
         }
     }
 
-    /**
-     * Set temporary jump height bonus directly
-     */
     public void setJumpHeightBonus(double bonus) {
         this.jumpHeightBonus = Math.max(0, bonus);
         markForSync();
     }
 
+    // === EFFECTIVE BONUS CALCULATIONS (CORRECTED - PERMANENT ADDITIVE ONLY) ===
+
     /**
-     * Get effective jump height including all bonuses
+     * CORRECTED: Get effective attack damage multiplier using ONLY permanent + temporary bonuses.
+     * Never uses "current realm" values because your system doesn't work that way.
+     */
+    public double getEffectiveAttackDamageMultiplier() {
+        // Base multiplier (1.0) + all accumulated permanent bonuses + temporary bonuses
+        double total = 1.0 + permanentAttackDamageBonus + attackDamageBonus;
+
+        ImmortalCultivation.LOGGER.debug("Calculated attack multiplier for {}: permanent={}, temporary={}, total={}",
+            player != null ? player.getName().getString() : "unknown",
+            permanentAttackDamageBonus, attackDamageBonus, total);
+
+        return total;
+    }
+
+    /**
+     * CORRECTED: Get effective movement speed multiplier using ONLY permanent + temporary bonuses.
+     * Never uses "current realm" values because your system doesn't work that way.
+     */
+    public double getEffectiveMovementSpeedMultiplier() {
+        // All accumulated permanent bonuses + temporary bonuses
+        double total = permanentMovementSpeedBonus + movementSpeedBonus;
+
+        ImmortalCultivation.LOGGER.debug("Calculated movement speed for {}: permanent={}, temporary={}, total={}",
+            player != null ? player.getName().getString() : "unknown",
+            permanentMovementSpeedBonus, movementSpeedBonus, total);
+
+        return total;
+    }
+
+    /**
+     * CORRECTED: Get effective jump height multiplier using ONLY permanent + temporary bonuses.
+     * Never uses "current realm" values because your system doesn't work that way.
      */
     public double getEffectiveJumpHeightMultiplier() {
-        try {
-            if (player == null) {
-                return permanentJumpHeightBonus + jumpHeightBonus;
-            }
+        // All accumulated permanent bonuses + temporary bonuses
+        double total = permanentJumpHeightBonus + jumpHeightBonus;
 
-            PlayerCultivationAttachment realmAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            double realmJumpBonus = 0.0;
+        ImmortalCultivation.LOGGER.debug("Calculated jump height for {}: permanent={}, temporary={}, total={}",
+            player != null ? player.getName().getString() : "unknown",
+            permanentJumpHeightBonus, jumpHeightBonus, total);
 
-            if (realmAttachment != null) {
-                double qiRealmJump = realmAttachment.getCurrentQiRealm().getBaseJumpHeight();
-                double bodyRealmJump = realmAttachment.getCurrentBodyRealm().getBaseJumpHeight();
-                realmJumpBonus = qiRealmJump + bodyRealmJump;
-            }
-
-            return permanentJumpHeightBonus + jumpHeightBonus + realmJumpBonus;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating effective jump height for player", e);
-            return permanentJumpHeightBonus + jumpHeightBonus;
-        }
+        return total;
     }
 
     // === UTILITY METHODS ===
@@ -334,6 +287,9 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         this.movementSpeedBonus = 0.0;
         this.jumpHeightBonus = 0.0;
         markForSync();
+
+        ImmortalCultivation.LOGGER.debug("Reset temporary bonuses for player: {}",
+            player != null ? player.getName().getString() : "unknown");
     }
 
     /**
@@ -347,6 +303,9 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         this.movementSpeedBonus = 0.0;
         this.jumpHeightBonus = 0.0;
         markForSync();
+
+        ImmortalCultivation.LOGGER.warn("Reset ALL bonuses (including permanent) for player: {}",
+            player != null ? player.getName().getString() : "unknown");
     }
 
     /**
@@ -376,13 +335,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         return breakdown.toString();
     }
 
-    @SubscribeEvent
-    public static void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
-        if (event.getEntity() instanceof ServerPlayer player) {
-            // Reapply modifiers after dimension change
-            CombatStatsEventHandler.refreshCombatStats(player);
-        }
-    }
+    // === DISPLAY VALUES FOR CLIENT ===
 
     public double getDisplayAttackBonus() {
         // On client side, prefer synced display value
@@ -460,9 +413,13 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         this.needsSync = true;
     }
 
+    /**
+     * CRITICAL: Force sync method for dimension changes and initialization.
+     * This ensures the client receives updated data even if internal state hasn't changed.
+     */
     public void forceSync() {
-        if (player instanceof ServerPlayer serverPlayer) {
-            try {
+        try {
+            if (player instanceof ServerPlayer serverPlayer) {
                 // Calculate effective bonuses including all types of bonuses
                 double effectiveAttackBonus = getEffectiveAttackDamageMultiplier() - 1.0;
                 double effectiveSpeedBonus = getEffectiveMovementSpeedMultiplier();
@@ -482,15 +439,15 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
                 this.lastSyncTime = System.currentTimeMillis();
                 this.needsSync = false;
 
-                ImmortalCultivation.LOGGER.debug("Combat stats sync packet sent to player: {}",
+                ImmortalCultivation.LOGGER.debug("Force synced combat stats for player: {}",
                     serverPlayer.getName().getString());
 
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error syncing combat stats for player {}",
-                    player.getName().getString(), e);
+            } else {
+                ImmortalCultivation.LOGGER.debug("Cannot sync combat stats - no player reference or not server player");
             }
-        } else if (player == null) {
-            ImmortalCultivation.LOGGER.debug("Cannot sync combat stats - no player reference");
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error force syncing combat stats for player {}",
+                player != null ? player.getName().getString() : "unknown", e);
         }
     }
 
@@ -557,11 +514,16 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerCombatStatsAttachment> {
         @Override
         public PlayerCombatStatsAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
-            PlayerCombatStatsAttachment attachment = new PlayerCombatStatsAttachment();
-            attachment.deserializeNBT(provider, tag);
+            PlayerCombatStatsAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerCombatStatsAttachment: {}", error))
+                .map(pair -> pair.getFirst())
+                .orElse(new PlayerCombatStatsAttachment());
 
+            // CRITICAL: Set player reference during deserialization
             if (holder instanceof Player player) {
                 attachment.setPlayer(player);
+                ImmortalCultivation.LOGGER.debug("Set player reference during combat stats attachment deserialization: {}",
+                    player.getName().getString());
             }
 
             return attachment;
@@ -569,7 +531,9 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
 
         @Override
         public @Nullable CompoundTag write(PlayerCombatStatsAttachment attachment, HolderLookup.Provider provider) {
-            return attachment.serializeNBT(provider);
+            return (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerCombatStatsAttachment: {}", error))
+                .orElse(new CompoundTag());
         }
     }
 }

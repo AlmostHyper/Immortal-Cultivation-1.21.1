@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -25,11 +26,14 @@ import net.neoforged.neoforge.event.entity.player.PlayerEvent;
  * Handles player login initialization for the unified dual cultivation system.
  * This ensures that all unified cultivation attachments are properly initialized when
  * a player joins the world, including both Qi and Body cultivation paths.
+ *
+ * UPDATED: Compatible with permanent additive stat system and DimensionChangeHandler.
  */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class PlayerLoginHandler {
 
-    @SubscribeEvent
+    // Run BEFORE DimensionChangeHandler's late login (which uses EventPriority.LOW)
+    @SubscribeEvent(priority = EventPriority.NORMAL)
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ImmortalCultivation.LOGGER.info("Player {} logged in, initializing unified dual cultivation system attachments",
@@ -42,14 +46,13 @@ public class PlayerLoginHandler {
             initializeCultivationAttachment(player); // Third: cultivation (realms, progress, focus, bonuses)
             initializeResourceAttachment(player);   // Fourth: resources (health, qi, body energy)
 
-            // IMPORTANT: Force sync all data to ensure client has latest values
-            forceSyncAllUnifiedData(player);
-
             // Check for divine dao destiny achievement (both heavenly talents)
             checkForDivineDaoDestiny(player);
 
             ImmortalCultivation.LOGGER.info("Unified dual cultivation system fully initialized for player: {}",
                 player.getName().getString());
+
+            // NOTE: Player references and force sync will be handled by DimensionChangeHandler's late login event
         }
     }
 
@@ -63,7 +66,7 @@ public class PlayerLoginHandler {
             PlayerRaceAttachment raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
 
             if (raceAttachment != null) {
-                // IMPORTANT: Set player reference for proper functionality
+                // Set player reference (will be updated again by DimensionChangeHandler, but needed for initialization)
                 raceAttachment.setPlayer(player);
 
                 // Check if race has been assigned
@@ -126,7 +129,7 @@ public class PlayerLoginHandler {
             PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
 
             if (talentAttachment != null) {
-                // IMPORTANT: Set player reference for proper functionality
+                // Set player reference (will be updated again by DimensionChangeHandler, but needed for initialization)
                 talentAttachment.setPlayer(player);
 
                 // Initialize spiritual roots if not assigned
@@ -180,7 +183,7 @@ public class PlayerLoginHandler {
         try {
             PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             if (cultivationAttachment != null) {
-                // IMPORTANT: Set player reference for realm calculations and combat stats
+                // Set player reference (will be updated again by DimensionChangeHandler, but needed for initialization)
                 cultivationAttachment.setPlayer(player);
 
                 // Ensure realms are updated after JSON loading (in case this is called after a reload)
@@ -234,24 +237,29 @@ public class PlayerLoginHandler {
     }
 
     /**
-     * Initialize unified resource attachment (health + qi + body energy).
+     * FIXED: Initialize unified resource attachment (health + qi + body energy).
      * This manages the consumable resources used for techniques and abilities,
      * separate from the cultivation progress values.
+     *
+     * IMPORTANT: This is compatible with the permanent additive system - it doesn't
+     * try to calculate or set permanent bonuses, only ensures attachments are ready.
      */
     private static void initializeResourceAttachment(ServerPlayer player) {
         try {
             PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
             if (resourceAttachment != null) {
-                // IMPORTANT: Set player reference for resource calculations
+                // Set player reference (will be updated again by DimensionChangeHandler, but needed for initialization)
                 resourceAttachment.setPlayer(player);
 
-                // Update max values based on current cultivation state
-                updateResourceMaxValues(player, resourceAttachment);
+                // REMOVED: No longer try to set permanent bonuses here
+                // The permanent bonuses are ONLY added through realm breakthroughs
+                // This ensures the additive system works correctly
 
-                ImmortalCultivation.LOGGER.info("Player {} unified resources initialized - Health: {}/{}, Qi: {}/{}, Body: {}/{}",
+                ImmortalCultivation.LOGGER.info("Player {} unified resources initialized - Health: {}/{} (+{} permanent), Qi: {}/{}, Body: {}/{}",
                     player.getName().getString(),
                     resourceAttachment.getCurrentHealth(),
                     resourceAttachment.getMaxHealth(),
+                    resourceAttachment.getPermanentHealthBonus(),
                     resourceAttachment.getCurrentQi(),
                     resourceAttachment.getMaxQi(),
                     resourceAttachment.getCurrentBody(),
@@ -262,31 +270,6 @@ public class PlayerLoginHandler {
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error initializing resources for player {}",
-                player.getName().getString(), e);
-        }
-    }
-
-    /**
-     * Update resource max values based on current cultivation state
-     */
-    private static void updateResourceMaxValues(ServerPlayer player, PlayerResourceAttachment resourceAttachment) {
-        try {
-            // Calculate and set max health
-            long maxHealth = resourceAttachment.getBaseMaxHealth();
-            resourceAttachment.setMaxHealth(maxHealth);
-
-            // Calculate and set max qi
-            long maxQi = resourceAttachment.getBaseMaxQi();
-            resourceAttachment.setMaxQi(maxQi);
-
-            // Calculate and set max body
-            long maxBody = resourceAttachment.getBaseMaxBody();
-            resourceAttachment.setMaxBody(maxBody);
-
-            ImmortalCultivation.LOGGER.debug("Updated max values for player {} - Health: {}, Qi: {}, Body: {}",
-                player.getName().getString(), maxHealth, maxQi, maxBody);
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error updating resource max values for player {}",
                 player.getName().getString(), e);
         }
     }
@@ -310,6 +293,8 @@ public class PlayerLoginHandler {
                 player.getName().getString(), e);
         }
     }
+
+    // === BROADCAST METHODS (unchanged) ===
 
     /**
      * Broadcast legendary achievement to all players on the server
@@ -476,6 +461,8 @@ public class PlayerLoginHandler {
         }
     }
 
+    // === AWAKENING MESSAGE METHODS (unchanged) ===
+
     /**
      * Send rarity-appropriate spiritual root awakening message
      */
@@ -622,6 +609,8 @@ public class PlayerLoginHandler {
         }
     }
 
+    // === EFFECTS METHODS (unchanged) ===
+
     /**
      * Play rarity-appropriate effects for spiritual root awakening
      */
@@ -731,62 +720,6 @@ public class PlayerLoginHandler {
                 0.5,
                 0.1
             );
-        }
-    }
-
-    /**
-     * Force sync all unified cultivation data to ensure client has the latest values.
-     * This is critical for proper display in GUIs and HUD elements.
-     */
-    private static void forceSyncAllUnifiedData(ServerPlayer player) {
-        try {
-            ImmortalCultivation.LOGGER.info("Force syncing all unified cultivation data for player {}",
-                player.getName().getString());
-
-            // Sync talent attachment (spiritual roots + physique)
-            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            if (talentAttachment != null) {
-                talentAttachment.setPlayer(player); // IMPORTANT: Set player reference
-                talentAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Synced unified talents for player {}", player.getName().getString());
-            }
-
-            // Sync cultivation attachment (realms + cultivation progress + focus + bonuses)
-            PlayerCultivationAttachment cultivationAttachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivationAttachment != null) {
-                cultivationAttachment.setPlayer(player); // IMPORTANT: Set player reference
-                cultivationAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Synced unified cultivation for player {}", player.getName().getString());
-            }
-
-            // Sync resource attachment (health + qi + body energy)
-            PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (resourceAttachment != null) {
-                resourceAttachment.setPlayer(player); // IMPORTANT: Set player reference
-                resourceAttachment.forceSync();
-                ImmortalCultivation.LOGGER.debug("Synced unified resources for player {}", player.getName().getString());
-            }
-
-            // OPTIONAL: Sync combat stats if still using separate attachment
-            try {
-                PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-                if (combatStatsAttachment != null) {
-                    combatStatsAttachment.setPlayer(player);
-                    combatStatsAttachment.forceSync();
-                    ImmortalCultivation.LOGGER.debug("Synced combat stats for player {}", player.getName().getString());
-                }
-            } catch (Exception e) {
-                // Combat stats might not exist in unified system
-                ImmortalCultivation.LOGGER.debug("Combat stats attachment not available (might be unified): {}",
-                    e.getMessage());
-            }
-
-            ImmortalCultivation.LOGGER.info("Successfully synced all unified cultivation data for player {}",
-                player.getName().getString());
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error force syncing unified data for player {}",
-                player.getName().getString(), e);
         }
     }
 }

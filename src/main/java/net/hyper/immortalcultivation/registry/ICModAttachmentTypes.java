@@ -19,12 +19,42 @@ public class ICModAttachmentTypes {
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerPillConsumptionAttachment>> PLAYER_PILL_CONSUMPTION;
 
     static {
-        PLAYER_RACE = REGISTRY.register("player_race", () -> AttachmentType.builder(() -> new PlayerRaceAttachment()).serialize(PlayerRaceAttachment.CODEC).copyOnDeath().build());
-        PLAYER_CULTIVATION = REGISTRY.register("player_cultivation", () -> AttachmentType.builder(() -> new PlayerCultivationAttachment()).serialize(PlayerCultivationAttachment.CODEC).copyOnDeath().build());
-        PLAYER_RESOURCES = REGISTRY.register("player_resource", () -> AttachmentType.builder(() -> new PlayerResourceAttachment()).serialize(PlayerResourceAttachment.CODEC).copyOnDeath().build());
-        PLAYER_TALENTS = REGISTRY.register("player_talent", () -> AttachmentType.builder(() -> new PlayerTalentAttachment()).serialize(PlayerTalentAttachment.CODEC).copyOnDeath().build());
-        PLAYER_COMBAT_STATS = REGISTRY.register("player_combat_stats", () -> AttachmentType.builder(() -> new PlayerCombatStatsAttachment()).serialize(PlayerCombatStatsAttachment.CODEC).copyOnDeath().build());
-        PLAYER_PILL_CONSUMPTION = REGISTRY.register("player_pill_consumption", () -> AttachmentType.builder(() -> new PlayerPillConsumptionAttachment()).serialize(PlayerPillConsumptionAttachment.CODEC).copyOnDeath().build());
+        // CRITICAL: Use custom serializers instead of CODECs to ensure player references are set during deserialization
+        PLAYER_RACE = REGISTRY.register("player_race", () ->
+            AttachmentType.builder(() -> new PlayerRaceAttachment())
+                .serialize(new PlayerRaceAttachment.Serializer())
+                .copyOnDeath()
+                .build());
+
+        PLAYER_CULTIVATION = REGISTRY.register("player_cultivation", () ->
+            AttachmentType.builder(() -> new PlayerCultivationAttachment())
+                .serialize(new PlayerCultivationAttachment.Serializer())
+                .copyOnDeath()
+                .build());
+
+        PLAYER_RESOURCES = REGISTRY.register("player_resource", () ->
+            AttachmentType.builder(() -> new PlayerResourceAttachment())
+                .serialize(new PlayerResourceAttachment.Serializer())
+                .copyOnDeath()
+                .build());
+
+        PLAYER_TALENTS = REGISTRY.register("player_talent", () ->
+            AttachmentType.builder(() -> new PlayerTalentAttachment())
+                .serialize(new PlayerTalentAttachment.Serializer())
+                .copyOnDeath()
+                .build());
+
+        PLAYER_COMBAT_STATS = REGISTRY.register("player_combat_stats", () ->
+            AttachmentType.builder(() -> new PlayerCombatStatsAttachment())
+                .serialize(new PlayerCombatStatsAttachment.Serializer())
+                .copyOnDeath()
+                .build());
+
+        PLAYER_PILL_CONSUMPTION = REGISTRY.register("player_pill_consumption", () ->
+            AttachmentType.builder(() -> new PlayerPillConsumptionAttachment())
+                .serialize(new PlayerPillConsumptionAttachment.Serializer())
+                .copyOnDeath()
+                .build());
     }
 
     public static void register(IEventBus modBus) {

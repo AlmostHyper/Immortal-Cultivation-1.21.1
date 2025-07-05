@@ -11,10 +11,14 @@ import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.attachment.IAttachmentHolder;
+import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import org.jetbrains.annotations.Nullable;
 
 import com.mojang.serialization.Codec;
@@ -29,6 +33,7 @@ import java.util.Objects;
  * PlayerBodyCultivationAttachment, PlayerCultivationFocusAttachment,
  * and PlayerCultivationBonusAttachment
  * Enhanced with comprehensive pill system integration and breakthrough types.
+ * Updated with proper dimension change handling.
  */
 public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCultivationData {
 
@@ -204,7 +209,8 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         }
     }
 
-    // === Constructor ===
+    // === CONSTRUCTORS ===
+
     public PlayerCultivationAttachment() {
         // Use safe initialization that handles JSON not being loaded yet
         this.currentQiRealm = getDefaultMortalRealm();
@@ -312,10 +318,17 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         }
     }
 
-    // === Player Reference Management ===
+    // === PLAYER REFERENCE MANAGEMENT ===
 
+    /**
+     * CRITICAL: Set player reference for sync and calculation purposes.
+     * Must be called after dimension changes and during initialization.
+     */
     public void setPlayer(Player player) {
         this.player = player;
+        ImmortalCultivation.LOGGER.debug("Set player reference for {}: {}",
+            this.getClass().getSimpleName(),
+            player != null ? player.getName().getString() : "null");
     }
 
     @Nullable
@@ -595,7 +608,6 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     public CultivationRealm getCurrentBodyRealm() {
         return currentBodyRealm;
     }
-
 
     /**
      * Updates the max cultivation limits based on current realms
@@ -992,45 +1004,60 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
      */
     private void syncToClient() {
         if (player instanceof ServerPlayer serverPlayer) {
-            CultivationSyncPacket packet = new CultivationSyncPacket(
-                currentQiRealm.getId(),
-                previousQiRealm != null ? previousQiRealm.getId() : "",
-                currentBodyRealm.getId(),
-                previousBodyRealm != null ? previousBodyRealm.getId() : "",
-                currentQiCultivation,
-                maxQiCultivation,
-                currentBodyCultivation,
-                maxBodyCultivation,
-                currentFocus,
-                qiCultivationAdditiveBonus,
-                qiCultivationMultiplicativeBonus,
-                bodyCultivationAdditiveBonus,
-                bodyCultivationMultiplicativeBonus,
-                // Include breakthrough data in sync packet
-                qiBreakthroughAttempts,
-                bodyBreakthroughAttempts,
-                qiBreakthroughCooldown,
-                bodyBreakthroughCooldown,
-                lastQiBreakthroughAttempt,
-                lastBodyBreakthroughAttempt
-            );
+            try {
+                CultivationSyncPacket packet = new CultivationSyncPacket(
+                    currentQiRealm.getId(),
+                    previousQiRealm != null ? previousQiRealm.getId() : "",
+                    currentBodyRealm.getId(),
+                    previousBodyRealm != null ? previousBodyRealm.getId() : "",
+                    currentQiCultivation,
+                    maxQiCultivation,
+                    currentBodyCultivation,
+                    maxBodyCultivation,
+                    currentFocus,
+                    qiCultivationAdditiveBonus,
+                    qiCultivationMultiplicativeBonus,
+                    bodyCultivationAdditiveBonus,
+                    bodyCultivationMultiplicativeBonus,
+                    // Include breakthrough data in sync packet
+                    qiBreakthroughAttempts,
+                    bodyBreakthroughAttempts,
+                    qiBreakthroughCooldown,
+                    bodyBreakthroughCooldown,
+                    lastQiBreakthroughAttempt,
+                    lastBodyBreakthroughAttempt
+                );
 
-            ICModNetwork.sendToPlayer(packet, serverPlayer);
+                ICModNetwork.sendToPlayer(packet, serverPlayer);
 
-            ImmortalCultivation.LOGGER.debug("Synced cultivation data to client - Qi attempts: {}, Body attempts: {}, Pill data included",
-                qiBreakthroughAttempts, bodyBreakthroughAttempts);
+                ImmortalCultivation.LOGGER.debug("Synced cultivation data to client - Qi attempts: {}, Body attempts: {}, pill data included",
+                    qiBreakthroughAttempts, bodyBreakthroughAttempts);
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error syncing cultivation data for player {}",
+                    player.getName().getString(), e);
+            }
         }
     }
 
     /**
-     * UPDATED: Force sync method with better logging
+     * CRITICAL: Force sync method for dimension changes and initialization.
+     * This ensures the client receives updated data even if internal state hasn't changed.
      */
     public void forceSync() {
-        if (player instanceof ServerPlayer) {
-            lastSyncedHash = 0; // Force a sync by invalidating hash
-            syncToClient();
-            ImmortalCultivation.LOGGER.debug("Forced cultivation sync for player {}",
-                player.getName().getString());
+        try {
+            if (player instanceof ServerPlayer serverPlayer) {
+                lastSyncedHash = 0; // Force a sync by invalidating hash
+                syncToClient();
+                ImmortalCultivation.LOGGER.debug("Force synced {} for player: {}",
+                    this.getClass().getSimpleName(),
+                    serverPlayer.getName().getString());
+            } else {
+                ImmortalCultivation.LOGGER.debug("Cannot sync cultivation data - no player reference or not server player");
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error force syncing {} for player {}",
+                this.getClass().getSimpleName(),
+                player != null ? player.getName().getString() : "unknown", e);
         }
     }
 
@@ -1102,7 +1129,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         this.lastQiBreakthroughAttempt = lastQiBreakthroughAttempt;
         this.lastBodyBreakthroughAttempt = lastBodyBreakthroughAttempt;
 
-        ImmortalCultivation.LOGGER.debug("Applied cultivation sync - Qi attempts: {}, Body attempts: {}, Pill consumption data applied",
+        ImmortalCultivation.LOGGER.debug("Applied cultivation sync - Qi attempts: {}, Body attempts: {}, pill consumption data applied",
             qiBreakthroughAttempts, bodyBreakthroughAttempts);
     }
 
@@ -1657,5 +1684,33 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         data.bodyCultivationMultiplicativeBonus = bonuses.bodyMultiplicative;
 
         return data;
+    }
+
+    // === SERIALIZER ===
+
+    public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerCultivationAttachment> {
+        @Override
+        public PlayerCultivationAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
+            PlayerCultivationAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerCultivationAttachment: {}", error))
+                .map(pair -> pair.getFirst())
+                .orElse(new PlayerCultivationAttachment());
+
+            // CRITICAL: Set player reference during deserialization
+            if (holder instanceof Player player) {
+                attachment.setPlayer(player);
+                ImmortalCultivation.LOGGER.debug("Set player reference during cultivation attachment deserialization: {}",
+                    player.getName().getString());
+            }
+
+            return attachment;
+        }
+
+        @Override
+        public @Nullable CompoundTag write(PlayerCultivationAttachment attachment, HolderLookup.Provider provider) {
+            return (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerCultivationAttachment: {}", error))
+                .orElse(new CompoundTag());
+        }
     }
 }

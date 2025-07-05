@@ -8,17 +8,21 @@ import net.hyper.immortalcultivation.cultivation.IQiData;
 import net.hyper.immortalcultivation.cultivation.IBodyData;
 import net.hyper.immortalcultivation.network.server.ResourceSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.attachment.IAttachmentHolder;
+import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 
 /**
- * Unified resource data attachment with additive permanent health bonus system.
- * Merges: PlayerHealthAttachment, PlayerQiAttachment, and PlayerBodyAttachment
- * Enhanced with automatic regeneration and meditation system integration.
+ * CORRECTED: Unified resource data attachment using ONLY permanent additive bonuses.
+ * This system never calculates stats from "current realm" - only from accumulated permanent bonuses.
+ * Each JSON realm defines the permanent bonus you GET when reaching it, not base stats while in it.
  */
 public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData {
 
@@ -26,36 +30,55 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     @Nullable
     private Player player;
 
-    // === Health Resource with Permanent Bonuses ===
-    private static final long MORTAL_BASE_HEALTH = 20L;
+    // === MORTAL BASE VALUES (starting values for new players) ===
+    private static final long MORTAL_BASE_HEALTH = 20L; // 1 heart
+    private static final long MORTAL_BASE_QI = 100L;
+    private static final long MORTAL_BASE_BODY = 100L;
+    private static final double MORTAL_BASE_HEALTH_REGEN = 0.0;
+    private static final double MORTAL_BASE_QI_REGEN = 1.0;
+    private static final double MORTAL_BASE_BODY_REGEN = 1.0;
 
-    // NEW: Permanent health bonuses from realm breakthroughs
+    // === PERMANENT ADDITIVE BONUSES (accumulated from realm breakthroughs) ===
     private long permanentHealthBonus = 0L;
     private double permanentHealthRegenBonus = 0.0;
+    private long permanentMaxQiBonus = 0L;
+    private double permanentQiRegenBonus = 0.0;
+    private long permanentMaxBodyBonus = 0L;
+    private double permanentBodyRegenBonus = 0.0;
 
+    // === CURRENT RESOURCE VALUES ===
     private long currentHealth = MORTAL_BASE_HEALTH;
+    private long currentQi = MORTAL_BASE_QI;
+    private long currentBody = MORTAL_BASE_BODY;
+
+    // === CALCULATED MAX VALUES (base + permanent bonuses) ===
     private long maxHealth = MORTAL_BASE_HEALTH;
+    private long maxQi = MORTAL_BASE_QI;
+    private long maxBody = MORTAL_BASE_BODY;
+
+    // === REGENERATION FRACTIONS ===
     private double healthRegenFraction = 0.0;
-
-    // === Qi Resource ===
-    private long currentQi = 0;
-    private long maxQi = 100;
     private double qiRegenFraction = 0.0;
-
-    // === Body Resource ===
-    private long currentBody = 0;
-    private long maxBody = 100;
     private double bodyRegenFraction = 0.0;
 
-    // === Sync Management ===
+    // === SYNC MANAGEMENT ===
     private long lastSyncedHash = 0;
     private int tickCounter = 0;
-    private static final int SYNC_INTERVAL = 10; // More frequent for resources
+    private static final int SYNC_INTERVAL = 10;
 
-    // === Player Reference Management ===
+    // === CONSTRUCTORS ===
+    public PlayerResourceAttachment() {}
 
+    // === PLAYER REFERENCE MANAGEMENT ===
+
+    /**
+     * CRITICAL: Set player reference for sync and calculation purposes.
+     * Must be called after dimension changes and during initialization.
+     */
     public void setPlayer(Player player) {
         this.player = player;
+        ImmortalCultivation.LOGGER.debug("Set player reference for PlayerResourceAttachment: {}",
+            player != null ? player.getName().getString() : "null");
     }
 
     @Nullable
@@ -66,104 +89,150 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         return null;
     }
 
-    // === NEW: Permanent Health Bonus System ===
+    // === PERMANENT HEALTH BONUS SYSTEM ===
 
     /**
-     * Enhanced permanent health bonus method with better tracking
+     * Adds a permanent health bonus from realm breakthrough.
+     * This is the ONLY way health increases in your system.
      */
     public void addPermanentHealthBonus(long healthBonus) {
         if (healthBonus <= 0) {
-            ImmortalCultivation.LOGGER.info("Skipping health bonus addition - bonus <= 0: {}", healthBonus);
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive health bonus: {}", healthBonus);
             return;
         }
 
         long oldBonus = this.permanentHealthBonus;
         long oldMaxHealth = this.maxHealth;
-        long oldCurrentHealth = this.currentHealth;
 
         this.permanentHealthBonus += healthBonus;
+        recalculateMaxHealth();
 
-        // Recalculate max health with new bonus
-        long newMaxHealth = getMaxHealth();
-
-        ImmortalCultivation.LOGGER.info("=== HEALTH BONUS DEBUG ===");
-        ImmortalCultivation.LOGGER.info("Adding health bonus: +{}", healthBonus);
-        ImmortalCultivation.LOGGER.info("Old permanent bonus: {}", oldBonus);
-        ImmortalCultivation.LOGGER.info("New permanent bonus: {}", this.permanentHealthBonus);
-        ImmortalCultivation.LOGGER.info("Old max health: {}", oldMaxHealth);
-        ImmortalCultivation.LOGGER.info("New max health: {}", newMaxHealth);
-
-        // Heal to full when gaining permanent health (common in Xianxia)
-        if (newMaxHealth > oldMaxHealth) {
-            this.currentHealth = newMaxHealth;
-            this.maxHealth = newMaxHealth;
-            ImmortalCultivation.LOGGER.info("Healed to full: {} current health", this.currentHealth);
+        // Heal to full when gaining permanent health (Xianxia tradition)
+        if (this.maxHealth > oldMaxHealth) {
+            this.currentHealth = this.maxHealth;
         }
 
-        updateVanillaHealthBar();
-        forceSync(); // Force immediate sync to client
-
-        ImmortalCultivation.LOGGER.info("Player gained +{} permanent health from JSON realm (total bonus: +{}, new max health: {})",
-            healthBonus, this.permanentHealthBonus, newMaxHealth);
-        ImmortalCultivation.LOGGER.info("=== END HEALTH BONUS DEBUG ===");
-    }
-
-    /**
-     * Sets the permanent health bonus (used by sync packet)
-     * This is called during client synchronization
-     */
-    public void setPermanentHealthBonus(long bonus) {
-        this.permanentHealthBonus = Math.max(0, bonus);
-        // Don't recalculate here - this is called during sync
-    }
-
-    /**
-     * Resets the permanent health bonus to zero (for debugging/admin purposes)
-     */
-    public void resetPermanentHealthBonus() {
-        this.permanentHealthBonus = 0L;
-        recalculateMaxHealth();
-        updateVanillaHealthBar();
-
-        ImmortalCultivation.LOGGER.info("Reset permanent health bonus to 0");
-    }
-
-    /**
-     * Forces a complete health recalculation and synchronization
-     */
-    public void forceHealthRecalculation() {
-        recalculateMaxHealth();
         updateVanillaHealthBar();
         forceSync();
 
-        ImmortalCultivation.LOGGER.info("Forced complete health recalculation");
+        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent health from realm breakthrough (total: +{}, max health: {})",
+            player != null ? player.getName().getString() : "unknown",
+            healthBonus, this.permanentHealthBonus, this.maxHealth);
+    }
+
+    public void addPermanentHealthRegenBonus(double healthRegenBonus) {
+        if (healthRegenBonus <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive health regen bonus: {}", healthRegenBonus);
+            return;
+        }
+
+        this.permanentHealthRegenBonus += healthRegenBonus;
+        forceSync();
+
+        ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec permanent health regen from realm breakthrough (total: +{}/sec)",
+            player != null ? player.getName().getString() : "unknown",
+            String.format("%.3f", healthRegenBonus),
+            String.format("%.3f", this.permanentHealthRegenBonus));
     }
 
     /**
-     * Gets the total permanent health bonus accumulated from breakthroughs
+     * Recalculates max health using ONLY permanent bonuses.
+     * Never uses "current realm" values because your system doesn't work that way.
      */
-    public long getPermanentHealthBonus() {
-        return permanentHealthBonus;
+    public void recalculateMaxHealth() {
+        // Max health = mortal base + all accumulated permanent bonuses
+        this.maxHealth = MORTAL_BASE_HEALTH + permanentHealthBonus;
+
+        // Ensure current health doesn't exceed new max
+        if (this.currentHealth > this.maxHealth) {
+            this.currentHealth = this.maxHealth;
+        }
+
+        ImmortalCultivation.LOGGER.debug("Recalculated max health: {} (base: {} + bonus: {})",
+            this.maxHealth, MORTAL_BASE_HEALTH, permanentHealthBonus);
     }
 
-    /**
-     * Recalculates max health based on permanent bonuses and cultivation
-     */
-    private void recalculateMaxHealth() {
-        long newMaxHealth = getMaxHealth();
+    // === PERMANENT QI BONUS SYSTEM ===
 
-        // If max health increased, maintain health percentage
-        if (newMaxHealth > this.maxHealth && this.maxHealth > 0) {
-            double healthPercentage = (double) this.currentHealth / this.maxHealth;
-            this.maxHealth = newMaxHealth;
-            this.currentHealth = Math.min((long)(newMaxHealth * healthPercentage), newMaxHealth);
-        } else {
-            this.maxHealth = newMaxHealth;
-            this.currentHealth = Math.min(this.currentHealth, this.maxHealth);
+    public void addPermanentMaxQiBonus(long qiBonus) {
+        if (qiBonus <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive max qi bonus: {}", qiBonus);
+            return;
+        }
+
+        this.permanentMaxQiBonus += qiBonus;
+        recalculateMaxQi();
+        forceSync();
+
+        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent max qi from realm breakthrough (total: +{}, max qi: {})",
+            player != null ? player.getName().getString() : "unknown",
+            qiBonus, this.permanentMaxQiBonus, this.maxQi);
+    }
+
+    public void addPermanentQiRegenBonus(double qiRegenBonus) {
+        if (qiRegenBonus <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive qi regen bonus: {}", qiRegenBonus);
+            return;
+        }
+
+        this.permanentQiRegenBonus += qiRegenBonus;
+        forceSync();
+
+        ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec permanent qi regen from realm breakthrough (total: +{}/sec)",
+            player != null ? player.getName().getString() : "unknown",
+            String.format("%.3f", qiRegenBonus),
+            String.format("%.3f", this.permanentQiRegenBonus));
+    }
+
+    private void recalculateMaxQi() {
+        this.maxQi = MORTAL_BASE_QI + permanentMaxQiBonus;
+
+        if (this.currentQi > this.maxQi) {
+            this.currentQi = this.maxQi;
         }
     }
 
-    // === Health Implementation ===
+    // === PERMANENT BODY BONUS SYSTEM ===
+
+    public void addPermanentMaxBodyBonus(long bodyBonus) {
+        if (bodyBonus <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive max body bonus: {}", bodyBonus);
+            return;
+        }
+
+        this.permanentMaxBodyBonus += bodyBonus;
+        recalculateMaxBody();
+        forceSync();
+
+        ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent max body from realm breakthrough (total: +{}, max body: {})",
+            player != null ? player.getName().getString() : "unknown",
+            bodyBonus, this.permanentMaxBodyBonus, this.maxBody);
+    }
+
+    public void addPermanentBodyRegenBonus(double bodyRegenBonus) {
+        if (bodyRegenBonus <= 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add non-positive body regen bonus: {}", bodyRegenBonus);
+            return;
+        }
+
+        this.permanentBodyRegenBonus += bodyRegenBonus;
+        forceSync();
+
+        ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec permanent body regen from realm breakthrough (total: +{}/sec)",
+            player != null ? player.getName().getString() : "unknown",
+            String.format("%.3f", bodyRegenBonus),
+            String.format("%.3f", this.permanentBodyRegenBonus));
+    }
+
+    private void recalculateMaxBody() {
+        this.maxBody = MORTAL_BASE_BODY + permanentMaxBodyBonus;
+
+        if (this.currentBody > this.maxBody) {
+            this.currentBody = this.maxBody;
+        }
+    }
+
+    // === HEALTH INTERFACE IMPLEMENTATION ===
 
     @Override
     public long getCurrentHealth() {
@@ -172,78 +241,23 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public void setCurrentHealth(long value) {
-        this.currentHealth = Math.max(0, Math.min(value, getMaxHealth()));
-
-        Player player = getPlayerSafe();
-        if (player != null) {
-            updateVanillaHealthBar();
-        }
-    }
-
-    /**
-     * Calculate base max health using ONLY permanent bonuses from breakthroughs.
-     * Current realm no longer directly affects health - only breakthrough achievements do.
-     * This ensures all cultivation gains are permanent and never lost.
-     */
-    @Override
-    public long getBaseMaxHealth() {
-        // Base mortal health + all accumulated permanent bonuses from JSON-defined realm breakthroughs
-        return MORTAL_BASE_HEALTH + permanentHealthBonus;
-    }
-
-    /**
-     * Calculate final max health with small cultivation progress bonuses.
-     * The main health comes from permanent bonuses, with minor bonuses from cultivation progress.
-     */
-    @Override
-    public long getMaxHealth() {
-        long baseMaxHealth = getBaseMaxHealth();
-
-        Player player = getPlayerSafe();
-        if (player == null) {
-            return baseMaxHealth;
-        }
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null) {
-                // Small additional bonuses from cultivation progress (not realm-based)
-                long qiCultivationBonus = (long)(cultivation.getCurrentQiCultivation() * 0.0005);
-                long bodyCultivationBonus = (long)(cultivation.getCurrentBodyCultivation() * 0.001);
-                return baseMaxHealth + qiCultivationBonus + bodyCultivationBonus;
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating cultivation health bonus", e);
-        }
-
-        return baseMaxHealth;
-    }
-
-    public void setMaxHealth(long value) {
-        this.maxHealth = Math.max(1, value);
-        if (currentHealth > maxHealth) {
-            currentHealth = maxHealth;
-        }
+        this.currentHealth = Math.max(0, Math.min(value, maxHealth));
         updateVanillaHealthBar();
     }
 
-    public void damageHealth(long amount) {
-        setCurrentHealth(currentHealth - amount);
+    @Override
+    public long getBaseMaxHealth() {
+        return MORTAL_BASE_HEALTH + permanentHealthBonus;
     }
 
-    public void healHealth(long amount) {
-        setCurrentHealth(currentHealth + amount);
-    }
-
-    public double getHealthProgress() {
-        if (maxHealth == 0) return 0.0;
-        return (double) currentHealth / maxHealth;
+    @Override
+    public long getMaxHealth() {
+        return maxHealth; // Already calculated with permanent bonuses
     }
 
     @Override
     public double getBaseHealthRegenerationRate() {
-        // Use accumulated permanent bonuses instead of current realm values
-        return permanentHealthRegenBonus;
+        return MORTAL_BASE_HEALTH_REGEN + permanentHealthRegenBonus;
     }
 
     @Override
@@ -255,17 +269,17 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     public double getEffectiveHealthRegenerationRate() {
         double baseRate = getBaseHealthRegenerationRate();
 
+        // Apply focus bonus if focusing on body cultivation
         Player player = getPlayerSafe();
-        if (player == null) return baseRate;
-
-        // Apply focus bonus
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null && cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.BODY) {
-                baseRate *= 1.5;
+        if (player != null) {
+            try {
+                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                if (cultivation != null && cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.BODY) {
+                    baseRate *= 1.5;
+                }
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error applying focus bonus to health regen", e);
             }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying focus bonus to health", e);
         }
 
         return baseRate;
@@ -276,70 +290,18 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         double baseCirculatingRate = getBaseCirculatingHealthRegenerationRate();
 
         Player player = getPlayerSafe();
-        if (player == null) return baseCirculatingRate;
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null && cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.BODY) {
-                baseCirculatingRate *= 1.2;
+        if (player != null) {
+            try {
+                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                if (cultivation != null && cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.BODY) {
+                    baseCirculatingRate *= 1.2;
+                }
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error applying focus bonus to circulating health regen", e);
             }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying focus bonus", e);
         }
 
         return baseCirculatingRate;
-    }
-
-    /**
-     * Adds a permanent health regeneration bonus (from realm breakthrough).
-     * This bonus persists even if the player's realm changes.
-     */
-    public void addPermanentHealthRegenBonus(double healthRegenBonus) {
-        if (healthRegenBonus <= 0) {
-            ImmortalCultivation.LOGGER.info("Skipping health regen bonus addition - bonus <= 0: {}", healthRegenBonus);
-            return;
-        }
-
-        double oldBonus = this.permanentHealthRegenBonus;
-        this.permanentHealthRegenBonus += healthRegenBonus;
-
-        forceSync(); // Force immediate sync to client
-
-        ImmortalCultivation.LOGGER.info("Player gained +{}/sec permanent health regen from JSON realm (total bonus: +{}/sec)",
-            healthRegenBonus, this.permanentHealthRegenBonus);
-
-        if (player instanceof ServerPlayer serverPlayer) {
-            ImmortalCultivation.LOGGER.info("Added {}/sec permanent health regen bonus to player {} (total permanent: +{}/sec)",
-                String.format("%.3f", healthRegenBonus),
-                serverPlayer.getName().getString(),
-                String.format("%.3f", permanentHealthRegenBonus));
-        }
-    }
-
-    /**
-     * Gets the total permanent health regeneration bonus accumulated from breakthroughs
-     */
-    public double getPermanentHealthRegenBonus() {
-        return permanentHealthRegenBonus;
-    }
-
-    /**
-     * Sets the permanent health regen bonus (used by sync packet)
-     * This is called during client synchronization
-     */
-    public void setPermanentHealthRegenBonus(double bonus) {
-        this.permanentHealthRegenBonus = Math.max(0.0, bonus);
-        // Don't recalculate here - this is called during sync
-    }
-
-    /**
-     * Resets the permanent health regen bonus to zero (for debugging/admin purposes)
-     */
-    public void resetPermanentHealthRegenBonus() {
-        this.permanentHealthRegenBonus = 0.0;
-
-        ImmortalCultivation.LOGGER.info("Reset permanent health regen bonus to 0 for player {}",
-            player != null ? player.getName().getString() : "unknown");
     }
 
     @Override
@@ -357,7 +319,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         this.healthRegenFraction += amount;
     }
 
-    // === Qi Implementation ===
+    // === QI INTERFACE IMPLEMENTATION ===
 
     @Override
     public long getCurrentQi() {
@@ -376,36 +338,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public long getBaseMaxQi() {
-        Player player = getPlayerSafe();
-        if (player == null) {
-            return 100; // Default base Qi
-        }
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation == null) return 100;
-
-            // FIXED: Combine both realms instead of just using Qi realm
-            long qiRealmQi = cultivation.getCurrentQiRealm().getBaseMaxQi();
-            long bodyRealmQi = cultivation.getCurrentBodyRealm().getBaseMaxQi();
-            long baseQi = qiRealmQi + bodyRealmQi;
-
-            // Small cultivation bonus to max Qi
-            long qiCultivationBonus = (long)(cultivation.getCurrentQiCultivation() * 0.01);
-            long bodyCultivationBonus = (long)(cultivation.getCurrentBodyCultivation() * 0.005);
-
-            return baseQi + qiCultivationBonus + bodyCultivationBonus;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating base max Qi", e);
-            return 100;
-        }
-    }
-
-    public void setMaxQi(long value) {
-        this.maxQi = Math.max(1, value);
-        if (currentQi > maxQi) {
-            currentQi = maxQi;
-        }
+        return MORTAL_BASE_QI + permanentMaxQiBonus;
     }
 
     @Override
@@ -413,37 +346,9 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         setCurrentQi(currentQi - amount);
     }
 
-    public void restoreQi(long amount) {
-        setCurrentQi(currentQi + amount);
-    }
-
-    public boolean hasEnoughQi(long amount) {
-        return currentQi >= amount;
-    }
-
-    public double getQiProgress() {
-        if (maxQi == 0) return 0.0;
-        return (double) currentQi / maxQi;
-    }
-
     @Override
     public double getBaseQiRegenerationRate() {
-        Player player = getPlayerSafe();
-        if (player == null) return 0.0;
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation == null) return 0.0;
-
-            // FIXED: Combine both realms instead of just using Qi realm
-            double qiRealmRegen = cultivation.getCurrentQiRealm().getBaseQiRegenerationRate();
-            double bodyRealmRegen = cultivation.getCurrentBodyRealm().getBaseQiRegenerationRate();
-
-            return qiRealmRegen + bodyRealmRegen;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting base Qi regen rate", e);
-            return 0.0;
-        }
+        return MORTAL_BASE_QI_REGEN + permanentQiRegenBonus;
     }
 
     @Override
@@ -456,16 +361,15 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         double baseRate = getBaseQiRegenerationRate();
 
         Player player = getPlayerSafe();
-        if (player == null) return baseRate;
-
-        // Apply focus bonus
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null) {
-                baseRate *= cultivation.getQiRegenerationBonus();
+        if (player != null) {
+            try {
+                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                if (cultivation != null) {
+                    baseRate *= cultivation.getQiRegenerationBonus();
+                }
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error applying cultivation bonus to qi regen", e);
             }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying focus bonus to Qi regen", e);
         }
 
         return baseRate;
@@ -476,21 +380,21 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         double baseCirculatingRate = getBaseCirculatingQiRegenerationRate();
 
         Player player = getPlayerSafe();
-        if (player == null) return baseCirculatingRate;
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null) {
-                baseCirculatingRate *= cultivation.getQiRegenerationBonus();
+        if (player != null) {
+            try {
+                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                if (cultivation != null) {
+                    baseCirculatingRate *= cultivation.getQiRegenerationBonus();
+                }
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error applying cultivation bonus to circulating qi regen", e);
             }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying focus bonus", e);
         }
 
         return baseCirculatingRate;
     }
 
-    // === Body Implementation ===
+    // === BODY INTERFACE IMPLEMENTATION ===
 
     @Override
     public long getCurrentBody() {
@@ -509,37 +413,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public long getBaseMaxBody() {
-        Player player = getPlayerSafe();
-        if (player == null) {
-            return 100; // Default base Body
-        }
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation == null) return 100;
-
-            // FIXED: Combine both realms instead of just using Body realm
-            // Use the same Qi values from both realms for Body energy
-            long qiRealmBody = cultivation.getCurrentQiRealm().getBaseMaxQi();
-            long bodyRealmBody = cultivation.getCurrentBodyRealm().getBaseMaxQi();
-            long baseBody = qiRealmBody + bodyRealmBody;
-
-            // Small cultivation bonus to max Body
-            long bodyCultivationBonus = (long)(cultivation.getCurrentBodyCultivation() * 0.01);
-            long qiCultivationBonus = (long)(cultivation.getCurrentQiCultivation() * 0.005);
-
-            return baseBody + bodyCultivationBonus + qiCultivationBonus;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating base max Body", e);
-            return 100;
-        }
-    }
-
-    public void setMaxBody(long value) {
-        this.maxBody = Math.max(1, value);
-        if (currentBody > maxBody) {
-            currentBody = maxBody;
-        }
+        return MORTAL_BASE_BODY + permanentMaxBodyBonus;
     }
 
     @Override
@@ -547,37 +421,9 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         setCurrentBody(currentBody - amount);
     }
 
-    public void restoreBody(long amount) {
-        setCurrentBody(currentBody + amount);
-    }
-
-    public boolean hasEnoughBody(long amount) {
-        return currentBody >= amount;
-    }
-
-    public double getBodyProgress() {
-        if (maxBody == 0) return 0.0;
-        return (double) currentBody / maxBody;
-    }
-
     @Override
     public double getBaseBodyRegenerationRate() {
-        Player player = getPlayerSafe();
-        if (player == null) return 0.0;
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation == null) return 0.0;
-
-            // FIXED: Combine both realms instead of just using Body realm
-            double qiRealmBodyRegen = cultivation.getCurrentQiRealm().getBaseQiRegenerationRate();
-            double bodyRealmBodyRegen = cultivation.getCurrentBodyRealm().getBaseQiRegenerationRate();
-
-            return qiRealmBodyRegen + bodyRealmBodyRegen;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting base Body regen rate", e);
-            return 0.0;
-        }
+        return MORTAL_BASE_BODY_REGEN + permanentBodyRegenBonus;
     }
 
     @Override
@@ -590,16 +436,15 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         double baseRate = getBaseBodyRegenerationRate();
 
         Player player = getPlayerSafe();
-        if (player == null) return baseRate;
-
-        // Apply focus bonus
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null) {
-                baseRate *= cultivation.getBodyRegenerationBonus();
+        if (player != null) {
+            try {
+                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                if (cultivation != null) {
+                    baseRate *= cultivation.getBodyRegenerationBonus();
+                }
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error applying cultivation bonus to body regen", e);
             }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying focus bonus to Body regen", e);
         }
 
         return baseRate;
@@ -610,62 +455,55 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         double baseCirculatingRate = getBaseCirculatingBodyRegenerationRate();
 
         Player player = getPlayerSafe();
-        if (player == null) return baseCirculatingRate;
-
-        try {
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null) {
-                baseCirculatingRate *= cultivation.getBodyRegenerationBonus();
+        if (player != null) {
+            try {
+                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                if (cultivation != null) {
+                    baseCirculatingRate *= cultivation.getBodyRegenerationBonus();
+                }
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error applying cultivation bonus to circulating body regen", e);
             }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying focus bonus", e);
         }
 
         return baseCirculatingRate;
     }
 
-    // === Enhanced Tick Processing ===
+    // === UTILITY METHODS ===
 
-    public void tick() {
-        if (player == null) return;
-
-        // Update max values based on current cultivation realms
-        updateMaxValues();
-
-        // Handle sync
-        tickCounter++;
-        if (tickCounter >= SYNC_INTERVAL) {
-            tickCounter = 0;
-            syncIfNeeded();
-        }
+    public void healHealth(long amount) {
+        setCurrentHealth(currentHealth + amount);
     }
 
-    /**
-     * Updates max values from cultivation realms
-     */
-    private void updateMaxValues() {
-        try {
-            long newMaxHealth = getMaxHealth();
-            long newMaxQi = getBaseMaxQi();
-            long newMaxBody = getBaseMaxBody();
-
-            // Update max values if they changed
-            if (newMaxHealth != maxHealth) {
-                setMaxHealth(newMaxHealth);
-            }
-            if (newMaxQi != maxQi) {
-                setMaxQi(newMaxQi);
-            }
-            if (newMaxBody != maxBody) {
-                setMaxBody(newMaxBody);
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error updating max values for player {}",
-                player != null ? player.getName().getString() : "null", e);
-        }
+    public void restoreQi(long amount) {
+        setCurrentQi(currentQi + amount);
     }
 
-    // === Enhanced Regeneration Methods ===
+    public void restoreBody(long amount) {
+        setCurrentBody(currentBody + amount);
+    }
+
+    public boolean hasEnoughQi(long amount) {
+        return currentQi >= amount;
+    }
+
+    public boolean hasEnoughBody(long amount) {
+        return currentBody >= amount;
+    }
+
+    public double getHealthProgress() {
+        return maxHealth > 0 ? (double) currentHealth / maxHealth : 0.0;
+    }
+
+    public double getQiProgress() {
+        return maxQi > 0 ? (double) currentQi / maxQi : 0.0;
+    }
+
+    public double getBodyProgress() {
+        return maxBody > 0 ? (double) currentBody / maxBody : 0.0;
+    }
+
+    // === REGENERATION METHODS ===
 
     public void regenerateHealth(double rate, boolean circulating) {
         if (getCurrentHealth() >= getMaxHealth()) return;
@@ -676,12 +514,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
         if (wholePoints > 0) {
             healHealth(wholePoints);
-
-            // Debug logging for significant healing
-            if (wholePoints >= 5) {
-                ImmortalCultivation.LOGGER.debug("Player healed {} health ({})",
-                    wholePoints, circulating ? "meditating" : "normal");
-            }
         }
     }
 
@@ -709,18 +541,20 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
-    // === Utility Methods ===
+    // === TICK PROCESSING ===
 
-    @Override
-    public void deserializeNBT(CompoundTag tag) {
-        // Not needed with Codec
+    public void tick() {
+        if (player == null) return;
+
+        // Handle sync
+        tickCounter++;
+        if (tickCounter >= SYNC_INTERVAL) {
+            tickCounter = 0;
+            syncIfNeeded();
+        }
     }
 
-    @Override
-    public CompoundTag serializeNBT() {
-        // Not needed with Codec
-        return new CompoundTag();
-    }
+    // === UTILITY METHODS ===
 
     private void updateVanillaHealthBar() {
         Player player = getPlayerSafe();
@@ -731,13 +565,22 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
-    public void setRegenFraction(double health, double qi, double body) {
-        this.healthRegenFraction = health;
-        this.qiRegenFraction = qi;
-        this.bodyRegenFraction = body;
+    /**
+     * Force recalculation of all max values from permanent bonuses.
+     * Called during dimension changes to ensure consistency.
+     */
+    public void forceHealthRecalculation() {
+        recalculateMaxHealth();
+        recalculateMaxQi();
+        recalculateMaxBody();
+        updateVanillaHealthBar();
+        forceSync();
+
+        ImmortalCultivation.LOGGER.debug("Force recalculated all resource values for player: {}",
+            player != null ? player.getName().getString() : "unknown");
     }
 
-    // === Sync Management ===
+    // === SYNC MANAGEMENT ===
 
     private void syncIfNeeded() {
         long currentHash = calculateStateHash();
@@ -753,60 +596,170 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     private void syncToClient() {
         if (player instanceof ServerPlayer serverPlayer) {
-            ResourceSyncPacket packet = new ResourceSyncPacket(
-                currentHealth, maxHealth,
-                permanentHealthBonus,
-                permanentHealthRegenBonus,
-                currentQi, maxQi,
-                currentBody, maxBody
-            );
-            PacketDistributor.sendToPlayer(serverPlayer, packet);
+            try {
+                ResourceSyncPacket packet = new ResourceSyncPacket(
+                    currentHealth, maxHealth,
+                    permanentHealthBonus,
+                    permanentHealthRegenBonus,
+                    currentQi, maxQi,
+                    currentBody, maxBody
+                );
+                PacketDistributor.sendToPlayer(serverPlayer, packet);
+
+                ImmortalCultivation.LOGGER.debug("Synced resource data to client for player: {}",
+                    serverPlayer.getName().getString());
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Error syncing resource data for player {}",
+                    player.getName().getString(), e);
+            }
         }
     }
 
+    /**
+     * CRITICAL: Force sync method for dimension changes and initialization.
+     * This ensures the client receives updated data even if internal state hasn't changed.
+     */
     public void forceSync() {
-        lastSyncedHash = 0;
-        syncToClient();
+        try {
+            lastSyncedHash = 0; // Reset hash to force sync
+            syncToClient();
+            ImmortalCultivation.LOGGER.debug("Force synced resource data for player: {}",
+                player != null ? player.getName().getString() : "unknown");
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error force syncing resource data", e);
+        }
     }
 
-    // === Serialization ===
+    // === GETTERS FOR PERMANENT BONUSES ===
+
+    public long getPermanentHealthBonus() { return permanentHealthBonus; }
+    public double getPermanentHealthRegenBonus() { return permanentHealthRegenBonus; }
+    public long getPermanentMaxQiBonus() { return permanentMaxQiBonus; }
+    public double getPermanentQiRegenBonus() { return permanentQiRegenBonus; }
+    public long getPermanentMaxBodyBonus() { return permanentMaxBodyBonus; }
+    public double getPermanentBodyRegenBonus() { return permanentBodyRegenBonus; }
+
+    // === SETTERS FOR SYNC (called by sync packets) ===
+
+    public void setPermanentHealthBonus(long bonus) {
+        this.permanentHealthBonus = Math.max(0, bonus);
+    }
+
+    public void setPermanentHealthRegenBonus(double bonus) {
+        this.permanentHealthRegenBonus = Math.max(0.0, bonus);
+    }
+
+    public void setPermanentMaxQiBonus(long bonus) {
+        this.permanentMaxQiBonus = Math.max(0, bonus);
+    }
+
+    public void setPermanentQiRegenBonus(double bonus) {
+        this.permanentQiRegenBonus = Math.max(0.0, bonus);
+    }
+
+    public void setPermanentMaxBodyBonus(long bonus) {
+        this.permanentMaxBodyBonus = Math.max(0, bonus);
+    }
+
+    public void setPermanentBodyRegenBonus(double bonus) {
+        this.permanentBodyRegenBonus = Math.max(0.0, bonus);
+    }
+
+    // === SERIALIZATION ===
 
     public static final Codec<PlayerResourceAttachment> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            // NEW: Added permanent health bonus to codec
+            // Permanent bonuses
             Codec.LONG.fieldOf("permanent_health_bonus").forGetter(d -> d.permanentHealthBonus),
+            Codec.DOUBLE.fieldOf("permanent_health_regen_bonus").forGetter(d -> d.permanentHealthRegenBonus),
+            Codec.LONG.fieldOf("permanent_max_qi_bonus").forGetter(d -> d.permanentMaxQiBonus),
+            Codec.DOUBLE.fieldOf("permanent_qi_regen_bonus").forGetter(d -> d.permanentQiRegenBonus),
+            Codec.LONG.fieldOf("permanent_max_body_bonus").forGetter(d -> d.permanentMaxBodyBonus),
+            Codec.DOUBLE.fieldOf("permanent_body_regen_bonus").forGetter(d -> d.permanentBodyRegenBonus),
+            // Current values
             Codec.LONG.fieldOf("current_health").forGetter(d -> d.currentHealth),
-            Codec.LONG.fieldOf("max_health").forGetter(d -> d.maxHealth),
-            Codec.DOUBLE.fieldOf("permanent_health_regen").forGetter(d -> d.permanentHealthRegenBonus),
-            Codec.DOUBLE.fieldOf("health_regen_fraction").forGetter(d -> d.healthRegenFraction),
             Codec.LONG.fieldOf("current_qi").forGetter(d -> d.currentQi),
-            Codec.LONG.fieldOf("max_qi").forGetter(d -> d.maxQi),
-            Codec.DOUBLE.fieldOf("qi_regen_fraction").forGetter(d -> d.qiRegenFraction),
             Codec.LONG.fieldOf("current_body").forGetter(d -> d.currentBody),
-            Codec.LONG.fieldOf("max_body").forGetter(d -> d.maxBody),
+            // Regeneration fractions
+            Codec.DOUBLE.fieldOf("health_regen_fraction").forGetter(d -> d.healthRegenFraction),
+            Codec.DOUBLE.fieldOf("qi_regen_fraction").forGetter(d -> d.qiRegenFraction),
             Codec.DOUBLE.fieldOf("body_regen_fraction").forGetter(d -> d.bodyRegenFraction)
         ).apply(instance, PlayerResourceAttachment::decode)
     );
 
     private static PlayerResourceAttachment decode(
-        long permanentHealthBonus,
-        long currentHealth, long maxHealth, double permanentHealthRegenBonus, double healthFraction,
-        long currentQi, long maxQi, double qiFraction,
-        long currentBody, long maxBody, double bodyFraction) {
+        long permanentHealthBonus, double permanentHealthRegenBonus,
+        long permanentMaxQiBonus, double permanentQiRegenBonus,
+        long permanentMaxBodyBonus, double permanentBodyRegenBonus,
+        long currentHealth, long currentQi, long currentBody,
+        double healthFraction, double qiFraction, double bodyFraction) {
 
         PlayerResourceAttachment data = new PlayerResourceAttachment();
+
+        // Set permanent bonuses
         data.permanentHealthBonus = permanentHealthBonus;
-        data.currentHealth = currentHealth;
-        data.maxHealth = maxHealth;
         data.permanentHealthRegenBonus = permanentHealthRegenBonus;
+        data.permanentMaxQiBonus = permanentMaxQiBonus;
+        data.permanentQiRegenBonus = permanentQiRegenBonus;
+        data.permanentMaxBodyBonus = permanentMaxBodyBonus;
+        data.permanentBodyRegenBonus = permanentBodyRegenBonus;
+
+        // Calculate max values from permanent bonuses
+        data.maxHealth = MORTAL_BASE_HEALTH + permanentHealthBonus;
+        data.maxQi = MORTAL_BASE_QI + permanentMaxQiBonus;
+        data.maxBody = MORTAL_BASE_BODY + permanentMaxBodyBonus;
+
+        // Set current values (ensuring they don't exceed max)
+        data.currentHealth = Math.min(currentHealth, data.maxHealth);
+        data.currentQi = Math.min(currentQi, data.maxQi);
+        data.currentBody = Math.min(currentBody, data.maxBody);
+
+        // Set regeneration fractions
         data.healthRegenFraction = healthFraction;
-        data.currentQi = currentQi;
-        data.maxQi = maxQi;
         data.qiRegenFraction = qiFraction;
-        data.currentBody = currentBody;
-        data.maxBody = maxBody;
         data.bodyRegenFraction = bodyFraction;
 
         return data;
+    }
+
+    // === SERIALIZER ===
+
+    public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerResourceAttachment> {
+        @Override
+        public PlayerResourceAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
+            PlayerResourceAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerResourceAttachment: {}", error))
+                .map(pair -> pair.getFirst())
+                .orElse(new PlayerResourceAttachment());
+
+            // CRITICAL: Set player reference during deserialization
+            if (holder instanceof Player player) {
+                attachment.setPlayer(player);
+                ImmortalCultivation.LOGGER.debug("Set player reference during resource attachment deserialization: {}",
+                    player.getName().getString());
+            }
+
+            return attachment;
+        }
+
+        @Override
+        public @Nullable CompoundTag write(PlayerResourceAttachment attachment, HolderLookup.Provider provider) {
+            return (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerResourceAttachment: {}", error))
+                .orElse(new CompoundTag());
+        }
+    }
+
+    // === LEGACY NBT METHODS (not used with Codec but required by interface) ===
+
+    @Override
+    public void deserializeNBT(CompoundTag tag) {
+        // Not needed with Codec
+    }
+
+    @Override
+    public CompoundTag serializeNBT() {
+        // Not needed with Codec
+        return new CompoundTag();
     }
 }
