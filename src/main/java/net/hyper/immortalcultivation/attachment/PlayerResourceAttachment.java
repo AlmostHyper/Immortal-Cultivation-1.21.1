@@ -329,6 +329,15 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     }
 
     /**
+     * Sets the permanent health regen bonus (used by sync packet)
+     * This is called during client synchronization
+     */
+    public void setPermanentHealthRegenBonus(double bonus) {
+        this.permanentHealthRegenBonus = Math.max(0.0, bonus);
+        // Don't recalculate here - this is called during sync
+    }
+
+    /**
      * Resets the permanent health regen bonus to zero (for debugging/admin purposes)
      */
     public void resetPermanentHealthRegenBonus() {
@@ -865,7 +874,8 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (player instanceof ServerPlayer serverPlayer) {
             ResourceSyncPacket packet = new ResourceSyncPacket(
                 currentHealth, maxHealth,
-                permanentHealthBonus,  // NEW: Include permanent health bonus
+                permanentHealthBonus,
+                permanentHealthRegenBonus,
                 currentQi, maxQi,
                 currentBody, maxBody,
                 isPlayerMeditating

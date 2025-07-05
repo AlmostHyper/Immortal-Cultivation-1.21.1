@@ -85,15 +85,15 @@ public class ICModConfiguredFeatures {
 
         );
 
-        register(context, OVERWORLD_LOW_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldLowQualitySpiritStoneOres, 6));
-        register(context, OVERWORLD_MEDIUM_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMediumQualitySpiritStoneOres, 5));
+        register(context, OVERWORLD_LOW_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldLowQualitySpiritStoneOres, 19));
+        register(context, OVERWORLD_MEDIUM_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMediumQualitySpiritStoneOres, 6));
         register(context, OVERWORLD_HIGH_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldHighQualitySpiritStoneOres, 4));
         register(context, OVERWORLD_TOP_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldTopQualitySpiritStoneOres, 3));
-        register(context, OVERWORLD_EARTH_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldEarthOres, 3));
-        register(context, OVERWORLD_FIRE_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldFireOres, 3));
-        register(context, OVERWORLD_METAL_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMetalOres, 3));
-        register(context, OVERWORLD_WATER_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWaterOres, 3));
-        register(context, OVERWORLD_WOOD_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWoodOres, 3));
+        register(context, OVERWORLD_EARTH_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldEarthOres, 6));
+        register(context, OVERWORLD_FIRE_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldFireOres, 6));
+        register(context, OVERWORLD_METAL_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMetalOres, 6));
+        register(context, OVERWORLD_WATER_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWaterOres, 6));
+        register(context, OVERWORLD_WOOD_ASPECTED_ORE_KEY, Feature.ORE, new OreConfiguration(overworldWoodOres, 6));
         register(context, OVERWORLD_SKY_IRON_ORE_KEY, Feature.ORE, new OreConfiguration(overworldSkyIronOres, 9));
     }
 

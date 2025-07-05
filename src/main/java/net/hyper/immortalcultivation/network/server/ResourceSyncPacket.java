@@ -11,14 +11,15 @@ import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Enhanced sync packet for unified resource data including permanent health bonus.
+ * Enhanced sync packet for unified resource data including permanent health bonus and health regen bonus.
  * Replaces: HealthSyncPacket, QiSyncPacket, and BodySyncPacket
  */
 public record ResourceSyncPacket(
     // Health
     long currentHealth,
     long maxHealth,
-    long permanentHealthBonus,  // NEW: Include permanent health bonus
+    long permanentHealthBonus,
+    double permanentHealthRegenBonus,  // FIXED: Now includes permanent health regen bonus
 
     // Qi Energy
     long currentQi,
@@ -46,7 +47,8 @@ public record ResourceSyncPacket(
         // Health
         ByteBufCodecs.VAR_LONG.encode(buf, packet.currentHealth);
         ByteBufCodecs.VAR_LONG.encode(buf, packet.maxHealth);
-        ByteBufCodecs.VAR_LONG.encode(buf, packet.permanentHealthBonus); // NEW
+        ByteBufCodecs.VAR_LONG.encode(buf, packet.permanentHealthBonus);
+        ByteBufCodecs.DOUBLE.encode(buf, packet.permanentHealthRegenBonus); // FIXED: Now syncs health regen bonus
 
         // Qi
         ByteBufCodecs.VAR_LONG.encode(buf, packet.currentQi);
@@ -65,7 +67,8 @@ public record ResourceSyncPacket(
             // Health
             ByteBufCodecs.VAR_LONG.decode(buf),
             ByteBufCodecs.VAR_LONG.decode(buf),
-            ByteBufCodecs.VAR_LONG.decode(buf), // NEW: permanent health bonus
+            ByteBufCodecs.VAR_LONG.decode(buf),
+            ByteBufCodecs.DOUBLE.decode(buf), // FIXED: Now decodes health regen bonus
 
             // Qi
             ByteBufCodecs.VAR_LONG.decode(buf),
@@ -91,8 +94,9 @@ public record ResourceSyncPacket(
             PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
 
             if (resources != null) {
-                // Apply health data including permanent bonus
-                resources.setPermanentHealthBonus(packet.permanentHealthBonus); // NEW
+                // Apply health data including permanent bonuses
+                resources.setPermanentHealthBonus(packet.permanentHealthBonus);
+                resources.setPermanentHealthRegenBonus(packet.permanentHealthRegenBonus); // FIXED: Now sets health regen bonus
                 resources.setMaxHealth(packet.maxHealth);
                 resources.setCurrentHealth(packet.currentHealth);
 

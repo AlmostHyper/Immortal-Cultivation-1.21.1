@@ -75,6 +75,12 @@ public class ICModNetwork {
             DamageFeedbackSyncPacket::handleClient
         );
 
+        REGISTRY.playToClient(
+            PillConsumptionSyncPacket.TYPE,
+            PillConsumptionSyncPacket.STREAM_CODEC,
+            PillConsumptionSyncPacket::handleClient
+        );
+
         // === CLIENT -> SERVER === //
 
         REGISTRY.playToServer(

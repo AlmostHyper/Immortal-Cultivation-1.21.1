@@ -68,6 +68,7 @@ public class CultivationStatsScreen extends Screen {
     private static final int QI_COLOR = 0xFF87CEEB;
     private static final int BODY_COLOR = 0xFFFF6347;
     private static final int HEALTH_COLOR = 0xFFFF69B4;
+    private static final int HEALTH_REGEN_COLOR = 0xFF98FB98; // Light green for health regen
     private static final int FOCUS_ACTIVE_COLOR = 0xFFFFD700;
     private static final int READY_COLOR = 0xFF90EE90;
     private static final int NOT_READY_COLOR = 0xFFFFB6C1;
@@ -452,7 +453,13 @@ public class CultivationStatsScreen extends Screen {
 
         int barX = windowX + margin;
         renderProgressBar(guiGraphics, barX, currentY, progressBarWidth, PROGRESS_BAR_HEIGHT, healthPercentage, HEALTH_COLOR);
-        currentY += PROGRESS_BAR_HEIGHT + sectionSpacing;
+        currentY += PROGRESS_BAR_HEIGHT + 3;
+
+        // Health regeneration rate
+        double healthRegenRate = resourceAttachment.getEffectiveHealthRegenerationRate();
+        String healthRegenText = String.format("Health Regen: %.3f/s", healthRegenRate);
+        drawStringAligned(guiGraphics, healthRegenText, windowX + margin, currentY, HEALTH_REGEN_COLOR);
+        currentY += lineHeight + sectionSpacing;
 
         // Qi Energy
         long currentQi = resourceAttachment.getCurrentQi();
