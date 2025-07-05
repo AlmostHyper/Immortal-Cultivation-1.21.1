@@ -129,9 +129,6 @@ public class PlayerRespawnHandler {
                 // Reset regeneration fractions
                 resourceAttachment.setRegenFraction(0.0, 0.0, 0.0);
 
-                // Reset meditation state
-                resourceAttachment.setMeditating(false);
-
                 // Sync vanilla health bar
                 float healthPercentage = 1.0f; // Full health
                 player.setHealth(player.getMaxHealth() * healthPercentage);

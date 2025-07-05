@@ -62,18 +62,9 @@ public class GetQiRegenCommand {
                 Component.literal(String.format("Meditation Rate: %.3f/sec (9x base)", circulationRate))
                     .withStyle(ChatFormatting.DARK_AQUA), false);
 
-            // Show meditation status
-            boolean meditating = resources.isPlayerMeditating();
-            String meditationStatus = meditating ? "Active (using meditation rate)" : "Inactive (using normal rate)";
-            ChatFormatting meditationColor = meditating ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
-
-            context.getSource().sendSuccess(() ->
-                Component.literal("Meditation Status: " + meditationStatus)
-                    .withStyle(meditationColor), false);
-
             // Time to full calculation
             if (currentQi < maxQi && effectiveRate > 0) {
-                double timeToFull = (maxQi - currentQi) / (meditating ? circulationRate : effectiveRate);
+                double timeToFull = (maxQi - currentQi) / (effectiveRate);
                 int minutes = (int) (timeToFull / 60);
                 int seconds = (int) (timeToFull % 60);
 

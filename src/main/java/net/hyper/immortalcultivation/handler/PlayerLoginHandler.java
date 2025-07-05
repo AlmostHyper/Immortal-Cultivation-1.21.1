@@ -248,15 +248,14 @@ public class PlayerLoginHandler {
                 // Update max values based on current cultivation state
                 updateResourceMaxValues(player, resourceAttachment);
 
-                ImmortalCultivation.LOGGER.info("Player {} unified resources initialized - Health: {}/{}, Qi: {}/{}, Body: {}/{}, Meditating: {}",
+                ImmortalCultivation.LOGGER.info("Player {} unified resources initialized - Health: {}/{}, Qi: {}/{}, Body: {}/{}",
                     player.getName().getString(),
                     resourceAttachment.getCurrentHealth(),
                     resourceAttachment.getMaxHealth(),
                     resourceAttachment.getCurrentQi(),
                     resourceAttachment.getMaxQi(),
                     resourceAttachment.getCurrentBody(),
-                    resourceAttachment.getMaxBody(),
-                    resourceAttachment.isPlayerMeditating());
+                    resourceAttachment.getMaxBody());
             } else {
                 ImmortalCultivation.LOGGER.error("Player {} has null resource attachment!",
                     player.getName().getString());

@@ -26,9 +26,6 @@ public class CultivationTickHandler {
         // Process all cultivation attachments - they handle their own logic now
         tickCultivationAttachments(serverPlayer);
 
-        // Process meditation detection for both cultivation types
-        processMeditationDetection(serverPlayer);
-
         // Process resource regeneration (Qi, Body energy, AND Health - FIXED!)
         processResourceRegeneration(serverPlayer);
 
@@ -103,39 +100,5 @@ public class CultivationTickHandler {
 
         // Allow very small movement (account for server lag/float precision)
         return horizontalSpeed < 0.01;
-    }
-
-    /**
-     * Process meditation detection for both Qi and Body cultivation.
-     * Meditation enhances cultivation rates significantly, so we need to detect
-     * when players are in the proper meditation posture.
-     */
-    private static void processMeditationDetection(ServerPlayer player) {
-        try {
-            boolean isCurrentlyMeditating = isPlayerMeditating(player);
-
-            // Update resource attachment with meditation state
-            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (resources != null) {
-                if (isCurrentlyMeditating) {
-                    resources.startMeditation();
-                } else {
-                    resources.stopMeditation();
-                }
-            }
-
-            // Update cultivation attachment with meditation state for potential future use
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation != null) {
-                if (isCurrentlyMeditating) {
-                    cultivation.startMeditation();
-                } else {
-                    cultivation.stopMeditation();
-                }
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error processing meditation detection for player {}",
-                player.getName().getString(), e);
-        }
     }
 }

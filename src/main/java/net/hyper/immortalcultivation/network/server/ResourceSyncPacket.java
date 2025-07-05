@@ -27,10 +27,8 @@ public record ResourceSyncPacket(
 
     // Body Energy
     long currentBody,
-    long maxBody,
+    long maxBody
 
-    // Meditation state
-    boolean isMeditating
 ) implements CustomPacketPayload {
 
     public static final Type<ResourceSyncPacket> TYPE = new Type<>(
@@ -58,8 +56,6 @@ public record ResourceSyncPacket(
         ByteBufCodecs.VAR_LONG.encode(buf, packet.currentBody);
         ByteBufCodecs.VAR_LONG.encode(buf, packet.maxBody);
 
-        // Meditation
-        ByteBufCodecs.BOOL.encode(buf, packet.isMeditating);
     }
 
     private static ResourceSyncPacket decode(ByteBuf buf) {
@@ -76,10 +72,8 @@ public record ResourceSyncPacket(
 
             // Body
             ByteBufCodecs.VAR_LONG.decode(buf),
-            ByteBufCodecs.VAR_LONG.decode(buf),
+            ByteBufCodecs.VAR_LONG.decode(buf)
 
-            // Meditation
-            ByteBufCodecs.BOOL.decode(buf)
         );
     }
 
@@ -108,8 +102,6 @@ public record ResourceSyncPacket(
                 resources.setMaxBody(packet.maxBody);
                 resources.setCurrentBody(packet.currentBody);
 
-                // Apply meditation state
-                resources.setMeditating(packet.isMeditating);
             }
         });
     }

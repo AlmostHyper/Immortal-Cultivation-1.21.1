@@ -310,10 +310,6 @@ public class GetRealmCommand {
         source.sendSuccess(() -> Component.literal(String.format("Body Energy: %d/%d (%.1f%%)",
             bodyCurrent, bodyMax, bodyPercent)).withStyle(ChatFormatting.DARK_RED), false);
 
-        // Meditation Status
-        boolean meditating = snapshot.resources.isPlayerMeditating();
-        source.sendSuccess(() -> Component.literal("Meditation Status: " + (meditating ? "Active" : "Inactive"))
-            .withStyle(meditating ? ChatFormatting.GREEN : ChatFormatting.GRAY), false);
     }
 
     /**

@@ -60,12 +60,19 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     private double bodyCultivationFraction = 0.0;
     private double bodyAccumulationRate = 0.0; // CRITICAL: This needs to be updated each tick
 
-    public void startMeditation() {
+    // === NEW: Toggle-Based Meditation System ===
+    private boolean isMeditationActive = false;
+    private int meditationTicks = 0;
+    private static final int MAX_MEDITATION_TICKS = 6000; // 5 minutes to reach max bonus (300 seconds * 20 ticks)
+    private static final double MAX_MEDITATION_MULTIPLIER = 3.0; // Maximum 3x cultivation rate
+    private static final double MIN_MEDITATION_MULTIPLIER = 1.0; // Start at normal rate
 
-    }
-
-    public void stopMeditation() {
-    }
+    // === Future Expansion: Biome/Block Bonuses (Currently Inactive) ===
+    // These fields are ready for when you implement location-based bonuses
+    private double biomeMeditationBonus = 0.0; // Future: bonus from specific biomes
+    private double blockMeditationBonus = 0.0; // Future: bonus from meditation blocks/structures
+    private boolean isInSacredGrove = false; // Future: special meditation areas
+    private boolean isOnMeditationMat = false; // Future: meditation items
 
     // === Focus System (from PlayerCultivationFocusAttachment) ===
     public enum CultivationType {
