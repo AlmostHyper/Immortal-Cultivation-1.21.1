@@ -332,7 +332,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     }
 
     @Nullable
-    protected Player getPlayerSafe() {
+    public Player getPlayerSafe() {
         if (player != null && player.isAlive()) {
             return player;
         }

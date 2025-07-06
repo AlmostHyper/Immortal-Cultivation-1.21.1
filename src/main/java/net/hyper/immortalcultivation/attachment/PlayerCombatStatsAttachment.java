@@ -71,7 +71,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     }
 
     @Nullable
-    protected Player getPlayerSafe() {
+    public Player getPlayerSafe() {
         if (player != null && player.isAlive()) {
             return player;
         }

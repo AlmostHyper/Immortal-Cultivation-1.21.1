@@ -82,7 +82,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     }
 
     @Nullable
-    protected Player getPlayerSafe() {
+    public Player getPlayerSafe() {
         if (player != null && player.isAlive()) {
             return player;
         }

@@ -85,7 +85,7 @@ public class ICModConfiguredFeatures {
 
         );
 
-        register(context, OVERWORLD_LOW_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldLowQualitySpiritStoneOres, 19));
+        register(context, OVERWORLD_LOW_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldLowQualitySpiritStoneOres, 9));
         register(context, OVERWORLD_MEDIUM_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldMediumQualitySpiritStoneOres, 6));
         register(context, OVERWORLD_HIGH_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldHighQualitySpiritStoneOres, 4));
         register(context, OVERWORLD_TOP_QUALITY_SPIRIT_STONE_ORE_KEY, Feature.ORE, new OreConfiguration(overworldTopQualitySpiritStoneOres, 3));
