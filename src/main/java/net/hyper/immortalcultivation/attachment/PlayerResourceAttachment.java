@@ -31,12 +31,12 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     private Player player;
 
     // === MORTAL BASE VALUES (starting values for new players) ===
-    private static final long MORTAL_BASE_HEALTH = 20L; // 1 heart
-    private static final long MORTAL_BASE_QI = 100L;
-    private static final long MORTAL_BASE_BODY = 100L;
+    private static final long MORTAL_BASE_HEALTH = 20L;
+    private static final long MORTAL_BASE_QI = 0L;
+    private static final long MORTAL_BASE_BODY = 0L;
     private static final double MORTAL_BASE_HEALTH_REGEN = 0.0;
-    private static final double MORTAL_BASE_QI_REGEN = 1.0;
-    private static final double MORTAL_BASE_BODY_REGEN = 1.0;
+    private static final double MORTAL_BASE_QI_REGEN = 0.0;
+    private static final double MORTAL_BASE_BODY_REGEN = 0.0;
 
     // === PERMANENT ADDITIVE BONUSES (accumulated from realm breakthroughs) ===
     private long permanentHealthBonus = 0L;
@@ -224,12 +224,21 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
             String.format("%.3f", this.permanentBodyRegenBonus));
     }
 
+    /**
+     * Recalculates max body using ONLY permanent bonuses.
+     * Never uses "current realm" values because your system doesn't work that way.
+     */
     private void recalculateMaxBody() {
+        // Max body = mortal base + all accumulated permanent bonuses
         this.maxBody = MORTAL_BASE_BODY + permanentMaxBodyBonus;
 
+        // Ensure current body doesn't exceed new max
         if (this.currentBody > this.maxBody) {
             this.currentBody = this.maxBody;
         }
+
+        ImmortalCultivation.LOGGER.debug("Recalculated max body: {} (base: {} + bonus: {})",
+            this.maxBody, MORTAL_BASE_BODY, permanentMaxBodyBonus);
     }
 
     // === HEALTH INTERFACE IMPLEMENTATION ===
@@ -651,8 +660,11 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     // === SETTERS FOR SYNC (called by sync packets) ===
 
+    // === SETTERS FOR SYNC (called by sync packets) ===
+
     public void setPermanentHealthBonus(long bonus) {
         this.permanentHealthBonus = Math.max(0, bonus);
+        recalculateMaxHealth(); // Auto-recalculate
     }
 
     public void setPermanentHealthRegenBonus(double bonus) {
@@ -661,6 +673,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     public void setPermanentMaxQiBonus(long bonus) {
         this.permanentMaxQiBonus = Math.max(0, bonus);
+        recalculateMaxQi(); // Auto-recalculate
     }
 
     public void setPermanentQiRegenBonus(double bonus) {
@@ -669,12 +682,12 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     public void setPermanentMaxBodyBonus(long bonus) {
         this.permanentMaxBodyBonus = Math.max(0, bonus);
+        recalculateMaxBody(); // Auto-recalculate
     }
 
     public void setPermanentBodyRegenBonus(double bonus) {
         this.permanentBodyRegenBonus = Math.max(0.0, bonus);
     }
-
     // === SERIALIZATION ===
 
     public static final Codec<PlayerResourceAttachment> CODEC = RecordCodecBuilder.create(instance ->

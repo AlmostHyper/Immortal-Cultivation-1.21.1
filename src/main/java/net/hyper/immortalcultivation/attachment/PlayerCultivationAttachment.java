@@ -118,6 +118,14 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     private double bodyCultivationAdditiveBonus = 0.0;
     private double bodyCultivationMultiplicativeBonus = 0.0;
 
+    // === MILESTONE TRACKING (add after existing cultivation fields) ===
+    private long totalQiCultivationEarned = 0L;     // Total Qi cultivation points ever earned
+    private long totalBodyCultivationEarned = 0L;   // Total Body cultivation points ever earned
+    private long lastQiMilestone = 0L;              // Last Qi milestone reached (in thousands)
+    private long lastBodyMilestone = 0L;            // Last Body milestone reached (in thousands)
+
+    private static final long MILESTONE_THRESHOLD = 1000L; // Milestone every 1000 points
+
     // === Sync Management ===
     private long lastSyncedHash = 0;
     private int tickCounter = 0;
@@ -370,7 +378,53 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         long wholePoints = (long) qiCultivationFraction;
         qiCultivationFraction -= wholePoints;
 
-        setCurrentQiCultivation(currentQiCultivation + wholePoints);
+        if (wholePoints > 0) {
+            // Track total cultivation earned for milestones
+            totalQiCultivationEarned += wholePoints;
+
+            // DEBUG LOGGING
+            ImmortalCultivation.LOGGER.info("DEBUG: Player {} gained {} Qi cultivation points. Total earned: {}",
+                player != null ? player.getName().getString() : "null", wholePoints, totalQiCultivationEarned);
+
+            // Apply the cultivation points
+            setCurrentQiCultivation(currentQiCultivation + wholePoints);
+
+            // Check for milestone bonuses
+            checkQiMilestones();
+        }
+    }
+
+    /**
+     * Check and apply Qi cultivation milestone bonuses
+     * Every 1000 points of Qi Cultivation → +2 Qi and +1 HP permanently
+     */
+    private void checkQiMilestones() {
+        long currentMilestone = totalQiCultivationEarned / MILESTONE_THRESHOLD;
+
+        ImmortalCultivation.LOGGER.info("DEBUG: Checking Qi milestones - Total: {}, Current milestone: {}, Last milestone: {}",
+            totalQiCultivationEarned, currentMilestone, lastQiMilestone);
+
+        if (currentMilestone > lastQiMilestone) {
+            long milestonesEarned = currentMilestone - lastQiMilestone;
+            lastQiMilestone = currentMilestone;
+
+            ImmortalCultivation.LOGGER.info("DEBUG: Player reference is {}", player != null ? "valid" : "null");
+
+            if (player != null) {
+                PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+                ImmortalCultivation.LOGGER.info("DEBUG: Resource attachment is {}", resources != null ? "valid" : "null");
+
+                if (resources != null) {
+                    // +2 Qi per milestone
+                    resources.addPermanentMaxQiBonus(milestonesEarned * 2);
+                    // +1 HP per milestone
+                    resources.addPermanentHealthBonus(milestonesEarned * 1);
+
+                    ImmortalCultivation.LOGGER.info("Player {} reached Qi cultivation milestone {} - gained +{} Qi, +{} HP",
+                        player.getName().getString(), currentMilestone, milestonesEarned * 2, milestonesEarned * 1);
+                }
+            }
+        }
     }
 
     public double getQiProgress() {
@@ -513,7 +567,42 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         long wholePoints = (long) bodyCultivationFraction;
         bodyCultivationFraction -= wholePoints;
 
-        setCurrentBodyCultivation(currentBodyCultivation + wholePoints);
+        if (wholePoints > 0) {
+            // Track total cultivation earned for milestones
+            totalBodyCultivationEarned += wholePoints;
+
+            // Apply the cultivation points
+            setCurrentBodyCultivation(currentBodyCultivation + wholePoints);
+
+            // Check for milestone bonuses
+            checkBodyMilestones();
+        }
+    }
+
+    /**
+     * Check and apply Body cultivation milestone bonuses
+     * Every 1000 points of Body Cultivation → +1 Qi and +2 HP permanently
+     */
+    private void checkBodyMilestones() {
+        long currentMilestone = totalBodyCultivationEarned / MILESTONE_THRESHOLD;
+
+        if (currentMilestone > lastBodyMilestone) {
+            long milestonesEarned = currentMilestone - lastBodyMilestone;
+            lastBodyMilestone = currentMilestone;
+
+            if (player != null) {
+                PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+                if (resources != null) {
+                    // +1 Qi per milestone
+                    resources.addPermanentMaxQiBonus(milestonesEarned * 1);
+                    // +2 HP per milestone
+                    resources.addPermanentHealthBonus(milestonesEarned * 2);
+
+                    ImmortalCultivation.LOGGER.info("Player {} reached Body cultivation milestone {} - gained +{} Qi, +{} HP",
+                        player.getName().getString(), currentMilestone, milestonesEarned * 1, milestonesEarned * 2);
+                }
+            }
+        }
     }
 
     public double getBodyProgress() {
@@ -698,27 +787,65 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                 double speedBonus = newRealm.getBaseMovementSpeed();
                 double jumpBonus = newRealm.getBaseJumpHeight();
 
-                // Apply permanent health bonus
-                if (healthBonus > 0) {
-                    PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-                    if (resourceAttachment != null) {
-                        resourceAttachment.addPermanentHealthBonus(healthBonus);
+                // MISSING PART: Get Qi values from JSON
+                long qiBonus = newRealm.getBaseMaxQi();
+                double qiRegenBonus = newRealm.getBaseQiRegenerationRate();
 
+                PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+                if (resourceAttachment != null) {
+                    // Apply permanent health bonus
+                    if (healthBonus > 0) {
+                        resourceAttachment.addPermanentHealthBonus(healthBonus);
                         ImmortalCultivation.LOGGER.info("Player {} gained +{} PERMANENT health from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
                             healthBonus,
                             cultivationType.getDisplayName(),
                             newRealm.getDisplayName());
                     }
-                }
 
-                // NEW: Apply permanent health regeneration bonus
-                if (healthRegenBonus > 0) {
-                    PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-                    if (resourceAttachment != null) {
+                    // Apply permanent health regeneration bonus
+                    if (healthRegenBonus > 0) {
                         resourceAttachment.addPermanentHealthRegenBonus(healthRegenBonus);
-
                         ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec PERMANENT health regen from {} realm advancement to {} (JSON-defined bonus)",
+                            player.getName().getString(),
+                            String.format("%.3f", healthRegenBonus),
+                            cultivationType.getDisplayName(),
+                            newRealm.getDisplayName());
+                    }
+
+                    // CRITICAL FIX: Apply permanent Qi bonuses
+                    if (qiBonus > 0) {
+                        resourceAttachment.addPermanentMaxQiBonus(qiBonus);
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{} PERMANENT max qi from {} realm advancement to {} (JSON-defined bonus)",
+                            player.getName().getString(),
+                            qiBonus,
+                            cultivationType.getDisplayName(),
+                            newRealm.getDisplayName());
+                    }
+
+                    if (qiRegenBonus > 0) {
+                        resourceAttachment.addPermanentQiRegenBonus(qiRegenBonus);
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec PERMANENT qi regen from {} realm advancement to {} (JSON-defined bonus)",
+                            player.getName().getString(),
+                            String.format("%.3f", qiRegenBonus),
+                            cultivationType.getDisplayName(),
+                            newRealm.getDisplayName());
+                    }
+
+                    // CRITICAL FIX: Apply permanent Body bonuses (derive from health for now)
+                    // Since JSON doesn't have explicit body stats, use health bonus as body bonus
+                    if (healthBonus > 0) {
+                        resourceAttachment.addPermanentMaxBodyBonus(healthBonus);
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{} PERMANENT max body from {} realm advancement to {} (derived from health bonus)",
+                            player.getName().getString(),
+                            healthBonus,
+                            cultivationType.getDisplayName(),
+                            newRealm.getDisplayName());
+                    }
+
+                    if (healthRegenBonus > 0) {
+                        resourceAttachment.addPermanentBodyRegenBonus(healthRegenBonus);
+                        ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec PERMANENT body regen from {} realm advancement to {} (derived from health regen)",
                             player.getName().getString(),
                             String.format("%.3f", healthRegenBonus),
                             cultivationType.getDisplayName(),
@@ -726,40 +853,29 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                     }
                 }
 
-                // Apply permanent attack damage bonus
-                if (attackBonus > 0) {
-                    PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-                    if (combatStatsAttachment != null) {
+                // Apply combat stat bonuses (existing code)
+                PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+                if (combatStatsAttachment != null) {
+                    if (attackBonus > 0) {
                         combatStatsAttachment.addPermanentAttackDamageBonus(attackBonus);
-
                         ImmortalCultivation.LOGGER.info("Player {} gained +{}% PERMANENT attack damage from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
                             attackBonus * 100,
                             cultivationType.getDisplayName(),
                             newRealm.getDisplayName());
                     }
-                }
 
-                // Apply permanent movement speed bonus
-                if (speedBonus > 0) {
-                    PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-                    if (combatStatsAttachment != null) {
+                    if (speedBonus > 0) {
                         combatStatsAttachment.addPermanentMovementSpeedBonus(speedBonus);
-
                         ImmortalCultivation.LOGGER.info("Player {} gained +{}% PERMANENT movement speed from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
                             speedBonus * 100,
                             cultivationType.getDisplayName(),
                             newRealm.getDisplayName());
                     }
-                }
 
-                // Apply permanent jump height bonus
-                if (jumpBonus > 0) {
-                    PlayerCombatStatsAttachment combatStatsAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-                    if (combatStatsAttachment != null) {
+                    if (jumpBonus > 0) {
                         combatStatsAttachment.addPermanentJumpHeightBonus(jumpBonus);
-
                         ImmortalCultivation.LOGGER.info("Player {} gained +{}% PERMANENT jump height from {} realm advancement to {} (JSON-defined bonus)",
                             player.getName().getString(),
                             jumpBonus * 100,
@@ -767,23 +883,10 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                             newRealm.getDisplayName());
                     }
                 }
-
-                // CRITICAL: Refresh combat stats immediately after applying permanent bonuses
-                if (player instanceof ServerPlayer serverPlayer) {
-                    // Small delay to ensure all bonuses are processed first
-                    player.level().getServer().execute(() -> {
-                        try {
-                            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
-                            ImmortalCultivation.LOGGER.info("Combat stats refreshed after realm advancement for player {}",
-                                serverPlayer.getName().getString());
-                        } catch (Exception e) {
-                            ImmortalCultivation.LOGGER.error("Error refreshing combat stats after realm advancement", e);
-                        }
-                    });
-                }
             }
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying permanent bonuses for realm advancement", e);
+            ImmortalCultivation.LOGGER.error("Error applying permanent bonuses for {} realm advancement to {}",
+                cultivationType.getDisplayName(), newRealm.getDisplayName(), e);
         }
     }
 
@@ -1541,9 +1644,15 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         ).apply(instance, RealmData::new)
     );
 
-    // Sub-codec for cultivation progress
-    private record CultivationProgress(long currentQi, long maxQi, double qiFraction,
-                                       long currentBody, long maxBody, double bodyFraction) {}
+    // Updated CultivationProgress record to include milestone data
+    public record CultivationProgress(
+        long currentQi, long maxQi, double qiFraction,
+        long currentBody, long maxBody, double bodyFraction,
+        // Add milestone tracking
+        long totalQiEarned, long totalBodyEarned,
+        long lastQiMilestone, long lastBodyMilestone
+    ) {
+    }
 
     private static final Codec<CultivationProgress> CULTIVATION_PROGRESS_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
@@ -1552,7 +1661,12 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             Codec.DOUBLE.optionalFieldOf("qi_fraction", 0.0).forGetter(CultivationProgress::qiFraction),
             Codec.LONG.optionalFieldOf("current_body", 0L).forGetter(CultivationProgress::currentBody),
             Codec.LONG.optionalFieldOf("max_body", 1000L).forGetter(CultivationProgress::maxBody),
-            Codec.DOUBLE.optionalFieldOf("body_fraction", 0.0).forGetter(CultivationProgress::bodyFraction)
+            Codec.DOUBLE.optionalFieldOf("body_fraction", 0.0).forGetter(CultivationProgress::bodyFraction),
+            // Add milestone tracking fields
+            Codec.LONG.optionalFieldOf("total_qi_earned", 0L).forGetter(CultivationProgress::totalQiEarned),
+            Codec.LONG.optionalFieldOf("total_body_earned", 0L).forGetter(CultivationProgress::totalBodyEarned),
+            Codec.LONG.optionalFieldOf("last_qi_milestone", 0L).forGetter(CultivationProgress::lastQiMilestone),
+            Codec.LONG.optionalFieldOf("last_body_milestone", 0L).forGetter(CultivationProgress::lastBodyMilestone)
         ).apply(instance, CultivationProgress::new)
     );
 
@@ -1613,7 +1727,10 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
     private CultivationProgress getCultivationProgress() {
         return new CultivationProgress(
             currentQiCultivation, maxQiCultivation, qiCultivationFraction,
-            currentBodyCultivation, maxBodyCultivation, bodyCultivationFraction
+            currentBodyCultivation, maxBodyCultivation, bodyCultivationFraction,
+            // Add milestone tracking values
+            totalQiCultivationEarned, totalBodyCultivationEarned,
+            lastQiMilestone, lastBodyMilestone
         );
     }
 
@@ -1651,13 +1768,18 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         }
 
         // Restore progress
+        // In the decode method, restore milestone data
         data.currentQiCultivation = progress.currentQi;
         data.maxQiCultivation = progress.maxQi;
         data.qiCultivationFraction = progress.qiFraction;
         data.currentBodyCultivation = progress.currentBody;
         data.maxBodyCultivation = progress.maxBody;
         data.bodyCultivationFraction = progress.bodyFraction;
-
+// Add milestone restoration
+        data.totalQiCultivationEarned = progress.totalQiEarned;
+        data.totalBodyCultivationEarned = progress.totalBodyEarned;
+        data.lastQiMilestone = progress.lastQiMilestone;
+        data.lastBodyMilestone = progress.lastBodyMilestone;
         // Restore focus
         try {
             data.currentFocus = CultivationType.valueOf(focus);
