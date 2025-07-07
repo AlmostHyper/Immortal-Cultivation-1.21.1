@@ -6,6 +6,7 @@ import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.cultivation.realms.data.CultivationRealmData;
 import net.hyper.immortalcultivation.cultivation.realms.data.JsonCultivationRealm;
+import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.network.server.CultivationSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
@@ -767,16 +768,18 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
                     }
                 }
 
-                // Send a comprehensive message to the player about their permanent gains
+                // CRITICAL: Refresh combat stats immediately after applying permanent bonuses
                 if (player instanceof ServerPlayer serverPlayer) {
-                    Component gainMessage = Component.literal("§6✦ PERMANENT CULTIVATION GAINS ✦")
-                        .append(Component.literal("\n§f" + cultivationType.getDisplayName() + " breakthrough to " + newRealm.getDisplayName() + ":"))
-                        .append(Component.literal("\n§c❤ +" + healthBonus + " Permanent Health"))
-                        .append(Component.literal("\n§4⚔ +" + String.format("%.1f%%", attackBonus * 100) + " Permanent Attack Damage"))
-                        .append(Component.literal("\n§b⚡ +" + String.format("%.1f%%", speedBonus * 100) + " Permanent Movement Speed"))
-                        .append(Component.literal("\n§a⏫ +" + String.format("%.1f%%", jumpBonus * 100) + " Permanent Jump Height"));
-
-                    serverPlayer.sendSystemMessage(gainMessage);
+                    // Small delay to ensure all bonuses are processed first
+                    player.level().getServer().execute(() -> {
+                        try {
+                            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+                            ImmortalCultivation.LOGGER.info("Combat stats refreshed after realm advancement for player {}",
+                                serverPlayer.getName().getString());
+                        } catch (Exception e) {
+                            ImmortalCultivation.LOGGER.error("Error refreshing combat stats after realm advancement", e);
+                        }
+                    });
                 }
             }
         } catch (Exception e) {

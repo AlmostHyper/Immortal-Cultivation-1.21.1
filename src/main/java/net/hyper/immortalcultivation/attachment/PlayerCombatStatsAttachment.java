@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.attachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.network.server.CombatStatsSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;
@@ -112,10 +113,12 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         this.permanentMovementSpeedBonus += speedBonus;
         markForSync();
 
-        ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent movement speed from realm breakthrough (total: +{}%)",
-            player != null ? player.getName().getString() : "unknown",
-            String.format("%.1f", speedBonus * 100),
-            String.format("%.1f", this.permanentMovementSpeedBonus * 100));
+        // Add this after the existing log in addPermanentMovementSpeedBonus
+        if (player instanceof ServerPlayer serverPlayer) {
+            ImmortalCultivation.LOGGER.info("DEBUG: Player reference valid, triggering immediate combat stats refresh");
+            // Force immediate refresh to apply the new permanent bonus
+            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+        }
     }
 
     /**
