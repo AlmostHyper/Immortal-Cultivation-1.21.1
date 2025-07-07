@@ -1,11 +1,11 @@
-package net.hyper.immortalcultivation.cultivation.realms.data;
+package net.hyper.immortalcultivation.cultivation.data;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.cultivation.CultivationRealm;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;

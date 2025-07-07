@@ -1,12 +1,10 @@
 package net.hyper.immortalcultivation.ui.screens;
 
-import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
-import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.cultivation.CultivationRealm;
 import net.hyper.immortalcultivation.network.client.CultivationFocusTogglePacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
-import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;

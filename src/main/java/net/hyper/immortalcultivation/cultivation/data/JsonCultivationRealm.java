@@ -1,8 +1,8 @@
-package net.hyper.immortalcultivation.cultivation.realms.data;
+package net.hyper.immortalcultivation.cultivation.data;
 
-import net.hyper.immortalcultivation.interfaces.IBodyCultivationData;
-import net.hyper.immortalcultivation.interfaces.IQiCultivationData;
-import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.cultivation.data.CultivationRealmData;
+import net.hyper.immortalcultivation.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.cultivation.CultivationRealm;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
@@ -23,6 +23,7 @@ import java.util.List;
 
 /**
  * A data-driven implementation of CultivationRealm that loads its properties from JSON.
+ * Updated to work with the unified ICultivationData interface.
  */
 public class JsonCultivationRealm extends CultivationRealm {
 
@@ -112,11 +113,6 @@ public class JsonCultivationRealm extends CultivationRealm {
         return data.baseQiRegenerationRate();
     }
 
-    @Override
-    public double getBaseCirculatingQiRegenerationRate() {
-        return data.baseCirculatingQiRegenerationRate();
-    }
-
     // === Realm Navigation ===
 
     @Override
@@ -180,7 +176,7 @@ public class JsonCultivationRealm extends CultivationRealm {
     // === Special Requirements ===
 
     @Override
-    public boolean meetsAdditionalRequirements(Player player, IQiCultivationData qiData) {
+    public boolean meetsAdditionalRequirements(Player player, ICultivationData cultivationData, ICultivationData.CultivationType type) {
         if (data.specialRequirements().isEmpty()) {
             return true; // No special requirements means anyone can access
         }
@@ -199,7 +195,7 @@ public class JsonCultivationRealm extends CultivationRealm {
         // Check required conditions
         if (!req.requiredConditions().isEmpty()) {
             for (String condition : req.requiredConditions()) {
-                if (!checkCondition(player, condition)) {
+                if (!checkCondition(player, condition, type)) {
                     return false;
                 }
             }
@@ -207,19 +203,12 @@ public class JsonCultivationRealm extends CultivationRealm {
 
         // Check special event requirement
         if (req.specialEvent().isPresent()) {
-            if (!checkSpecialEvent(player, req.specialEvent().get())) {
+            if (!checkSpecialEvent(player, req.specialEvent().get(), type)) {
                 return false;
             }
         }
 
         return true;
-    }
-
-    @Override
-    public boolean meetsAdditionalRequirements(Player player, IBodyCultivationData bodyData) {
-        // For now, use the same requirements for both cultivation types
-        // In the future, you could differentiate between Qi and Body requirements
-        return meetsAdditionalRequirements(player, (IQiCultivationData) bodyData);
     }
 
     // === Helper Methods for Requirements ===
@@ -228,7 +217,6 @@ public class JsonCultivationRealm extends CultivationRealm {
         try {
             ResourceLocation itemLocation = ResourceLocation.parse(itemId);
             // Check if player has the required item in their inventory
-            // This is a simplified check - you might want to implement more sophisticated logic
             return player.getInventory().items.stream()
                 .anyMatch(stack -> !stack.isEmpty() &&
                     stack.getItem().builtInRegistryHolder().key().location().equals(itemLocation));
@@ -237,7 +225,7 @@ public class JsonCultivationRealm extends CultivationRealm {
         }
     }
 
-    private boolean checkCondition(Player player, String condition) {
+    private boolean checkCondition(Player player, String condition, ICultivationData.CultivationType type) {
         // Basic condition checking - you can expand this based on your needs
         switch (condition.toLowerCase()) {
             case "storm_weather":
@@ -250,13 +238,17 @@ public class JsonCultivationRealm extends CultivationRealm {
                 return player.isInWater();
             case "full_health":
                 return player.getHealth() >= player.getMaxHealth();
+            case "qi_focused":
+                return type == ICultivationData.CultivationType.QI;
+            case "body_focused":
+                return type == ICultivationData.CultivationType.BODY;
             default:
                 // Unknown condition defaults to true
                 return true;
         }
     }
 
-    private boolean checkSpecialEvent(Player player, String specialEvent) {
+    private boolean checkSpecialEvent(Player player, String specialEvent, ICultivationData.CultivationType type) {
         // Basic special event checking - you can expand this based on your needs
         switch (specialEvent.toLowerCase()) {
             case "lightning_strike_survived":
@@ -265,21 +257,26 @@ public class JsonCultivationRealm extends CultivationRealm {
             case "first_meditation":
                 // Check if this is the player's first time meditating
                 return true;
+            case "qi_breakthrough":
+                return type == ICultivationData.CultivationType.QI;
+            case "body_breakthrough":
+                return type == ICultivationData.CultivationType.BODY;
             default:
                 // Unknown special event defaults to true
                 return true;
         }
     }
 
-    // === Realm Events ===
+    // === Unified Realm Events ===
 
     @Override
-    public void onRealmAdvancement(Player player, IQiCultivationData qiData, @Nullable CultivationRealm previousRealm) {
+    public void onRealmAdvancement(Player player, ICultivationData cultivationData, @Nullable CultivationRealm previousRealm, ICultivationData.CultivationType type) {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
 
-        // Send default advancement message
+        // Send cultivation-type-specific advancement message
+        String cultivationTypeText = type == ICultivationData.CultivationType.QI ? "refined your qi" : "tempered your body";
         serverPlayer.sendSystemMessage(
-            Component.literal("You have advanced to " + getDisplayName() + "!")
+            Component.literal("You have " + cultivationTypeText + " to " + getDisplayName() + "!")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
         );
 
@@ -289,27 +286,28 @@ public class JsonCultivationRealm extends CultivationRealm {
 
             // Handle on enter event
             if (events.onEnterEvent().isPresent()) {
-                handleRealmEvent(serverPlayer, events.onEnterEvent().get(), "enter");
+                handleRealmEvent(serverPlayer, events.onEnterEvent().get(), "enter", type);
             }
 
             // Handle breakthrough event (since this is an advancement)
             if (events.onBreakthroughEvent().isPresent()) {
-                handleRealmEvent(serverPlayer, events.onBreakthroughEvent().get(), "breakthrough");
+                handleRealmEvent(serverPlayer, events.onBreakthroughEvent().get(), "breakthrough", type);
             }
         }
 
-        // Play default advancement effects
+        // Play advancement effects
         playAdvancementEffects(serverPlayer);
     }
 
     @Override
-    public void onRealmExit(Player player, IQiCultivationData qiData, @Nullable CultivationRealm nextRealm) {
+    public void onRealmExit(Player player, ICultivationData cultivationData, @Nullable CultivationRealm nextRealm, ICultivationData.CultivationType type) {
         if (!(player instanceof ServerPlayer serverPlayer)) return;
 
         // Send default exit message
         if (nextRealm != null && nextRealm.getRealmLevel() > this.getRealmLevel()) {
+            String typeText = type.getDisplayName().toLowerCase();
             serverPlayer.sendSystemMessage(
-                Component.literal("You prepare to advance beyond " + getDisplayName() + "...")
+                Component.literal("Your " + typeText + " prepares to advance beyond " + getDisplayName() + "...")
                     .withStyle(ChatFormatting.AQUA)
             );
         }
@@ -320,69 +318,21 @@ public class JsonCultivationRealm extends CultivationRealm {
 
             // Handle on exit event
             if (events.onExitEvent().isPresent()) {
-                handleRealmEvent(serverPlayer, events.onExitEvent().get(), "exit");
-            }
-        }
-    }
-
-    // === Body Cultivation Events ===
-
-    @Override
-    public void onRealmAdvancement(Player player, IBodyCultivationData bodyData, @Nullable CultivationRealm previousRealm) {
-        if (!(player instanceof ServerPlayer serverPlayer)) return;
-
-        // Send default advancement message
-        serverPlayer.sendSystemMessage(
-            Component.literal("Your body has been tempered to " + getDisplayName() + "!")
-                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
-        );
-
-        // Handle the same events as Qi cultivation for now
-        if (data.realmEvents().isPresent()) {
-            CultivationRealmData.RealmEvents events = data.realmEvents().get();
-
-            if (events.onEnterEvent().isPresent()) {
-                handleRealmEvent(serverPlayer, events.onEnterEvent().get(), "enter");
-            }
-
-            if (events.onBreakthroughEvent().isPresent()) {
-                handleRealmEvent(serverPlayer, events.onBreakthroughEvent().get(), "breakthrough");
-            }
-        }
-
-        playAdvancementEffects(serverPlayer);
-    }
-
-    @Override
-    public void onRealmExit(Player player, IBodyCultivationData bodyData, @Nullable CultivationRealm nextRealm) {
-        if (!(player instanceof ServerPlayer serverPlayer)) return;
-
-        if (nextRealm != null && nextRealm.getRealmLevel() > this.getRealmLevel()) {
-            serverPlayer.sendSystemMessage(
-                Component.literal("Your body prepares for further tempering beyond " + getDisplayName() + "...")
-                    .withStyle(ChatFormatting.AQUA)
-            );
-        }
-
-        if (data.realmEvents().isPresent()) {
-            CultivationRealmData.RealmEvents events = data.realmEvents().get();
-
-            if (events.onExitEvent().isPresent()) {
-                handleRealmEvent(serverPlayer, events.onExitEvent().get(), "exit");
+                handleRealmEvent(serverPlayer, events.onExitEvent().get(), "exit", type);
             }
         }
     }
 
     // === Helper Methods ===
 
-    private void handleRealmEvent(ServerPlayer player, String eventId, String eventType) {
-        // Basic event handling - you can expand this to handle different event types
-        // For now, we'll just log the event and play a sound
+    private void handleRealmEvent(ServerPlayer player, String eventId, String eventType, ICultivationData.CultivationType cultivationType) {
+        // Enhanced event handling with cultivation type context
+        String typeText = cultivationType.getDisplayName().toLowerCase();
 
         switch (eventType) {
             case "enter":
                 player.sendSystemMessage(
-                    Component.literal("You feel the energy of " + getDisplayName() + " coursing through you.")
+                    Component.literal("You feel the " + typeText + " energy of " + getDisplayName() + " coursing through you.")
                         .withStyle(ChatFormatting.GREEN)
                 );
                 player.level().playSound(null, player.blockPosition(),
@@ -390,7 +340,7 @@ public class JsonCultivationRealm extends CultivationRealm {
                 break;
             case "exit":
                 player.sendSystemMessage(
-                    Component.literal("The energy of " + getDisplayName() + " begins to fade.")
+                    Component.literal("The " + typeText + " energy of " + getDisplayName() + " begins to fade.")
                         .withStyle(ChatFormatting.GRAY)
                 );
                 player.level().playSound(null, player.blockPosition(),
@@ -398,7 +348,7 @@ public class JsonCultivationRealm extends CultivationRealm {
                 break;
             case "breakthrough":
                 player.sendSystemMessage(
-                    Component.literal("A breakthrough! Your cultivation has reached new heights!")
+                    Component.literal("A " + typeText + " breakthrough! Your cultivation has reached new heights!")
                         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
                 );
                 player.level().playSound(null, player.blockPosition(),

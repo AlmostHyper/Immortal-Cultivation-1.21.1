@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.cultivation.realms.data;
+package net.hyper.immortalcultivation.cultivation.data;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

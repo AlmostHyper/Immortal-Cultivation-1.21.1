@@ -37,7 +37,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class ICModTickEvent {
 
-    // === PERFORMANCE CONSTANTS ===
+    // === PERFORMANCE CONSTANTS === //
 
     // Base tick intervals (can be dynamically adjusted)
     private static final int BASE_CULTIVATION_INTERVAL = 4;     // 5 times per second
@@ -60,7 +60,7 @@ public class ICModTickEvent {
     private static final int MAX_PLAYERS_PER_TICK = 10;          // Process max 10 players per tick
     private static final double LOAD_ADJUSTMENT_THRESHOLD = 0.8;  // Adjust intervals at 80% load
 
-    // === CACHING SYSTEM ===
+    // === CACHING SYSTEM === //
 
     /**
      * Multi-tier attachment cache with performance tracking
@@ -74,6 +74,7 @@ public class ICModTickEvent {
         // Secondary attachments (less frequently accessed)
         PlayerTalentAttachment talents;
         PlayerRaceAttachment race;
+        PlayerBreakthroughAttachment breakthrough;
         PlayerPillConsumptionAttachment pillConsumption;
 
         // Cache metadata
@@ -116,6 +117,7 @@ public class ICModTickEvent {
         void refreshSecondary(ServerPlayer player) {
             this.talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
             this.race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+            this.breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
             this.pillConsumption = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
             this.secondaryCacheTime = System.currentTimeMillis();
 
@@ -125,6 +127,9 @@ public class ICModTickEvent {
             }
             if (race != null && race.getPlayerSafe() != player) {
                 race.setPlayer(player);
+            }
+            if (breakthrough != null && breakthrough.getPlayerSafe() != player) {
+                breakthrough.setPlayer(player);
             }
             if (pillConsumption != null && pillConsumption.getPlayerSafe() != player) {
                 pillConsumption.setPlayer(player);
@@ -366,18 +371,26 @@ public class ICModTickEvent {
                 }
             }
 
-            // Process pill consumption using the generic system
-            if (cache.pillConsumption instanceof IDirtyTrackable) {
-                if (processAttachment(player, (IDirtyTrackable) cache.pillConsumption,
-                    currentSecondaryInterval, "pill consumption", TickOperation.SECONDARY_SYSTEMS)) {
-                    processed = true;
-                }
-            }
-
             // Process race using the generic system
             if (cache.race instanceof IDirtyTrackable) {
                 if (processAttachment(player, (IDirtyTrackable) cache.race,
                     currentSecondaryInterval, "race", TickOperation.SECONDARY_SYSTEMS)) {
+                    processed = true;
+                }
+            }
+
+            // Process breakthrough using the generic system
+            if (cache.breakthrough instanceof IDirtyTrackable) {
+                if (processAttachment(player, (IDirtyTrackable) cache.breakthrough,
+                    currentSecondaryInterval, "breakthrough", TickOperation.SECONDARY_SYSTEMS)) {
+                    processed = true;
+                }
+            }
+
+            // Process pill consumption using the generic system
+            if (cache.pillConsumption instanceof IDirtyTrackable) {
+                if (processAttachment(player, (IDirtyTrackable) cache.pillConsumption,
+                    currentSecondaryInterval, "pill consumption", TickOperation.SECONDARY_SYSTEMS)) {
                     processed = true;
                 }
             }

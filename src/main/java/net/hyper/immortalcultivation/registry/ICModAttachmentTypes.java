@@ -11,15 +11,21 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 public class ICModAttachmentTypes {
     public static final DeferredRegister<AttachmentType<?>> REGISTRY = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, ImmortalCultivation.MOD_ID);
 
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerTalentAttachment>> PLAYER_TALENTS;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerRaceAttachment>> PLAYER_RACE;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerCultivationAttachment>> PLAYER_CULTIVATION;
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerBreakthroughAttachment>> PLAYER_BREAKTHROUGH;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerResourceAttachment>> PLAYER_RESOURCES;
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerTalentAttachment>> PLAYER_TALENTS;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerCombatStatsAttachment>> PLAYER_COMBAT_STATS;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerPillConsumptionAttachment>> PLAYER_PILL_CONSUMPTION;
 
     static {
-        // CRITICAL: Use custom serializers instead of CODECs to ensure player references are set during deserialization
+        PLAYER_TALENTS = REGISTRY.register("player_talent", () ->
+            AttachmentType.builder(() -> new PlayerTalentAttachment())
+                .serialize(new PlayerTalentAttachment.Serializer())
+                .copyOnDeath()
+                .build());
+
         PLAYER_RACE = REGISTRY.register("player_race", () ->
             AttachmentType.builder(() -> new PlayerRaceAttachment())
                 .serialize(new PlayerRaceAttachment.Serializer())
@@ -32,15 +38,15 @@ public class ICModAttachmentTypes {
                 .copyOnDeath()
                 .build());
 
-        PLAYER_RESOURCES = REGISTRY.register("player_resource", () ->
-            AttachmentType.builder(() -> new PlayerResourceAttachment())
-                .serialize(new PlayerResourceAttachment.Serializer())
+        PLAYER_BREAKTHROUGH = REGISTRY.register("player_breakthrough", () ->
+            AttachmentType.builder(() -> new PlayerBreakthroughAttachment())
+                .serialize(new PlayerBreakthroughAttachment.Serializer())
                 .copyOnDeath()
                 .build());
 
-        PLAYER_TALENTS = REGISTRY.register("player_talent", () ->
-            AttachmentType.builder(() -> new PlayerTalentAttachment())
-                .serialize(new PlayerTalentAttachment.Serializer())
+        PLAYER_RESOURCES = REGISTRY.register("player_resources", () ->
+            AttachmentType.builder(() -> new PlayerResourceAttachment())
+                .serialize(new PlayerResourceAttachment.Serializer())
                 .copyOnDeath()
                 .build());
 

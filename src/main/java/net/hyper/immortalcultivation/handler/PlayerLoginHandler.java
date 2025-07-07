@@ -4,7 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.cultivation.SpiritualRootType;
 import net.hyper.immortalcultivation.cultivation.PhysiqueType;
-import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.cultivation.CultivationRealm;
 import net.hyper.immortalcultivation.network.server.OpenRaceSelectionSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;

@@ -1,8 +1,8 @@
 package net.hyper.immortalcultivation.registry;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.cultivation.realms.*;
-import net.hyper.immortalcultivation.cultivation.realms.data.CultivationRealmLoader;
+import net.hyper.immortalcultivation.cultivation.CultivationRealm;
+import net.hyper.immortalcultivation.cultivation.data.CultivationRealmLoader;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
