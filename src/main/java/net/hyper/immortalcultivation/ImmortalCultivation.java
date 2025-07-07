@@ -1,10 +1,9 @@
 package net.hyper.immortalcultivation;
 
-import net.hyper.immortalcultivation.handler.CultivationTickHandler;
+import net.hyper.immortalcultivation.event.ICModTickEvent;
 import net.hyper.immortalcultivation.handler.ICModHealthHandler;
 import net.hyper.immortalcultivation.handler.ICModImmunityHandler;
 import net.hyper.immortalcultivation.registry.*;
-import net.hyper.immortalcultivation.ui.menus.PillFurnaceMenu;
 import net.hyper.immortalcultivation.ui.screens.PillFurnaceScreen;
 import org.slf4j.Logger;
 
@@ -51,7 +50,7 @@ public class ImmortalCultivation
 
         NeoForge.EVENT_BUS.register(ICModImmunityHandler.class);
         NeoForge.EVENT_BUS.register(ICModHealthHandler.class);
-        NeoForge.EVENT_BUS.register(CultivationTickHandler.class);
+        NeoForge.EVENT_BUS.register(ICModTickEvent.class);
 
         LOGGER.info("Handlers registered successfully!");
 

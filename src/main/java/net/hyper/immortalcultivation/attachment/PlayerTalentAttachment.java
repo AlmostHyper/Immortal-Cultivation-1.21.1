@@ -56,7 +56,7 @@ public class PlayerTalentAttachment {
     }
 
     @Nullable
-    protected Player getPlayerSafe() {
+    public Player getPlayerSafe() {
         if (player != null && player.isAlive()) {
             return player;
         }

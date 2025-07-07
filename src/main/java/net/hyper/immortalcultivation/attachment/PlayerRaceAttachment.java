@@ -51,7 +51,7 @@ public class PlayerRaceAttachment {
     }
 
     @Nullable
-    protected Player getPlayerSafe() {
+    public Player getPlayerSafe() {
         if (player != null && player.isAlive()) {
             return player;
         }
