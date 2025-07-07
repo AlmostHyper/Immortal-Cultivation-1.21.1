@@ -211,6 +211,46 @@ public class CombatStatsEventHandler {
         }
     }
 
+    /**
+     * Handle jump height enhancement through LivingJumpEvent
+     */
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void onLivingJump(LivingEvent.LivingJumpEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        try {
+            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            if (combatStats == null) {
+                return;
+            }
+
+            double jumpMultiplier = combatStats.getEffectiveJumpHeightMultiplier();
+
+            if (jumpMultiplier > 0.0) {
+                // Get current movement and only modify Y if it's a fresh jump
+                Vec3 currentMovement = player.getDeltaMovement();
+
+                // Only enhance if this looks like a fresh jump (Y velocity around vanilla jump)
+                if (currentMovement.y > 0.3 && currentMovement.y < 0.5) {
+                    // Enhance the existing jump velocity instead of replacing it
+                    double enhancedY = currentMovement.y * (1.0 + jumpMultiplier);
+                    player.setDeltaMovement(currentMovement.x, enhancedY, currentMovement.z);
+
+                    ImmortalCultivation.LOGGER.debug("Enhanced jump for {}: {}% boost ({} -> {})",
+                        player.getName().getString(),
+                        String.format("%.1f", jumpMultiplier * 100),
+                        String.format("%.3f", currentMovement.y),
+                        String.format("%.3f", enhancedY));
+                }
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying jump height bonus for player {}",
+                player.getName().getString(), e);
+        }
+    }
+
     // === UTILITY METHODS ===
 
     /**
@@ -307,6 +347,42 @@ public class CombatStatsEventHandler {
         }
     }
 
+    /**
+     * Detailed attribute modifier debugging
+     */
+    public static void debugAttributeModifiers(ServerPlayer player) {
+        try {
+            ImmortalCultivation.LOGGER.info("=== DETAILED ATTRIBUTE DEBUG FOR {} ===", player.getName().getString());
+
+            // Movement Speed Debug
+            AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (speedAttr != null) {
+                ImmortalCultivation.LOGGER.info("MOVEMENT SPEED:");
+                ImmortalCultivation.LOGGER.info("  Base Value: {}", speedAttr.getBaseValue());
+                ImmortalCultivation.LOGGER.info("  Final Value: {}", speedAttr.getValue());
+                ImmortalCultivation.LOGGER.info("  Difference: {}", speedAttr.getValue() - speedAttr.getBaseValue());
+
+                // Check if our modifier exists
+                AttributeModifier ourModifier = speedAttr.getModifier(CULTIVATION_MOVEMENT_SPEED_ID);
+                if (ourModifier != null) {
+                    ImmortalCultivation.LOGGER.info("  Our Modifier: amount={}, operation={}",
+                        ourModifier.amount(), ourModifier.operation());
+                } else {
+                    ImmortalCultivation.LOGGER.warn("  OUR MODIFIER IS MISSING!");
+                }
+
+                // List ALL modifiers
+                ImmortalCultivation.LOGGER.info("  All Modifiers ({}):", speedAttr.getModifiers().size());
+                speedAttr.getModifiers().forEach(modifier -> {
+                    ImmortalCultivation.LOGGER.info("    - ID: {}, Amount: {}, Op: {}",
+                        modifier.id(), modifier.amount(), modifier.operation());
+                });
+            }
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error debugging attribute modifiers", e);
+        }
+    }
+
     private static void applyCombatStatsModifiers(ServerPlayer player) {
         try {
             PlayerCombatStatsAttachment combatStats = PlayerCombatStatsAttachment.getOrCreate(player);
@@ -316,7 +392,10 @@ public class CombatStatsEventHandler {
             double speedMultiplier = combatStats.getEffectiveMovementSpeedMultiplier();
             double jumpMultiplier = combatStats.getEffectiveJumpHeightMultiplier();
 
-            // Apply attack damage modifier
+            ImmortalCultivation.LOGGER.info("Applying modifiers for {}: ATK={}, SPD={}, JUMP={}",
+                player.getName().getString(), attackMultiplier, speedMultiplier, jumpMultiplier);
+
+            // Apply attack damage modifier (this one works)
             AttributeInstance attackAttr = player.getAttribute(Attributes.ATTACK_DAMAGE);
             if (attackAttr != null) {
                 attackAttr.removeModifier(CULTIVATION_ATTACK_DAMAGE_ID);
@@ -326,19 +405,63 @@ public class CombatStatsEventHandler {
                         attackMultiplier - 1.0,
                         AttributeModifier.Operation.ADD_MULTIPLIED_BASE
                     ));
+                    ImmortalCultivation.LOGGER.info("Applied attack modifier: +{}%", (attackMultiplier - 1.0) * 100);
                 }
             }
 
-            // Apply movement speed modifier
+            // Apply movement speed modifier with detailed logging
             AttributeInstance speedAttr = player.getAttribute(Attributes.MOVEMENT_SPEED);
             if (speedAttr != null) {
+                double oldValue = speedAttr.getValue();
+                double baseValue = speedAttr.getBaseValue();
+
+                // Remove existing modifier first
+                boolean hadModifier = speedAttr.getModifier(CULTIVATION_MOVEMENT_SPEED_ID) != null;
                 speedAttr.removeModifier(CULTIVATION_MOVEMENT_SPEED_ID);
-                if (speedMultiplier != 0.0) {
-                    speedAttr.addPermanentModifier(new AttributeModifier(
+
+                ImmortalCultivation.LOGGER.info("MOVEMENT SPEED DEBUG for {}:", player.getName().getString());
+                ImmortalCultivation.LOGGER.info("  Base Speed: {}", baseValue);
+                ImmortalCultivation.LOGGER.info("  Speed Before: {}", oldValue);
+                ImmortalCultivation.LOGGER.info("  Had Previous Modifier: {}", hadModifier);
+                ImmortalCultivation.LOGGER.info("  Speed Multiplier to Apply: {} ({}%)", speedMultiplier, speedMultiplier * 100);
+
+                if (speedMultiplier > 0.0) {
+                    // Calculate absolute speed increase for cumulative bonuses
+                    double speedIncrease = baseValue * speedMultiplier;
+
+                    ImmortalCultivation.LOGGER.info("  Calculated Speed Increase: {} (base {} * multiplier {})",
+                        speedIncrease, baseValue, speedMultiplier);
+
+                    // Use ADD_VALUE for predictable cumulative results
+                    AttributeModifier modifier = new AttributeModifier(
                         CULTIVATION_MOVEMENT_SPEED_ID,
-                        speedMultiplier,
+                        speedIncrease,
                         AttributeModifier.Operation.ADD_VALUE
-                    ));
+                    );
+
+                    speedAttr.addPermanentModifier(modifier);
+
+                    // Immediately check results
+                    double newValue = speedAttr.getValue();
+                    AttributeModifier appliedModifier = speedAttr.getModifier(CULTIVATION_MOVEMENT_SPEED_ID);
+
+                    ImmortalCultivation.LOGGER.info("  Speed After Application: {}", newValue);
+                    ImmortalCultivation.LOGGER.info("  Actual Speed Change: {}", newValue - baseValue);
+                    ImmortalCultivation.LOGGER.info("  Modifier Applied Successfully: {}", appliedModifier != null);
+
+                    if (appliedModifier != null) {
+                        ImmortalCultivation.LOGGER.info("  Applied Modifier Details: amount={}, operation={}",
+                            appliedModifier.amount(), appliedModifier.operation());
+                    }
+
+                    // Check if speed actually changed meaningfully
+                    if (Math.abs(newValue - baseValue) < 0.001) {
+                        ImmortalCultivation.LOGGER.error("  ERROR: Speed did not change despite modifier application!");
+                    } else {
+                        ImmortalCultivation.LOGGER.info("  SUCCESS: Speed increased by {}", newValue - baseValue);
+                    }
+                } else {
+                    ImmortalCultivation.LOGGER.info("  No speed bonus to apply (multiplier: {})", speedMultiplier);
                 }
             }
 
@@ -346,14 +469,18 @@ public class CombatStatsEventHandler {
             AttributeInstance stepAttr = player.getAttribute(Attributes.STEP_HEIGHT);
             if (stepAttr != null) {
                 stepAttr.removeModifier(CULTIVATION_JUMP_HEIGHT_ID);
-                if (jumpMultiplier != 0.0) {
+                if (jumpMultiplier > 0.0) {
                     stepAttr.addPermanentModifier(new AttributeModifier(
                         CULTIVATION_JUMP_HEIGHT_ID,
                         jumpMultiplier,
                         AttributeModifier.Operation.ADD_VALUE
                     ));
+                    ImmortalCultivation.LOGGER.info("Applied step height modifier: +{}", jumpMultiplier);
                 }
             }
+
+            // Detailed debug output
+            debugAttributeModifiers(player);
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying combat stats modifiers for player {}",
@@ -413,9 +540,51 @@ public class CombatStatsEventHandler {
 
         if (bonusPercent <= 0.1) return;
 
-        // Add cultivation bonus to tooltip
-        tooltip.add(Component.literal("Cultivation Bonus: +" + String.format("%.1f", bonusPercent) + "%")
-            .withStyle(ChatFormatting.GOLD));
+        // Calculate attack multiplier for damage calculation
+        double attackMultiplier = 1.0 + attackBonus;
+
+        // Get the weapon's base damage
+        double baseDamage = 0;
+        if (stack.getItem() instanceof SwordItem sword) {
+            baseDamage = sword.getTier().getAttackDamageBonus() + 4; // 4 is base player damage
+        } else if (stack.getItem() instanceof AxeItem axe) {
+            baseDamage = axe.getTier().getAttackDamageBonus() + 6; // 6 is base axe damage
+        }
+
+        double totalDamage = baseDamage * attackMultiplier;
+
+        // Look for existing attack damage line in tooltip
+        boolean foundAndModified = false;
+        for (int i = 0; i < tooltip.size(); i++) {
+            Component component = tooltip.get(i);
+            String text = component.getString();
+
+            // Look for attack damage line and replace it
+            if (text.contains("Attack Damage") && text.contains(" ")) {
+                String modifiedText = String.format(" %.1f Attack Damage", totalDamage);
+                tooltip.set(i, Component.literal(modifiedText).withStyle(ChatFormatting.DARK_GREEN));
+
+                // Add explanation line
+                tooltip.add(i + 1, Component.literal(
+                    String.format("  §7(%.1f base + %.0f%% cultivation)", baseDamage, bonusPercent)
+                ).withStyle(ChatFormatting.GRAY));
+
+                foundAndModified = true;
+                break;
+            }
+        }
+
+        // If we didn't find an existing line, add our own
+        if (!foundAndModified) {
+            tooltip.add(Component.literal("").withStyle(ChatFormatting.GRAY)); // Empty line
+            tooltip.add(Component.literal("When in Main Hand:").withStyle(ChatFormatting.GRAY));
+            tooltip.add(Component.literal(
+                String.format(" %.1f Attack Damage", totalDamage)
+            ).withStyle(ChatFormatting.DARK_GREEN));
+            tooltip.add(Component.literal(
+                String.format("  §7(%.1f base + %.0f%% cultivation)", baseDamage, bonusPercent)
+            ).withStyle(ChatFormatting.GRAY));
+        }
     }
 
     private static void forceSyncCombatStats(ServerPlayer player) {

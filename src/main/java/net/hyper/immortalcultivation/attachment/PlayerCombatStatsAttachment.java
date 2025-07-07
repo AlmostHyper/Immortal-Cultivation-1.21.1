@@ -368,28 +368,26 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     /**
      * Update combat stats from server data (called by sync packet)
      */
-    public void updateFromServer(double attackBonus, double speedBonus, double jumpBonus) {
+    public void updateFromServer(double attackBonus, double speedBonus, double jumpBonus,
+                                 double permAttack, double permSpeed, double permJump) {
         try {
-            // Store display values separately
-            double oldAttackBonus = this.displayAttackBonus;
-
+            // Store display values
             this.displayAttackBonus = attackBonus;
             this.displaySpeedBonus = speedBonus;
             this.displayJumpBonus = jumpBonus;
+
+            // CRITICAL: Also update permanent values on client
+            this.permanentAttackDamageBonus = permAttack;
+            this.permanentMovementSpeedBonus = permSpeed;
+            this.permanentJumpHeightBonus = permJump;
+
             this.needsSync = false;
 
-            ImmortalCultivation.LOGGER.debug("Updated combat stats from server: ATK+{}% (was {}%), SPD+{}%, JUMP+{}%",
-                String.format("%.1f", attackBonus * 100),
-                String.format("%.1f", oldAttackBonus * 100),
-                String.format("%.1f", speedBonus * 100),
-                String.format("%.1f", jumpBonus * 100));
+            ImmortalCultivation.LOGGER.debug("Updated combat stats from server: ATK+{}% (perm: {}), SPD+{}% (perm: {}), JUMP+{}% (perm: {})",
+                String.format("%.1f", attackBonus * 100), String.format("%.1f", permAttack * 100),
+                String.format("%.1f", speedBonus * 100), String.format("%.1f", permSpeed * 100),
+                String.format("%.1f", jumpBonus * 100), String.format("%.1f", permJump * 100));
 
-            // Log if there was a significant change
-            if (Math.abs(attackBonus - oldAttackBonus) > 0.01) {
-                ImmortalCultivation.LOGGER.info("Combat stats changed on client - Attack bonus: {}% -> {}%",
-                    String.format("%.1f", oldAttackBonus * 100),
-                    String.format("%.1f", attackBonus * 100));
-            }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error updating combat stats from server", e);
         }
@@ -431,10 +429,11 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
                     String.format("%.1f", effectiveSpeedBonus * 100),
                     String.format("%.1f", effectiveJumpBonus * 100));
 
-                // Send sync packet with effective values
+                // Send sync packet with BOTH effective AND permanent values
                 PacketDistributor.sendToPlayer(serverPlayer,
                     new CombatStatsSyncPacket(
-                        effectiveAttackBonus, effectiveSpeedBonus, effectiveJumpBonus));
+                        effectiveAttackBonus, effectiveSpeedBonus, effectiveJumpBonus,
+                        permanentAttackDamageBonus, permanentMovementSpeedBonus, permanentJumpHeightBonus));
 
                 this.lastSyncTime = System.currentTimeMillis();
                 this.needsSync = false;

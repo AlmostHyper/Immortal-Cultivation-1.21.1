@@ -18,7 +18,11 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public record CombatStatsSyncPacket(
     double attackDamageBonus,
     double movementSpeedBonus,
-    double jumpHeightBonus
+    double jumpHeightBonus,
+    // Add permanent values
+    double permanentAttackBonus,
+    double permanentSpeedBonus,
+    double permanentJumpBonus
 ) implements CustomPacketPayload {
 
     public static final CustomPacketPayload.Type<CombatStatsSyncPacket> TYPE =
@@ -29,6 +33,9 @@ public record CombatStatsSyncPacket(
             ByteBufCodecs.DOUBLE, CombatStatsSyncPacket::attackDamageBonus,
             ByteBufCodecs.DOUBLE, CombatStatsSyncPacket::movementSpeedBonus,
             ByteBufCodecs.DOUBLE, CombatStatsSyncPacket::jumpHeightBonus,
+            ByteBufCodecs.DOUBLE, CombatStatsSyncPacket::permanentAttackBonus,
+            ByteBufCodecs.DOUBLE, CombatStatsSyncPacket::permanentSpeedBonus,
+            ByteBufCodecs.DOUBLE, CombatStatsSyncPacket::permanentJumpBonus,
             CombatStatsSyncPacket::new
         );
 
@@ -52,7 +59,11 @@ public record CombatStatsSyncPacket(
                             String.format("%.1f", msg.movementSpeedBonus() * 100),
                             String.format("%.1f", msg.jumpHeightBonus() * 100));
 
-                        combatStats.updateFromServer(msg.attackDamageBonus(), msg.movementSpeedBonus(), msg.jumpHeightBonus());
+                        // Update both display AND permanent values
+                        combatStats.updateFromServer(
+                            msg.attackDamageBonus(), msg.movementSpeedBonus(), msg.jumpHeightBonus(),
+                            msg.permanentAttackBonus(), msg.permanentSpeedBonus(), msg.permanentJumpBonus()
+                        );
 
                         ImmortalCultivation.LOGGER.debug("Combat stats updated on client for player: {}",
                             player.getName().getString());
@@ -60,7 +71,7 @@ public record CombatStatsSyncPacket(
                         ImmortalCultivation.LOGGER.warn("Received combat stats sync but player is null!");
                     }
                 } catch (Exception e) {
-                    ImmortalCultivation.LOGGER.error("Error handling combat stats sync on client", e);
+                    ImmortalCultivation.LOGGER.error("Error handling combat stats sync", e);
                 }
             });
         }

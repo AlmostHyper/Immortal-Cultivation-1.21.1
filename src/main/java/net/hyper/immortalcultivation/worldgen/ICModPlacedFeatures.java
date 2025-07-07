@@ -34,7 +34,7 @@ public class ICModPlacedFeatures {
         // === Spirit Stones === //
 
         register(context, LOW_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_LOW_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(12,
+            ICModOrePlacements.commonOrePlacement(9,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(480))));
 
         register(context, MEDIUM_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_MEDIUM_QUALITY_SPIRIT_STONE_ORE_KEY),
