@@ -15,6 +15,19 @@ package net.hyper.immortalcultivation.interfaces;
 public interface IDirtyTrackable {
 
     /**
+     * Check if this attachment should sync based on its dirty flag and internal criteria
+     * @return true if sync should happen now
+     */
+    public boolean shouldSyncNow();
+
+    /**
+     * Force synchronization of this attachment to the client.
+     * This should handle creating the appropriate packet, sending it,
+     * and clearing the dirty flag upon success.
+     */
+    void forceSync();
+
+    /**
      * Mark this attachment as dirty (needs sync)
      */
     void markDirty();

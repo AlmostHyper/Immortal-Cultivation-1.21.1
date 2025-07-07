@@ -9,7 +9,7 @@ import net.minecraft.nbt.CompoundTag;
  * This provides thread-safe dirty flag tracking with optional change counting
  * for advanced sync optimization.
  */
-public class DirtyTracker implements IDirtyTrackable {
+public abstract class DirtyTrackerHelper implements IDirtyTrackable {
 
     private volatile boolean dirty = false;
     private volatile long changeCounter = 0;
@@ -18,6 +18,21 @@ public class DirtyTracker implements IDirtyTrackable {
     // NBT tags for serialization
     private static final String TAG_CHANGE_COUNTER = "ChangeCounter";
     private static final String TAG_LAST_SYNC_TIME = "LastSyncTime";
+
+    /**
+     * Check if this attachment should sync based on its dirty flag and internal criteria
+     * @return true if sync should happen now
+     */
+    @Override
+    public abstract boolean shouldSyncNow();
+
+    /**
+     * Force synchronization of this attachment to the client.
+     * This should handle creating the appropriate packet, sending it,
+     * and clearing the dirty flag upon success.
+     */
+    @Override
+    public abstract void forceSync();
 
     /**
      * Mark as dirty (needs sync)
@@ -126,7 +141,7 @@ public class DirtyTracker implements IDirtyTrackable {
 
     @Override
     public String toString() {
-        return String.format("DirtyTracker{dirty=%s, changes=%d, lastSync=%d}",
+        return String.format("DirtyTrackerHelper{dirty=%s, changes=%d, lastSync=%d}",
             dirty, changeCounter, lastSyncTime);
     }
 }

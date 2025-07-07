@@ -3,11 +3,8 @@ package net.hyper.immortalcultivation.attachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.interfaces.IHealthData;
-import net.hyper.immortalcultivation.interfaces.IQiData;
-import net.hyper.immortalcultivation.interfaces.IBodyData;
-import net.hyper.immortalcultivation.helper.DirtyTracker;
-import net.hyper.immortalcultivation.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.interfaces.*;
+import net.hyper.immortalcultivation.helper.DirtyTrackerHelper;
 import net.hyper.immortalcultivation.network.server.ResourceSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;
@@ -26,7 +23,7 @@ import javax.annotation.Nullable;
  * This system never calculates stats from "current realm" - only from accumulated permanent bonuses.
  * Each JSON realm defines the permanent bonus you GET when reaching it, not base stats while in it.
  */
-public class PlayerResourceAttachment implements IDirtyTrackable, IHealthData, IQiData, IBodyData {
+public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData, ITickable, IDirtyTrackable {
 
     // === Player Reference ===
     @Nullable
@@ -64,10 +61,17 @@ public class PlayerResourceAttachment implements IDirtyTrackable, IHealthData, I
     private double bodyRegenFraction = 0.0;
 
     // === SYNC MANAGEMENT ===
-    private final DirtyTracker dirtyTracker = new DirtyTracker();
+    private final DirtyTrackerHelper dirtyTrackerHelper = new DirtyTrackerHelper() {
+        @Override
+        public void forceSync() {
+            PlayerResourceAttachment.this.forceSync();
+        }
 
-    private int tickCounter = 0;
-    private static final int SYNC_INTERVAL = 10;
+        @Override
+        public boolean shouldSyncNow() {
+            return shouldSync(1500, 1); // Fast sync for resources
+        }
+    };
 
     // === CONSTRUCTORS ===
     public PlayerResourceAttachment() {}
@@ -629,13 +633,6 @@ public class PlayerResourceAttachment implements IDirtyTrackable, IHealthData, I
 
         // CRITICAL: Update vanilla health bar every tick to ensure it stays synced
         updateVanillaHealthBar();
-
-        // Handle sync
-        tickCounter++;
-        if (tickCounter >= SYNC_INTERVAL) {
-            tickCounter = 0;
-            syncIfNeeded();
-        }
     }
 
     private void applyRegeneration() {
@@ -692,17 +689,6 @@ public class PlayerResourceAttachment implements IDirtyTrackable, IHealthData, I
 
     // === SYNC MANAGEMENT ===
 
-    private void syncIfNeeded() {
-        // Use dirty tracker for efficient sync checking
-        if (dirtyTracker.shouldSync(3000, 5)) { // Every 3 seconds OR 5 changes
-            syncToClient();
-        }
-    }
-
-    private long calculateStateHash() {
-        return (currentHealth << 42) | (currentQi << 21) | currentBody;
-    }
-
     private void syncToClient() {
         if (player instanceof ServerPlayer serverPlayer) {
             try {
@@ -723,21 +709,6 @@ public class PlayerResourceAttachment implements IDirtyTrackable, IHealthData, I
                 ImmortalCultivation.LOGGER.error("Error syncing resource data for player {}",
                     player.getName().getString(), e);
             }
-        }
-    }
-
-
-    /**
-     * CRITICAL: Force sync method for dimension changes and initialization.
-     * This ensures the client receives updated data even if internal state hasn't changed.
-     */
-    public void forceSync() {
-        try {
-            syncToClient(); // This will clear dirty flag
-            ImmortalCultivation.LOGGER.debug("Force synced resource data for player: {}",
-                player != null ? player.getName().getString() : "unknown");
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error force syncing resource data", e);
         }
     }
 
@@ -887,32 +858,41 @@ public class PlayerResourceAttachment implements IDirtyTrackable, IHealthData, I
     // === DIRTY FLAG IMPLEMENTATION === //
 
     @Override
+    public boolean shouldSyncNow() {
+        return dirtyTrackerHelper.shouldSync(1500, 1);
+    }
+
+    @Override
+    public void forceSync() {
+    }
+
+    @Override
     public void markDirty() {
-        dirtyTracker.markDirty();
+        dirtyTrackerHelper.markDirty();
     }
 
     @Override
     public boolean isDirty() {
-        return dirtyTracker.isDirty();
+        return dirtyTrackerHelper.isDirty();
     }
 
     @Override
     public void clearDirty() {
-        dirtyTracker.clearDirty();
+        dirtyTrackerHelper.clearDirty();
     }
 
     @Override
     public long getChangeCounter() {
-        return dirtyTracker.getChangeCounter();
+        return dirtyTrackerHelper.getChangeCounter();
     }
 
     @Override
     public void incrementChangeCounter() {
-        dirtyTracker.incrementChangeCounter();
+        dirtyTrackerHelper.incrementChangeCounter();
     }
 
     @Override
     public void resetChangeCounter() {
-        dirtyTracker.resetChangeCounter();
+        dirtyTrackerHelper.resetChangeCounter();
     }
 }

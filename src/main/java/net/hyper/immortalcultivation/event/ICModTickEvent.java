@@ -2,6 +2,9 @@ package net.hyper.immortalcultivation.event;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
+import net.hyper.immortalcultivation.helper.DirtyTrackerHelper;
+import net.hyper.immortalcultivation.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.interfaces.ITickable;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -184,9 +187,6 @@ public class ICModTickEvent {
     private static final EnumMap<TickOperation, AtomicLong> operationTimes = new EnumMap<>(TickOperation.class);
     private static final EnumMap<TickOperation, AtomicInteger> operationCounts = new EnumMap<>(TickOperation.class);
 
-    // Sync tracking to prevent sync spam
-    private static final Map<UUID, Map<TickOperation, Long>> lastSyncTimes = new ConcurrentHashMap<>();
-
     static {
         for (TickOperation op : TickOperation.values()) {
             operationTimes.put(op, new AtomicLong(0));
@@ -300,88 +300,51 @@ public class ICModTickEvent {
 
     // === PROCESSING METHODS ===
 
-    private static boolean processCultivation(ServerPlayer player, AttachmentCache cache, long startTime) {
+    /**
+     * Generic attachment processing method that works with any IDirtyTrackable
+     */
+    private static boolean processAttachment(ServerPlayer player, IDirtyTrackable attachment,
+                                             int tickInterval, String attachmentName, TickOperation operation) {
+        if (attachment == null) return false;
+
         long operationStart = System.nanoTime();
 
         try {
-            PlayerCultivationAttachment cultivation = cache.cultivation;
-            if (cultivation == null) return false;
-
-            // Call the original tick method - let it handle its own logic
-            // But control sync frequency through our unified system
-            for (int i = 0; i < currentCultivationInterval; i++) {
-                cultivation.tick();
+            // Call tick method if the attachment supports it
+            if (attachment instanceof ITickable tickable) {
+                for (int i = 0; i < tickInterval; i++) {
+                    tickable.tick();
+                }
             }
 
-            // Override sync behavior: Force sync at our controlled interval (every 5 seconds)
-            if (shouldSync(player.getUUID(), TickOperation.CULTIVATION, 100)) {
-                cultivation.forceSync();
+            // Use the attachment's intelligent sync system
+            if (attachment.shouldSyncNow()) {
+                attachment.forceSync();
             }
 
             return true;
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.warn("Error processing cultivation for player {}: {}",
-                player.getName().getString(), e.getMessage());
+            ImmortalCultivation.LOGGER.warn("Error processing {} for player {}: {}",
+                attachmentName, player.getName().getString(), e.getMessage());
             return false;
         } finally {
             long duration = System.nanoTime() - operationStart;
-            operationTimes.get(TickOperation.CULTIVATION).addAndGet(duration);
-            operationCounts.get(TickOperation.CULTIVATION).incrementAndGet();
+            operationTimes.get(operation).addAndGet(duration);
+            operationCounts.get(operation).incrementAndGet();
         }
     }
 
+    // Update the calling methods:
     private static boolean processResources(ServerPlayer player, AttachmentCache cache, long startTime) {
-        long operationStart = System.nanoTime();
+        return processAttachment(player, cache.resources, currentResourceInterval, "resources", TickOperation.RESOURCES);
+    }
 
-        try {
-            PlayerResourceAttachment resources = cache.resources;
-            if (resources == null) return false;
-
-            // Call the main tick method for each missed tick to maintain proper timing
-            for (int i = 0; i < currentResourceInterval; i++) {
-                resources.tick();
-            }
-
-            // Handle sync separately (every 3 seconds)
-            if (shouldSync(player.getUUID(), TickOperation.RESOURCES, 60)) {
-                resources.forceSync();
-            }
-
-            return true;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.warn("Error processing resources for player {}: {}",
-                player.getName().getString(), e.getMessage());
-            return false;
-        } finally {
-            long duration = System.nanoTime() - operationStart;
-            operationTimes.get(TickOperation.RESOURCES).addAndGet(duration);
-            operationCounts.get(TickOperation.RESOURCES).incrementAndGet();
-        }
+    private static boolean processCultivation(ServerPlayer player, AttachmentCache cache, long startTime) {
+        return processAttachment(player, cache.cultivation, currentCultivationInterval, "cultivation", TickOperation.CULTIVATION);
     }
 
     private static boolean processCombatStats(ServerPlayer player, AttachmentCache cache, long startTime) {
-        long operationStart = System.nanoTime();
-
-        try {
-            PlayerCombatStatsAttachment combatStats = cache.combatStats;
-            if (combatStats == null) return false;
-
-            // Combat stats don't need rapid ticking, just periodic sync
-            // Handle sync every 10 seconds since combat stats change less frequently
-            if (shouldSync(player.getUUID(), TickOperation.COMBAT_STATS, 200)) {
-                combatStats.forceSync();
-            }
-
-            return true;
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.warn("Error processing combat stats for player {}: {}",
-                player.getName().getString(), e.getMessage());
-            return false;
-        } finally {
-            long duration = System.nanoTime() - operationStart;
-            operationTimes.get(TickOperation.COMBAT_STATS).addAndGet(duration);
-            operationCounts.get(TickOperation.COMBAT_STATS).incrementAndGet();
-        }
+        return processAttachment(player, cache.combatStats, currentCombatStatsInterval, "combat stats", TickOperation.COMBAT_STATS);
     }
 
     private static boolean processSecondarySystem(ServerPlayer player, AttachmentCache cache, long startTime) {
@@ -393,21 +356,30 @@ public class ICModTickEvent {
                 cache.refreshSecondary(player);
             }
 
-            // Process secondary systems (talents, pills, etc.)
             boolean processed = false;
 
-            // Process talents if available
-            if (cache.talents != null) {
-                // Assuming talents have a tick method - adjust based on your implementation
-                // cache.talents.tick();
-                processed = true;
+            // Process talents using the generic system
+            if (cache.talents instanceof IDirtyTrackable) {
+                if (processAttachment(player, (IDirtyTrackable) cache.talents,
+                    currentSecondaryInterval, "talents", TickOperation.SECONDARY_SYSTEMS)) {
+                    processed = true;
+                }
             }
 
-            // Process pill consumption tracking
-            if (cache.pillConsumption != null) {
-                // Assuming pill consumption has tick logic - adjust based on your implementation
-                // cache.pillConsumption.tick();
-                processed = true;
+            // Process pill consumption using the generic system
+            if (cache.pillConsumption instanceof IDirtyTrackable) {
+                if (processAttachment(player, (IDirtyTrackable) cache.pillConsumption,
+                    currentSecondaryInterval, "pill consumption", TickOperation.SECONDARY_SYSTEMS)) {
+                    processed = true;
+                }
+            }
+
+            // Process race using the generic system
+            if (cache.race instanceof IDirtyTrackable) {
+                if (processAttachment(player, (IDirtyTrackable) cache.race,
+                    currentSecondaryInterval, "race", TickOperation.SECONDARY_SYSTEMS)) {
+                    processed = true;
+                }
             }
 
             return processed;
@@ -420,23 +392,6 @@ public class ICModTickEvent {
             operationTimes.get(TickOperation.SECONDARY_SYSTEMS).addAndGet(duration);
             operationCounts.get(TickOperation.SECONDARY_SYSTEMS).incrementAndGet();
         }
-    }
-
-    // === SYNC MANAGEMENT ===
-
-    /**
-     * Check if enough time has passed since the last sync for this operation
-     */
-    private static boolean shouldSync(UUID playerId, TickOperation operation, int intervalTicks) {
-        Map<TickOperation, Long> playerSyncTimes = lastSyncTimes.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>());
-        Long lastSync = playerSyncTimes.get(operation);
-        long currentTick = globalTickCounter.get();
-
-        if (lastSync == null || currentTick - lastSync >= intervalTicks) {
-            playerSyncTimes.put(operation, currentTick);
-            return true;
-        }
-        return false;
     }
 
     // === CACHE MANAGEMENT ===
@@ -577,7 +532,6 @@ public class ICModTickEvent {
      */
     public static void clearPlayerCache(UUID playerId) {
         attachmentCache.remove(playerId);
-        lastSyncTimes.remove(playerId);
     }
 
     /**
@@ -585,7 +539,6 @@ public class ICModTickEvent {
      */
     public static void clearAllCaches() {
         attachmentCache.clear();
-        lastSyncTimes.clear();
         totalProcessingTime.set(0);
         totalPlayersProcessed.set(0);
         for (TickOperation op : TickOperation.values()) {
