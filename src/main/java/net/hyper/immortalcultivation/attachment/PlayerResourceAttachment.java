@@ -555,11 +555,40 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     public void tick() {
         if (player == null) return;
 
+        // Apply regeneration for all three resources
+        applyRegeneration();
+
         // Handle sync
         tickCounter++;
         if (tickCounter >= SYNC_INTERVAL) {
             tickCounter = 0;
             syncIfNeeded();
+        }
+    }
+
+    private void applyRegeneration() {
+        // Health regeneration
+        if (canRegenerateHealth()) {
+            double healthRegenRate = getEffectiveHealthRegenerationRate();
+            if (healthRegenRate > 0) {
+                regenerateHealth(healthRegenRate / 20.0, false); // Convert per-second to per-tick
+            }
+        }
+
+        // Qi regeneration
+        if (canRegenerateQi()) {
+            double qiRegenRate = getEffectiveQiRegenerationRate();
+            if (qiRegenRate > 0) {
+                regenerateQi(qiRegenRate / 20.0, false); // Convert per-second to per-tick
+            }
+        }
+
+        // Body regeneration
+        if (canRegenerateBody()) {
+            double bodyRegenRate = getEffectiveBodyRegenerationRate();
+            if (bodyRegenRate > 0) {
+                regenerateBody(bodyRegenRate / 20.0, false); // Convert per-second to per-tick
+            }
         }
     }
 
