@@ -15,10 +15,6 @@ public abstract class DirtyTrackerHelper implements IDirtyTrackable {
     private volatile long changeCounter = 0;
     private volatile long lastSyncTime = 0;
 
-    // NBT tags for serialization
-    private static final String TAG_CHANGE_COUNTER = "ChangeCounter";
-    private static final String TAG_LAST_SYNC_TIME = "LastSyncTime";
-
     /**
      * Check if this attachment should sync based on its dirty flag and internal criteria
      * @return true if sync should happen now
@@ -119,29 +115,20 @@ public abstract class DirtyTrackerHelper implements IDirtyTrackable {
         incrementChangeCounter();
     }
 
-    // === SERIALIZATION ===
-
-    /**
-     * Serialize to NBT
-     */
-    public void writeToNBT(CompoundTag tag) {
-        tag.putLong(TAG_CHANGE_COUNTER, changeCounter);
-        tag.putLong(TAG_LAST_SYNC_TIME, lastSyncTime);
-        // Note: dirty flag is not serialized as it's runtime state
-    }
-
-    /**
-     * Deserialize from NBT
-     */
-    public void readFromNBT(CompoundTag tag) {
-        this.changeCounter = tag.getLong(TAG_CHANGE_COUNTER);
-        this.lastSyncTime = tag.getLong(TAG_LAST_SYNC_TIME);
-        this.dirty = true; // Always dirty after loading
-    }
-
     @Override
     public String toString() {
         return String.format("DirtyTrackerHelper{dirty=%s, changes=%d, lastSync=%d}",
             dirty, changeCounter, lastSyncTime);
+    }
+
+    // === CODEC === //
+
+    /**
+     * Restore state from CODEC deserialization
+     */
+    public void restoreFromCodec(long changeCounter, long lastSyncTime) {
+        this.changeCounter = changeCounter;
+        this.lastSyncTime = lastSyncTime;
+        this.dirty = true; // Always dirty after loading
     }
 }

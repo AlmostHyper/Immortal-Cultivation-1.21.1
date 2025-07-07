@@ -4,6 +4,9 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
+import net.hyper.immortalcultivation.helper.DirtyTrackerHelper;
+import net.hyper.immortalcultivation.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.interfaces.ITickable;
 import net.hyper.immortalcultivation.network.server.CombatStatsSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;
@@ -23,16 +26,7 @@ import javax.annotation.Nullable;
  * This system never calculates stats from "current realm" - only from accumulated permanent bonuses.
  * Each JSON realm defines the permanent bonus you GET when reaching it, not base stats while in it.
  */
-public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag> {
-
-    // === CONSTANTS ===
-    private static final String TAG_PERMANENT_ATTACK_BONUS = "PermanentAttackDamageBonus";
-    private static final String TAG_PERMANENT_SPEED_BONUS = "PermanentMovementSpeedBonus";
-    private static final String TAG_PERMANENT_JUMP_BONUS = "PermanentJumpHeightBonus";
-    private static final String TAG_ATTACK_DAMAGE_BONUS = "AttackDamageBonus";
-    private static final String TAG_MOVEMENT_SPEED_BONUS = "MovementSpeedBonus";
-    private static final String TAG_JUMP_HEIGHT_BONUS = "JumpHeightBonus";
-    private static final String TAG_LAST_SYNC_TIME = "LastSyncTime";
+public class PlayerCombatStatsAttachment implements IDirtyTrackable, ITickable {
 
     // === PERMANENT BONUSES (accumulated from realm breakthroughs) ===
     private double permanentAttackDamageBonus = 0.0;
@@ -52,9 +46,6 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     // === INTERNAL TRACKING ===
     @Nullable
     private Player player;
-    private long lastSyncTime = 0;
-    private boolean needsSync = false;
-    private int tickCounter = 0;
 
     // === INITIALIZATION ===
 
@@ -82,8 +73,63 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     // === PERMANENT BONUS SYSTEM ===
 
     /**
+     * Batch multiple permanent bonus changes to reduce sync overhead.
+     * Recommended for realm breakthroughs that grant multiple bonuses.
+     */
+    public void addPermanentBonuses(double attackBonus, double speedBonus, double jumpBonus) {
+        // Validate all inputs first
+        if (attackBonus < 0 || speedBonus < 0 || jumpBonus < 0) {
+            ImmortalCultivation.LOGGER.warn("Attempted to add negative permanent bonuses: ATK={}, SPD={}, JUMP={}",
+                attackBonus, speedBonus, jumpBonus);
+            return;
+        }
+
+        boolean changed = false;
+        StringBuilder logMessage = new StringBuilder();
+        logMessage.append("Player ").append(player != null ? player.getName().getString() : "unknown")
+            .append(" gained permanent bonuses: ");
+
+        if (attackBonus > 0) {
+            this.permanentAttackDamageBonus += attackBonus;
+            logMessage.append(String.format("ATK+%.1f%% (total: %.1f%%), ",
+                attackBonus * 100, this.permanentAttackDamageBonus * 100));
+            changed = true;
+        }
+
+        if (speedBonus > 0) {
+            this.permanentMovementSpeedBonus += speedBonus;
+            logMessage.append(String.format("SPD+%.1f%% (total: %.1f%%), ",
+                speedBonus * 100, this.permanentMovementSpeedBonus * 100));
+            changed = true;
+        }
+
+        if (jumpBonus > 0) {
+            this.permanentJumpHeightBonus += jumpBonus;
+            logMessage.append(String.format("JUMP+%.1f%% (total: %.1f%%)",
+                jumpBonus * 100, this.permanentJumpHeightBonus * 100));
+            changed = true;
+        }
+
+        if (changed) {
+            markDirty();
+
+            // Trigger immediate refresh for consistent behavior
+            if (player instanceof ServerPlayer serverPlayer) {
+                CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+            }
+
+            // Clean up trailing comma if present
+            String finalMessage = logMessage.toString().replaceAll(", $", "");
+            ImmortalCultivation.LOGGER.info(finalMessage);
+        } else {
+            ImmortalCultivation.LOGGER.debug("No valid bonuses to apply for player: {}",
+                player != null ? player.getName().getString() : "unknown");
+        }
+    }
+
+    /**
      * Adds a permanent attack damage bonus from realm breakthrough.
-     * This is the ONLY way attack damage increases in your system.
+     * For single bonus additions. Use addPermanentBonuses() for multiple bonuses.
      */
     public void addPermanentAttackDamageBonus(double attackBonus) {
         if (attackBonus <= 0) {
@@ -92,7 +138,12 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         }
 
         this.permanentAttackDamageBonus += attackBonus;
-        markForSync();
+        markDirty();
+
+        // Consistent refresh behavior
+        if (player instanceof ServerPlayer serverPlayer) {
+            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+        }
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent attack damage from realm breakthrough (total: +{}%)",
             player != null ? player.getName().getString() : "unknown",
@@ -102,7 +153,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
 
     /**
      * Adds a permanent movement speed bonus from realm breakthrough.
-     * This is the ONLY way movement speed increases in your system.
+     * For single bonus additions. Use addPermanentBonuses() for multiple bonuses.
      */
     public void addPermanentMovementSpeedBonus(double speedBonus) {
         if (speedBonus <= 0) {
@@ -111,19 +162,22 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         }
 
         this.permanentMovementSpeedBonus += speedBonus;
-        markForSync();
+        markDirty();
 
-        // Add this after the existing log in addPermanentMovementSpeedBonus
+        // Consistent refresh behavior
         if (player instanceof ServerPlayer serverPlayer) {
-            ImmortalCultivation.LOGGER.info("DEBUG: Player reference valid, triggering immediate combat stats refresh");
-            // Force immediate refresh to apply the new permanent bonus
             CombatStatsEventHandler.refreshCombatStats(serverPlayer);
         }
+
+        ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent movement speed from realm breakthrough (total: +{}%)",
+            player != null ? player.getName().getString() : "unknown",
+            String.format("%.1f", speedBonus * 100),
+            String.format("%.1f", this.permanentMovementSpeedBonus * 100));
     }
 
     /**
      * Adds a permanent jump height bonus from realm breakthrough.
-     * This is the ONLY way jump height increases in your system.
+     * For single bonus additions. Use addPermanentBonuses() for multiple bonuses.
      */
     public void addPermanentJumpHeightBonus(double jumpBonus) {
         if (jumpBonus <= 0) {
@@ -132,7 +186,12 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         }
 
         this.permanentJumpHeightBonus += jumpBonus;
-        markForSync();
+        markDirty();
+
+        // Consistent refresh behavior
+        if (player instanceof ServerPlayer serverPlayer) {
+            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+        }
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent jump height from realm breakthrough (total: +{}%)",
             player != null ? player.getName().getString() : "unknown",
@@ -177,7 +236,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     public void addAttackDamageBonus(double bonus) {
         if (bonus > 0) {
             this.attackDamageBonus += bonus;
-            markForSync();
+            markDirty();
 
             ImmortalCultivation.LOGGER.debug("Added {}% temporary attack damage bonus to player {} (total temporary: +{}%)",
                 String.format("%.1f", bonus * 100),
@@ -188,7 +247,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
 
     public void setAttackDamageBonus(double bonus) {
         this.attackDamageBonus = Math.max(0, bonus);
-        markForSync();
+        markDirty();
     }
 
     public double getMovementSpeedBonus() {
@@ -198,7 +257,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     public void addMovementSpeedBonus(double bonus) {
         if (bonus > 0) {
             this.movementSpeedBonus += bonus;
-            markForSync();
+            markDirty();
 
             ImmortalCultivation.LOGGER.debug("Added {}% temporary movement speed bonus to player {} (total temporary: +{}%)",
                 String.format("%.1f", bonus * 100),
@@ -209,7 +268,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
 
     public void setMovementSpeedBonus(double bonus) {
         this.movementSpeedBonus = Math.max(0, bonus);
-        markForSync();
+        markDirty();
     }
 
     public double getJumpHeightBonus() {
@@ -219,7 +278,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
     public void addJumpHeightBonus(double bonus) {
         if (bonus > 0) {
             this.jumpHeightBonus += bonus;
-            markForSync();
+            markDirty();
 
             ImmortalCultivation.LOGGER.debug("Added {}% temporary jump height bonus to player {} (total temporary: +{}%)",
                 String.format("%.1f", bonus * 100),
@@ -230,7 +289,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
 
     public void setJumpHeightBonus(double bonus) {
         this.jumpHeightBonus = Math.max(0, bonus);
-        markForSync();
+        markDirty();
     }
 
     // === EFFECTIVE BONUS CALCULATIONS (CORRECTED - PERMANENT ADDITIVE ONLY) ===
@@ -289,7 +348,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         this.attackDamageBonus = 0.0;
         this.movementSpeedBonus = 0.0;
         this.jumpHeightBonus = 0.0;
-        markForSync();
+        markDirty();
 
         ImmortalCultivation.LOGGER.debug("Reset temporary bonuses for player: {}",
             player != null ? player.getName().getString() : "unknown");
@@ -305,7 +364,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         this.attackDamageBonus = 0.0;
         this.movementSpeedBonus = 0.0;
         this.jumpHeightBonus = 0.0;
-        markForSync();
+        markDirty();
 
         ImmortalCultivation.LOGGER.warn("Reset ALL bonuses (including permanent) for player: {}",
             player != null ? player.getName().getString() : "unknown");
@@ -368,6 +427,18 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
 
     // === SYNCHRONIZATION ===
 
+    private final DirtyTrackerHelper dirtyTrackerHelper = new DirtyTrackerHelper() {
+        @Override
+        public void forceSync() {
+            PlayerCombatStatsAttachment.this.forceSync();
+        }
+
+        @Override
+        public boolean shouldSyncNow() {
+            return shouldSync(2000, 2); // Combat stats don't need as frequent sync as resources
+        }
+    };
+
     /**
      * Update combat stats from server data (called by sync packet)
      */
@@ -384,7 +455,7 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
             this.permanentMovementSpeedBonus = permSpeed;
             this.permanentJumpHeightBonus = permJump;
 
-            this.needsSync = false;
+            clearDirty(); // Use DirtyTrackerHelper instead of needsSync
 
             ImmortalCultivation.LOGGER.debug("Updated combat stats from server: ATK+{}% (perm: {}), SPD+{}% (perm: {}), JUMP+{}% (perm: {})",
                 String.format("%.1f", attackBonus * 100), String.format("%.1f", permAttack * 100),
@@ -396,122 +467,111 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
         }
     }
 
+    @Override
     public void tick() {
-        tickCounter++;
+        // Update display values if needed
+        updateDisplayValues();
 
-        // Sync every 20 ticks (1 second) if needed
-        if (needsSync && tickCounter % 20 == 0) {
-            forceSync();
-        }
-
-        // Periodic full sync every 5 seconds
-        if (tickCounter % 100 == 0) {
+        // Check if sync is needed
+        if (shouldSyncNow()) {
             forceSync();
         }
     }
 
-    public void markForSync() {
-        this.needsSync = true;
+    private void updateDisplayValues() {
+        // Only calculate if this is server-side
+        if (player == null || player.level().isClientSide()) {
+            return;
+        }
+
+        double newAttackBonus = getDisplayAttackBonus();
+        double newSpeedBonus = getEffectiveMovementSpeedMultiplier();
+        double newJumpBonus = getEffectiveJumpHeightMultiplier();
+
+        boolean changed = false;
+        final double threshold = 0.001;
+
+        if (Math.abs(displayAttackBonus - newAttackBonus) > threshold) {
+            displayAttackBonus = newAttackBonus;
+            changed = true;
+        }
+        if (Math.abs(displaySpeedBonus - newSpeedBonus) > threshold) {
+            displaySpeedBonus = newSpeedBonus;
+            changed = true;
+        }
+        if (Math.abs(displayJumpBonus - newJumpBonus) > threshold) {
+            displayJumpBonus = newJumpBonus;
+            changed = true;
+        }
+
+        if (changed) {
+            markDirty();
+        }
     }
 
-    /**
-     * CRITICAL: Force sync method for dimension changes and initialization.
-     * This ensures the client receives updated data even if internal state hasn't changed.
-     */
+    // === DIRTY FLAGS === //
+
+    @Override
+    public boolean shouldSyncNow() {
+        return dirtyTrackerHelper.shouldSync(2000, 2); // 2 second interval, 2 change threshold
+    }
+
+    @Override
     public void forceSync() {
-        try {
-            if (player instanceof ServerPlayer serverPlayer) {
-                // Calculate effective bonuses including all types of bonuses
-                double effectiveAttackBonus = getEffectiveAttackDamageMultiplier() - 1.0;
-                double effectiveSpeedBonus = getEffectiveMovementSpeedMultiplier();
-                double effectiveJumpBonus = getEffectiveJumpHeightMultiplier();
+        if (player instanceof ServerPlayer serverPlayer) {
+            try {
+                CombatStatsSyncPacket packet = new CombatStatsSyncPacket(
+                    getEffectiveAttackDamageMultiplier(),
+                    getEffectiveMovementSpeedMultiplier(),
+                    getEffectiveJumpHeightMultiplier(),
+                    permanentAttackDamageBonus,
+                    permanentMovementSpeedBonus,
+                    permanentJumpHeightBonus
+                );
 
-                // Log what we're sending
-                ImmortalCultivation.LOGGER.debug("Syncing combat stats to client - Attack: {}%, Speed: {}%, Jump: {}%",
-                    String.format("%.1f", effectiveAttackBonus * 100),
-                    String.format("%.1f", effectiveSpeedBonus * 100),
-                    String.format("%.1f", effectiveJumpBonus * 100));
+                PacketDistributor.sendToPlayer(serverPlayer, packet);
+                clearDirty(); // This already updates lastSyncTime in DirtyTrackerHelper
 
-                // Send sync packet with BOTH effective AND permanent values
-                PacketDistributor.sendToPlayer(serverPlayer,
-                    new CombatStatsSyncPacket(
-                        effectiveAttackBonus, effectiveSpeedBonus, effectiveJumpBonus,
-                        permanentAttackDamageBonus, permanentMovementSpeedBonus, permanentJumpHeightBonus));
-
-                this.lastSyncTime = System.currentTimeMillis();
-                this.needsSync = false;
-
-                ImmortalCultivation.LOGGER.debug("Force synced combat stats for player: {}",
+                ImmortalCultivation.LOGGER.debug("Synced combat stats for player: {}",
                     serverPlayer.getName().getString());
-
-            } else {
-                ImmortalCultivation.LOGGER.debug("Cannot sync combat stats - no player reference or not server player");
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Failed to sync combat stats for player {}: {}",
+                    player.getName().getString(), e.getMessage());
             }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error force syncing combat stats for player {}",
-                player != null ? player.getName().getString() : "unknown", e);
         }
     }
 
-    // === NBT SERIALIZATION ===
-
     @Override
-    public CompoundTag serializeNBT(HolderLookup.Provider provider) {
-        CompoundTag tag = new CompoundTag();
-        // Permanent bonuses
-        tag.putDouble(TAG_PERMANENT_ATTACK_BONUS, permanentAttackDamageBonus);
-        tag.putDouble(TAG_PERMANENT_SPEED_BONUS, permanentMovementSpeedBonus);
-        tag.putDouble(TAG_PERMANENT_JUMP_BONUS, permanentJumpHeightBonus);
-        // Temporary bonuses
-        tag.putDouble(TAG_ATTACK_DAMAGE_BONUS, attackDamageBonus);
-        tag.putDouble(TAG_MOVEMENT_SPEED_BONUS, movementSpeedBonus);
-        tag.putDouble(TAG_JUMP_HEIGHT_BONUS, jumpHeightBonus);
-        tag.putLong(TAG_LAST_SYNC_TIME, lastSyncTime);
-        return tag;
+    public void markDirty() {
+        dirtyTrackerHelper.markDirty();
     }
 
     @Override
-    public void deserializeNBT(HolderLookup.Provider provider, CompoundTag tag) {
-        // Load permanent bonuses
-        this.permanentAttackDamageBonus = tag.getDouble(TAG_PERMANENT_ATTACK_BONUS);
-        this.permanentMovementSpeedBonus = tag.getDouble(TAG_PERMANENT_SPEED_BONUS);
-        this.permanentJumpHeightBonus = tag.getDouble(TAG_PERMANENT_JUMP_BONUS);
-        // Load temporary bonuses
-        this.attackDamageBonus = tag.getDouble(TAG_ATTACK_DAMAGE_BONUS);
-        this.movementSpeedBonus = tag.getDouble(TAG_MOVEMENT_SPEED_BONUS);
-        this.jumpHeightBonus = tag.getDouble(TAG_JUMP_HEIGHT_BONUS);
-        this.lastSyncTime = tag.getLong(TAG_LAST_SYNC_TIME);
-        this.needsSync = true; // Always need sync after loading
+    public boolean isDirty() {
+        return dirtyTrackerHelper.isDirty();
     }
 
-    // === CODEC ===
+    @Override
+    public void clearDirty() {
+        dirtyTrackerHelper.clearDirty();
+    }
 
-    public static final Codec<PlayerCombatStatsAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
-        // Permanent bonuses
-        Codec.DOUBLE.optionalFieldOf("permanentAttackDamageBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getPermanentAttackDamageBonus),
-        Codec.DOUBLE.optionalFieldOf("permanentMovementSpeedBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getPermanentMovementSpeedBonus),
-        Codec.DOUBLE.optionalFieldOf("permanentJumpHeightBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getPermanentJumpHeightBonus),
-        // Temporary bonuses
-        Codec.DOUBLE.optionalFieldOf("attackDamageBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getAttackDamageBonus),
-        Codec.DOUBLE.optionalFieldOf("movementSpeedBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getMovementSpeedBonus),
-        Codec.DOUBLE.optionalFieldOf("jumpHeightBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getJumpHeightBonus),
-        Codec.LONG.optionalFieldOf("lastSyncTime", 0L).forGetter(comp -> comp.lastSyncTime),
-        Codec.INT.optionalFieldOf("tickCounter", 0).forGetter(comp -> comp.tickCounter)
-    ).apply(instance, (permAttack, permSpeed, permJump, attackBonus, speedBonus, jumpBonus, syncTime, ticks) -> {
-        PlayerCombatStatsAttachment comp = new PlayerCombatStatsAttachment();
-        comp.permanentAttackDamageBonus = permAttack;
-        comp.permanentMovementSpeedBonus = permSpeed;
-        comp.permanentJumpHeightBonus = permJump;
-        comp.attackDamageBonus = attackBonus;
-        comp.movementSpeedBonus = speedBonus;
-        comp.jumpHeightBonus = jumpBonus;
-        comp.lastSyncTime = syncTime;
-        comp.tickCounter = ticks;
-        comp.needsSync = true; // Always need sync after loading
-        return comp;
-    }));
+    @Override
+    public long getChangeCounter() {
+        return dirtyTrackerHelper.getChangeCounter();
+    }
 
-    // === SERIALIZER ===
+    @Override
+    public void incrementChangeCounter() {
+        dirtyTrackerHelper.incrementChangeCounter();
+    }
+
+    @Override
+    public void resetChangeCounter() {
+        dirtyTrackerHelper.resetChangeCounter();
+    }
+
+    // === SERIALIZER === //
 
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerCombatStatsAttachment> {
         @Override
@@ -538,4 +598,36 @@ public class PlayerCombatStatsAttachment implements INBTSerializable<CompoundTag
                 .orElse(new CompoundTag());
         }
     }
+
+    // === CODEC === //
+
+    public static final Codec<PlayerCombatStatsAttachment> CODEC = RecordCodecBuilder.create(instance -> instance.group(
+        // Permanent bonuses
+        Codec.DOUBLE.optionalFieldOf("permanentAttackDamageBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getPermanentAttackDamageBonus),
+        Codec.DOUBLE.optionalFieldOf("permanentMovementSpeedBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getPermanentMovementSpeedBonus),
+        Codec.DOUBLE.optionalFieldOf("permanentJumpHeightBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getPermanentJumpHeightBonus),
+        // Temporary bonuses
+        Codec.DOUBLE.optionalFieldOf("attackDamageBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getAttackDamageBonus),
+        Codec.DOUBLE.optionalFieldOf("movementSpeedBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getMovementSpeedBonus),
+        Codec.DOUBLE.optionalFieldOf("jumpHeightBonus", 0.0).forGetter(PlayerCombatStatsAttachment::getJumpHeightBonus),
+        // Remove lastSyncTime from here since it's handled by DirtyTrackerHelper
+        // DirtyTrackerHelper fields
+        Codec.LONG.optionalFieldOf("changeCounter", 0L).forGetter(comp -> comp.dirtyTrackerHelper.getChangeCounter()),
+        Codec.LONG.optionalFieldOf("dirtyLastSyncTime", 0L).forGetter(comp -> comp.dirtyTrackerHelper.getLastSyncTime())
+    ).apply(instance, (permAttack, permSpeed, permJump, attackBonus, speedBonus, jumpBonus, changeCounter, dirtyLastSync) -> {
+        PlayerCombatStatsAttachment comp = new PlayerCombatStatsAttachment();
+        comp.permanentAttackDamageBonus = permAttack;
+        comp.permanentMovementSpeedBonus = permSpeed;
+        comp.permanentJumpHeightBonus = permJump;
+        comp.attackDamageBonus = attackBonus;
+        comp.movementSpeedBonus = speedBonus;
+        comp.jumpHeightBonus = jumpBonus;
+        // Remove: comp.lastSyncTime = syncTime;
+
+        // Restore DirtyTrackerHelper state
+        comp.dirtyTrackerHelper.restoreFromCodec(changeCounter, dirtyLastSync);
+        comp.markDirty(); // Always dirty after loading
+
+        return comp;
+    }));
 }
