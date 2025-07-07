@@ -1,8 +1,8 @@
 package net.hyper.immortalcultivation.attachment;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
-import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
+import net.hyper.immortalcultivation.interfaces.IBodyCultivationData;
+import net.hyper.immortalcultivation.interfaces.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.cultivation.realms.data.CultivationRealmData;
 import net.hyper.immortalcultivation.cultivation.realms.data.JsonCultivationRealm;
@@ -1120,17 +1120,6 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         if (bodyBreakthroughCooldown && player.level().getGameTime() - lastBodyBreakthroughAttempt > 6000) {
             bodyBreakthroughCooldown = false;
         }
-    }
-
-    @Override
-    public void deserializeNBT(CompoundTag tag) {
-        // Not needed with Codec
-    }
-
-    @Override
-    public CompoundTag serializeNBT() {
-        // Not needed with Codec
-        return new CompoundTag();
     }
 
     // === Sync Management ===

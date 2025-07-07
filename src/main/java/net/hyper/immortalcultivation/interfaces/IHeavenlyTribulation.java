@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.cultivation;
+package net.hyper.immortalcultivation.interfaces;
 
 import net.minecraft.world.entity.player.Player;
 

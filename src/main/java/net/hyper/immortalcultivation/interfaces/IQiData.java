@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.cultivation;
+package net.hyper.immortalcultivation.interfaces;
 
 import net.minecraft.nbt.CompoundTag;
 
@@ -218,9 +218,4 @@ public interface IQiData {
      */
     default void onQiAdded(long amount) {
     }
-
-    // === Serialization === //
-
-    void deserializeNBT(CompoundTag tag);
-    CompoundTag serializeNBT();
 }

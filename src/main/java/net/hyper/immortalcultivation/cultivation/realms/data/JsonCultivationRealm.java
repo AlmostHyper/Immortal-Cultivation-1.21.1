@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.cultivation.realms.data;
 
-import net.hyper.immortalcultivation.cultivation.IBodyCultivationData;
-import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
+import net.hyper.immortalcultivation.interfaces.IBodyCultivationData;
+import net.hyper.immortalcultivation.interfaces.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.minecraft.ChatFormatting;
@@ -13,7 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvent;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.player.Player;
@@ -21,7 +20,6 @@ import net.minecraft.world.entity.player.Player;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 /**
  * A data-driven implementation of CultivationRealm that loads its properties from JSON.

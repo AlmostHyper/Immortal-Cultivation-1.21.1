@@ -337,21 +337,9 @@ public class ICModTickEvent {
             PlayerResourceAttachment resources = cache.resources;
             if (resources == null) return false;
 
-            // Apply regeneration with rate compensation
+            // Call the main tick method for each missed tick to maintain proper timing
             for (int i = 0; i < currentResourceInterval; i++) {
-                // Apply regeneration logic without full tick to avoid sync timing issues
-                if (resources.canRegenerateHealth()) {
-                    double rate = resources.getEffectiveHealthRegenerationRate() / 20.0;
-                    resources.regenerateHealth(rate, false);
-                }
-                if (resources.canRegenerateQi()) {
-                    double rate = resources.getEffectiveQiRegenerationRate() / 20.0;
-                    resources.regenerateQi(rate, false);
-                }
-                if (resources.canRegenerateBody()) {
-                    double rate = resources.getEffectiveBodyRegenerationRate() / 20.0;
-                    resources.regenerateBody(rate, false);
-                }
+                resources.tick();
             }
 
             // Handle sync separately (every 3 seconds)

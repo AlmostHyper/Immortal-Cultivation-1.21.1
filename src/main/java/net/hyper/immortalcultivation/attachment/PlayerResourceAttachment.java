@@ -3,9 +3,11 @@ package net.hyper.immortalcultivation.attachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.cultivation.IHealthData;
-import net.hyper.immortalcultivation.cultivation.IQiData;
-import net.hyper.immortalcultivation.cultivation.IBodyData;
+import net.hyper.immortalcultivation.interfaces.IHealthData;
+import net.hyper.immortalcultivation.interfaces.IQiData;
+import net.hyper.immortalcultivation.interfaces.IBodyData;
+import net.hyper.immortalcultivation.helper.DirtyTracker;
+import net.hyper.immortalcultivation.interfaces.IDirtyTrackable;
 import net.hyper.immortalcultivation.network.server.ResourceSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;
@@ -24,7 +26,7 @@ import javax.annotation.Nullable;
  * This system never calculates stats from "current realm" - only from accumulated permanent bonuses.
  * Each JSON realm defines the permanent bonus you GET when reaching it, not base stats while in it.
  */
-public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData {
+public class PlayerResourceAttachment implements IDirtyTrackable, IHealthData, IQiData, IBodyData {
 
     // === Player Reference ===
     @Nullable
@@ -62,7 +64,8 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     private double bodyRegenFraction = 0.0;
 
     // === SYNC MANAGEMENT ===
-    private long lastSyncedHash = 0;
+    private final DirtyTracker dirtyTracker = new DirtyTracker();
+
     private int tickCounter = 0;
     private static final int SYNC_INTERVAL = 10;
 
@@ -91,6 +94,24 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     // === PERMANENT HEALTH BONUS SYSTEM ===
 
+    public long addHealth(long amount) {
+        if (amount <= 0) return 0;
+
+        long actualIncrease = Math.min(amount, getRemainingHealthCapacity());
+        if (actualIncrease > 0) {
+            long oldHealth = currentHealth;
+            currentHealth += actualIncrease;
+
+            onHealthChanged(oldHealth, currentHealth);
+            updateVanillaHealthBar();
+
+            // UNIVERSAL DIRTY MARKING
+            markDirty();
+        }
+
+        return actualIncrease;
+    }
+
     /**
      * Adds a permanent health bonus from realm breakthrough.
      * This is the ONLY way health increases in your system.
@@ -107,13 +128,12 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         this.permanentHealthBonus += healthBonus;
         recalculateMaxHealth();
 
-        // Heal to full when gaining permanent health (Xianxia tradition)
         if (this.maxHealth > oldMaxHealth) {
             this.currentHealth = this.maxHealth;
         }
 
         updateVanillaHealthBar();
-        forceSync();
+        markDirty();
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent health from realm breakthrough (total: +{}, max health: {})",
             player != null ? player.getName().getString() : "unknown",
@@ -127,7 +147,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
 
         this.permanentHealthRegenBonus += healthRegenBonus;
-        forceSync();
+        markDirty();
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec permanent health regen from realm breakthrough (total: +{}/sec)",
             player != null ? player.getName().getString() : "unknown",
@@ -162,7 +182,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
         this.permanentMaxQiBonus += qiBonus;
         recalculateMaxQi();
-        forceSync();
+        markDirty();
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent max qi from realm breakthrough (total: +{}, max qi: {})",
             player != null ? player.getName().getString() : "unknown",
@@ -176,7 +196,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
 
         this.permanentQiRegenBonus += qiRegenBonus;
-        forceSync();
+        markDirty();
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec permanent qi regen from realm breakthrough (total: +{}/sec)",
             player != null ? player.getName().getString() : "unknown",
@@ -202,7 +222,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
         this.permanentMaxBodyBonus += bodyBonus;
         recalculateMaxBody();
-        forceSync();
+        markDirty();
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{} permanent max body from realm breakthrough (total: +{}, max body: {})",
             player != null ? player.getName().getString() : "unknown",
@@ -216,7 +236,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
 
         this.permanentBodyRegenBonus += bodyRegenBonus;
-        forceSync();
+        markDirty();
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{}/sec permanent body regen from realm breakthrough (total: +{}/sec)",
             player != null ? player.getName().getString() : "unknown",
@@ -250,13 +270,35 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public void setCurrentHealth(long value) {
+        long oldHealth = this.currentHealth;
         this.currentHealth = Math.max(0, Math.min(value, maxHealth));
-        updateVanillaHealthBar();
+
+        if (oldHealth != this.currentHealth) {
+            updateVanillaHealthBar();
+            markDirty();
+        }
     }
 
     @Override
     public long getBaseMaxHealth() {
         return MORTAL_BASE_HEALTH + permanentHealthBonus;
+    }
+
+    public long consumeHealth(long amount) {
+        if (amount <= 0) return 0;
+
+        long actualConsumption = Math.min(amount, currentHealth);
+        if (actualConsumption > 0) {
+            long oldHealth = currentHealth;
+            currentHealth -= actualConsumption;
+
+            onHealthChanged(oldHealth, currentHealth);
+            updateVanillaHealthBar();
+
+            markDirty();
+        }
+
+        return actualConsumption;
     }
 
     @Override
@@ -337,7 +379,12 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public void setCurrentQi(long value) {
+        long oldQi = this.currentQi;
         this.currentQi = Math.max(0, Math.min(value, maxQi));
+
+        if (oldQi != this.currentQi) {
+            markDirty();
+        }
     }
 
     @Override
@@ -412,7 +459,12 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public void setCurrentBody(long value) {
+        long oldBody = this.currentBody;
         this.currentBody = Math.max(0, Math.min(value, maxBody));
+
+        if (oldBody != this.currentBody) {
+            markDirty();
+        }
     }
 
     @Override
@@ -480,16 +532,33 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     // === UTILITY METHODS ===
 
-    public void healHealth(long amount) {
-        setCurrentHealth(currentHealth + amount);
+    public long healHealth(long amount) {
+        if (amount <= 0) return 0;
+
+        long actualHealing = Math.min(amount, getRemainingHealthCapacity());
+        if (actualHealing > 0) {
+            long oldHealth = currentHealth;
+            currentHealth += actualHealing;
+
+            onHealthChanged(oldHealth, currentHealth);
+            updateVanillaHealthBar();
+
+            markDirty();
+        }
+
+        return actualHealing;
     }
 
     public void restoreQi(long amount) {
-        setCurrentQi(currentQi + amount);
+        if (amount > 0) {
+            setCurrentQi(currentQi + amount); // setCurrentQi now calls markDirty()
+        }
     }
 
     public void restoreBody(long amount) {
-        setCurrentBody(currentBody + amount);
+        if (amount > 0) {
+            setCurrentBody(currentBody + amount); // setCurrentBody now calls markDirty()
+        }
     }
 
     public boolean hasEnoughQi(long amount) {
@@ -558,6 +627,9 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         // Apply regeneration for all three resources
         applyRegeneration();
 
+        // CRITICAL: Update vanilla health bar every tick to ensure it stays synced
+        updateVanillaHealthBar();
+
         // Handle sync
         tickCounter++;
         if (tickCounter >= SYNC_INTERVAL) {
@@ -621,9 +693,8 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     // === SYNC MANAGEMENT ===
 
     private void syncIfNeeded() {
-        long currentHash = calculateStateHash();
-        if (currentHash != lastSyncedHash) {
-            lastSyncedHash = currentHash;
+        // Use dirty tracker for efficient sync checking
+        if (dirtyTracker.shouldSync(3000, 5)) { // Every 3 seconds OR 5 changes
             syncToClient();
         }
     }
@@ -636,26 +707,18 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (player instanceof ServerPlayer serverPlayer) {
             try {
                 ResourceSyncPacket packet = new ResourceSyncPacket(
-                    // Current resource values (3 parameters) - CORRECT ORDER
-                    currentHealth,              // 1. long currentHealth
-                    currentQi,                  // 2. long currentQi
-                    currentBody,                // 3. long currentBody
-
-                    // ALL permanent bonuses (6 parameters) - THESE WERE MISSING!
-                    permanentHealthBonus,       // 7. long permanentHealthBonus
-                    permanentHealthRegenBonus,  // 8. double permanentHealthRegenBonus
-                    permanentMaxQiBonus,        // 9. long permanentMaxQiBonus
-                    permanentQiRegenBonus,      // 10. double permanentQiRegenBonus
-                    permanentMaxBodyBonus,      // 11. long permanentMaxBodyBonus
-                    permanentBodyRegenBonus     // 12. double permanentBodyRegenBonus
+                    currentHealth, currentQi, currentBody,
+                    permanentHealthBonus, permanentHealthRegenBonus,
+                    permanentMaxQiBonus, permanentQiRegenBonus,
+                    permanentMaxBodyBonus, permanentBodyRegenBonus
                 );
                 PacketDistributor.sendToPlayer(serverPlayer, packet);
 
-                ImmortalCultivation.LOGGER.debug("Synced complete resource data to client for player: {} (Health: {}/{} +{}, Qi: {}/{} +{}, Body: {}/{} +{})",
-                    serverPlayer.getName().getString(),
-                    currentHealth, maxHealth, permanentHealthBonus,
-                    currentQi, maxQi, permanentMaxQiBonus,
-                    currentBody, maxBody, permanentMaxBodyBonus);
+                // Clear dirty flag after successful sync
+                clearDirty();
+
+                ImmortalCultivation.LOGGER.debug("Synced resource data to client for player: {}",
+                    serverPlayer.getName().getString());
             } catch (Exception e) {
                 ImmortalCultivation.LOGGER.error("Error syncing resource data for player {}",
                     player.getName().getString(), e);
@@ -663,14 +726,14 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
+
     /**
      * CRITICAL: Force sync method for dimension changes and initialization.
      * This ensures the client receives updated data even if internal state hasn't changed.
      */
     public void forceSync() {
         try {
-            lastSyncedHash = 0; // Reset hash to force sync
-            syncToClient();
+            syncToClient(); // This will clear dirty flag
             ImmortalCultivation.LOGGER.debug("Force synced resource data for player: {}",
                 player != null ? player.getName().getString() : "unknown");
         } catch (Exception e) {
@@ -692,31 +755,50 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     // === SETTERS FOR SYNC (called by sync packets) ===
 
     public void setPermanentHealthBonus(long bonus) {
-        this.permanentHealthBonus = Math.max(0, bonus);
-        recalculateMaxHealth(); // Auto-recalculate
+        if (this.permanentHealthBonus != bonus) {
+            this.permanentHealthBonus = Math.max(0, bonus);
+            recalculateMaxHealth();
+            markDirty();
+        }
     }
 
     public void setPermanentHealthRegenBonus(double bonus) {
-        this.permanentHealthRegenBonus = Math.max(0.0, bonus);
+        if (this.permanentHealthRegenBonus != bonus) {
+            this.permanentHealthRegenBonus = Math.max(0.0, bonus);
+            markDirty();
+        }
     }
 
     public void setPermanentMaxQiBonus(long bonus) {
-        this.permanentMaxQiBonus = Math.max(0, bonus);
-        recalculateMaxQi(); // Auto-recalculate
+        if (this.permanentMaxQiBonus != bonus) {
+            this.permanentMaxQiBonus = Math.max(0, bonus);
+            recalculateMaxQi();
+            markDirty();
+        }
     }
 
     public void setPermanentQiRegenBonus(double bonus) {
-        this.permanentQiRegenBonus = Math.max(0.0, bonus);
+        if (this.permanentQiRegenBonus != bonus) {
+            this.permanentQiRegenBonus = Math.max(0.0, bonus);
+            markDirty();
+        }
     }
 
     public void setPermanentMaxBodyBonus(long bonus) {
-        this.permanentMaxBodyBonus = Math.max(0, bonus);
-        recalculateMaxBody(); // Auto-recalculate
+        if (this.permanentMaxBodyBonus != bonus) {
+            this.permanentMaxBodyBonus = Math.max(0, bonus);
+            recalculateMaxBody();
+            markDirty();
+        }
     }
 
     public void setPermanentBodyRegenBonus(double bonus) {
-        this.permanentBodyRegenBonus = Math.max(0.0, bonus);
+        if (this.permanentBodyRegenBonus != bonus) {
+            this.permanentBodyRegenBonus = Math.max(0.0, bonus);
+            markDirty();
+        }
     }
+
     // === SERIALIZATION ===
 
     public static final Codec<PlayerResourceAttachment> CODEC = RecordCodecBuilder.create(instance ->
@@ -802,16 +884,35 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
-    // === LEGACY NBT METHODS (not used with Codec but required by interface) ===
+    // === DIRTY FLAG IMPLEMENTATION === //
 
     @Override
-    public void deserializeNBT(CompoundTag tag) {
-        // Not needed with Codec
+    public void markDirty() {
+        dirtyTracker.markDirty();
     }
 
     @Override
-    public CompoundTag serializeNBT() {
-        // Not needed with Codec
-        return new CompoundTag();
+    public boolean isDirty() {
+        return dirtyTracker.isDirty();
+    }
+
+    @Override
+    public void clearDirty() {
+        dirtyTracker.clearDirty();
+    }
+
+    @Override
+    public long getChangeCounter() {
+        return dirtyTracker.getChangeCounter();
+    }
+
+    @Override
+    public void incrementChangeCounter() {
+        dirtyTracker.incrementChangeCounter();
+    }
+
+    @Override
+    public void resetChangeCounter() {
+        dirtyTracker.resetChangeCounter();
     }
 }

@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.cultivation;
+package net.hyper.immortalcultivation.interfaces;
 
 import net.minecraft.nbt.CompoundTag;
 
@@ -218,10 +218,5 @@ public interface IBodyData {
      */
     default void onBodyAdded(long amount) {
     }
-
-    // === Serialization === //
-
-    void deserializeNBT(CompoundTag tag);
-    CompoundTag serializeNBT();
 }
 
