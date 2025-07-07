@@ -112,6 +112,9 @@ public class CultivationTickHandler {
     /**
      * OPTIMIZED: Tick cultivation attachment with reduced frequency
      */
+    /**
+     * OPTIMIZED: Tick cultivation attachment with reduced frequency
+     */
     private static void tickCultivationAttachments(ServerPlayer player, AttachmentCache cache) {
         try {
             PlayerCultivationAttachment cultivation = cache.cultivation;
@@ -120,7 +123,12 @@ public class CultivationTickHandler {
                 if (cultivation.getPlayerSafe() != player) {
                     cultivation.setPlayer(player);
                 }
-                cultivation.tick();
+
+                // CRITICAL FIX: Call tick multiple times to compensate for reduced frequency
+                int tickMultiplier = CULTIVATION_TICK_INTERVAL; // This is 4
+                for (int i = 0; i < tickMultiplier; i++) {
+                    cultivation.tick();
+                }
             }
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error ticking cultivation attachments for player {}",

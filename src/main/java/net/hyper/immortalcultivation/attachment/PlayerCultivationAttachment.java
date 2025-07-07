@@ -6,16 +6,13 @@ import net.hyper.immortalcultivation.cultivation.IQiCultivationData;
 import net.hyper.immortalcultivation.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.cultivation.realms.data.CultivationRealmData;
 import net.hyper.immortalcultivation.cultivation.realms.data.JsonCultivationRealm;
-import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.network.server.CultivationSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
-import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
@@ -335,8 +332,7 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
      */
     public void setPlayer(Player player) {
         this.player = player;
-        ImmortalCultivation.LOGGER.debug("Set player reference for {}: {}",
-            this.getClass().getSimpleName(),
+        ImmortalCultivation.LOGGER.debug("Set player reference for PlayerCultivationAttachment: {}",
             player != null ? player.getName().getString() : "null");
     }
 
@@ -372,6 +368,10 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         }
     }
 
+
+    /**
+     * Double version - for tick progression with fractional accumulation
+     */
     public void addQiCultivation(double amount) {
         qiCultivationFraction += amount;
 
@@ -392,6 +392,31 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             // Check for milestone bonuses
             checkQiMilestones();
         }
+    }
+
+    /**
+     * Long version - for commands and direct whole number additions
+     */
+    @Override
+    public long addQiCultivation(long amount) {
+        if (amount <= 0) return 0;
+
+        // Track total cultivation earned for milestones
+        totalQiCultivationEarned += amount;
+
+        // DEBUG LOGGING
+        ImmortalCultivation.LOGGER.info("DEBUG: Player {} gained {} Qi cultivation points (direct). Total earned: {}",
+            player != null ? player.getName().getString() : "null", amount, totalQiCultivationEarned);
+
+        // Apply the cultivation points
+        long currentBefore = currentQiCultivation;
+        setCurrentQiCultivation(currentQiCultivation + amount);
+        long actualAdded = currentQiCultivation - currentBefore;
+
+        // Check for milestone bonuses
+        checkQiMilestones();
+
+        return actualAdded;
     }
 
     /**
@@ -561,6 +586,9 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         }
     }
 
+    /**
+     * Double version - for tick progression with fractional accumulation
+     */
     public void addBodyCultivation(double amount) {
         bodyCultivationFraction += amount;
 
@@ -571,12 +599,41 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
             // Track total cultivation earned for milestones
             totalBodyCultivationEarned += wholePoints;
 
+            // DEBUG LOGGING
+            ImmortalCultivation.LOGGER.info("DEBUG: Player {} gained {} Body cultivation points. Total earned: {}",
+                player != null ? player.getName().getString() : "null", wholePoints, totalBodyCultivationEarned);
+
             // Apply the cultivation points
             setCurrentBodyCultivation(currentBodyCultivation + wholePoints);
 
             // Check for milestone bonuses
             checkBodyMilestones();
         }
+    }
+
+    /**
+     * Long version - for commands and direct whole number additions
+     */
+    @Override
+    public long addBodyCultivation(long amount) {
+        if (amount <= 0) return 0;
+
+        // Track total cultivation earned for milestones
+        totalBodyCultivationEarned += amount;
+
+        // DEBUG LOGGING
+        ImmortalCultivation.LOGGER.info("DEBUG: Player {} gained {} Body cultivation points (direct). Total earned: {}",
+            player != null ? player.getName().getString() : "null", amount, totalBodyCultivationEarned);
+
+        // Apply the cultivation points
+        long currentBefore = currentBodyCultivation;
+        setCurrentBodyCultivation(currentBodyCultivation + amount);
+        long actualAdded = currentBodyCultivation - currentBefore;
+
+        // Check for milestone bonuses
+        checkBodyMilestones();
+
+        return actualAdded;
     }
 
     /**
@@ -1041,12 +1098,12 @@ public class PlayerCultivationAttachment implements IQiCultivationData, IBodyCul
         this.qiAccumulationRate = getEffectiveQiCultivationRate() / 20.0; // Convert per-second to per-tick
         this.bodyAccumulationRate = getEffectiveBodyCultivationRate() / 20.0; // Convert per-second to per-tick
 
-        // Accumulate cultivation using the updated rates
+        // Accumulate cultivation using the updated rates - DON'T CAST TO LONG!
         if (qiAccumulationRate > 0 && getCurrentQiCultivation() < getMaxQiCultivation()) {
-            addQiCultivation(qiAccumulationRate);
+            addQiCultivation(qiAccumulationRate); // ✅ Pass double directly
         }
         if (bodyAccumulationRate > 0 && getCurrentBodyCultivation() < getMaxBodyCultivation()) {
-            addBodyCultivation(bodyAccumulationRate);
+            addBodyCultivation(bodyAccumulationRate); // ✅ Pass double directly
         }
 
         // Handle sync

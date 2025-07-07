@@ -79,8 +79,15 @@ public class SetCultivationCommand {
                 return 0;
             }
 
-            // Apply the change
-            cultivation.setCurrentQiCultivation(newCultivation);
+            // CRITICAL FIX: Update totalQiCultivationEarned and trigger milestone checks
+            if (newCultivation > oldCultivation) {
+                // Calculate the difference and add it properly
+                long cultivationGained = newCultivation - oldCultivation;
+                cultivation.addQiCultivation(cultivationGained);
+            } else {
+                // If setting to a lower value, just set directly (no milestones gained)
+                cultivation.setCurrentQiCultivation(newCultivation);
+            }
 
             // Provide comprehensive feedback
             context.getSource().sendSuccess(() ->
@@ -129,8 +136,15 @@ public class SetCultivationCommand {
                 return 0;
             }
 
-            // Apply the change
-            cultivation.setCurrentBodyCultivation(newCultivation);
+            // CRITICAL FIX: Update totalBodyCultivationEarned and trigger milestone checks
+            if (newCultivation > oldCultivation) {
+                // Calculate the difference and add it properly
+                long cultivationGained = newCultivation - oldCultivation;
+                cultivation.addBodyCultivation(cultivationGained);
+            } else {
+                // If setting to a lower value, just set directly (no milestones gained)
+                cultivation.setCurrentBodyCultivation(newCultivation);
+            }
 
             // Provide comprehensive feedback
             context.getSource().sendSuccess(() ->
