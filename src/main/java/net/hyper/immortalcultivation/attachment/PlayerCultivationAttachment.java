@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -418,6 +419,107 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
                 currentCultivation.put(type, newMax);
             }
         }
+    }
+
+    /**
+     * Gets the current realm index for the specified cultivation type based on the realm level from JSON configuration.
+     * The index is 0-based, so the first cultivation realm (level 1) has index 0.
+     *
+     * This method provides a consistent way to determine relative realm progression
+     * for calculations like death penalties, which should scale with advancement.
+     *
+     * @param type The cultivation type (QI or BODY)
+     * @return The 0-based index of the current realm, or 0 if realm is null
+     */
+    public int getCurrentRealmIndex(CultivationType type) {
+        CultivationRealm currentRealm = getCurrentRealm(type);
+        if (currentRealm == null) {
+            ImmortalCultivation.LOGGER.warn("Current {} realm is null for player {}, returning index 0",
+                type.getDisplayName().toLowerCase(),
+                player != null ? player.getName().getString() : "unknown");
+            return 0;
+        }
+
+        // Realm levels in JSON start at 1, but we want 0-based indexing
+        // Mortal realm should be level 0, first cultivation realm is level 1
+        int realmLevel = currentRealm.getRealmLevel();
+        return Math.max(0, realmLevel - 1);
+    }
+
+    /**
+     * Gets the maximum realm index available in the system for the specified cultivation type.
+     * This can be useful for calculating progression percentages or caps.
+     *
+     * @param type The cultivation type (QI or BODY)
+     * @return The highest available realm index, or 0 if no realms are available
+     */
+    public int getMaxRealmIndex(CultivationType type) {
+        try {
+            List<CultivationRealm> allRealms = ICModCultivationRealms.getRealmsByLevel();
+            if (allRealms.isEmpty()) {
+                return 0;
+            }
+
+            // Find the highest level realm
+            int maxLevel = allRealms.stream()
+                .mapToInt(CultivationRealm::getRealmLevel)
+                .max()
+                .orElse(1);
+
+            return Math.max(0, maxLevel - 1);
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error getting max {} realm index",
+                type.getDisplayName().toLowerCase(), e);
+            return 0;
+        }
+    }
+
+    /**
+     * Gets the realm progression percentage for the specified cultivation type (0.0 to 1.0).
+     * This combines both realm advancement and within-realm progress.
+     *
+     * @param type The cultivation type (QI or BODY)
+     * @return A value between 0.0 (mortal) and 1.0 (max realm + max cultivation)
+     */
+    public double getRealmProgressionPercentage(CultivationType type) {
+        try {
+            int currentIndex = getCurrentRealmIndex(type);
+            int maxIndex = getMaxRealmIndex(type);
+
+            if (maxIndex == 0) {
+                return 0.0;
+            }
+
+            // Base progress from realm advancement
+            double realmProgress = (double) currentIndex / maxIndex;
+
+            // Within-realm progress
+            double cultivationProgress = type == CultivationType.QI ? getProgress(CultivationType.QI) : getProgress(CultivationType.BODY);
+
+            // Combine: each realm contributes equally, plus within-realm progress
+            double progressPerRealm = 1.0 / (maxIndex + 1);
+            return realmProgress + (cultivationProgress * progressPerRealm);
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error calculating {} realm progression percentage",
+                type.getDisplayName().toLowerCase(), e);
+            return 0.0;
+        }
+    }
+
+    /**
+     * Gets a debug summary of realm indices for troubleshooting.
+     *
+     * @return A formatted string with current realm index information for both cultivation types
+     */
+    public String getRealmIndexDebugInfo() {
+        return String.format("Realm Indices - Qi: %d/%d (%.1f%%), Body: %d/%d (%.1f%%), QiLevel: %d, BodyLevel: %d",
+            getCurrentRealmIndex(CultivationType.QI), getMaxRealmIndex(CultivationType.QI),
+            getRealmProgressionPercentage(CultivationType.QI) * 100,
+            getCurrentRealmIndex(CultivationType.BODY), getMaxRealmIndex(CultivationType.BODY),
+            getRealmProgressionPercentage(CultivationType.BODY) * 100,
+            getCurrentRealm(CultivationType.QI) != null ? getCurrentRealm(CultivationType.QI).getRealmLevel() : -1,
+            getCurrentRealm(CultivationType.BODY) != null ? getCurrentRealm(CultivationType.BODY).getRealmLevel() : -1);
     }
 
     private void applyPermanentBonusesIfAdvancement(@Nullable CultivationRealm previousRealm,

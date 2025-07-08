@@ -208,30 +208,28 @@ public class ICModRespawnEvent {
 
     /**
      * Calculates qi cultivation death penalty based on current realm.
-     * Higher realms have stronger foundations and lose less progress.
      */
     private static double calculateQiDeathPenalty(PlayerCultivationAttachment cultivation) {
-        // Base penalty starts at 30% for mortals
+        // Base penalty starts at 10% for mortals
         double basePenalty = 0.10;
 
         // Reduce penalty based on realm advancement
-        int realmIndex = cultivation.getCurrentQiRealmIndex();
-        double realmReduction = Math.min(0.20, realmIndex * 0.02); // Max 20% reduction
+        int realmIndex = cultivation.getCurrentRealmIndex(ICultivationData.CultivationType.QI);
+        double realmReduction = Math.min(0.10, realmIndex * 0.002); // Max 10% reduction
 
-        return Math.max(0.05, basePenalty - realmReduction); // Minimum 5% penalty
+        return Math.max(0.03, basePenalty - realmReduction); // Minimum 3% penalty
     }
 
     /**
      * Calculates body cultivation death penalty based on current realm.
-     * Body cultivation typically has slightly lower penalties due to physical resilience.
      */
     private static double calculateBodyDeathPenalty(PlayerCultivationAttachment cultivation) {
-        // Base penalty starts at 25% for mortals (lower than qi)
-        double basePenalty = 0.25;
+        // Base penalty starts at 10% for mortals
+        double basePenalty = 10;
 
         // Reduce penalty based on realm advancement
-        int realmIndex = cultivation.getCurrentBodyRealmIndex();
-        double realmReduction = Math.min(0.15, realmIndex * 0.02); // Max 15% reduction
+        int realmIndex = cultivation.getCurrentRealmIndex(ICultivationData.CultivationType.BODY);
+        double realmReduction = Math.min(0.10, realmIndex * 0.002); // Max 10% reduction
 
         return Math.max(0.03, basePenalty - realmReduction); // Minimum 3% penalty
     }
@@ -240,9 +238,6 @@ public class ICModRespawnEvent {
 
     /**
      * Restores all cultivation resources to full upon respawn.
-     *
-     * Following Xianxia tradition where respawn represents soul reconstruction,
-     * all vital energies should be restored to maximum capacity.
      */
     private static boolean restoreResourcesOnRespawn(ServerPlayer player) {
         long operationStart = System.nanoTime();

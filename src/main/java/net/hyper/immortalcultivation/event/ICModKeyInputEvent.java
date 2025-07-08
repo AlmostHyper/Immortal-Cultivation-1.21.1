@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.handler;
+package net.hyper.immortalcultivation.event;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.registry.ICModKeyBinds;
@@ -27,7 +27,7 @@ import org.lwjgl.glfw.GLFW;
  * - NeoForge bus: "The player pressed a key, respond to it" (happens during play)
  */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID, value = Dist.CLIENT)
-public class ICModInputHandler {
+public class ICModKeyInputEvent {
 
     /**
      * Handles key input events for cultivation interface shortcuts.
