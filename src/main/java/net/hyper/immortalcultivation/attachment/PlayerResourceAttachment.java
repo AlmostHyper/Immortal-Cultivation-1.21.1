@@ -399,8 +399,8 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
                     // Applies additive and multiplicative bonuses from realm definitions
                     double qiAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.QI);
                     double qiMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.QI);
-                    double bodyAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.BODY);
-                    double bodyMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.BODY);
+                    double bodyAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.BODY) * 0.5;
+                    double bodyMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.BODY) * 0.5;
 
                     // Combine bonuses from both cultivation types
                     double totalAdditiveBonus = qiAdditive + bodyAdditive;
@@ -466,8 +466,8 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
                 PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                 if (cultivation != null) {
                     // Applies additive and multiplicative bonuses from realm definitions
-                    double qiAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.QI);
-                    double qiMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.QI);
+                    double qiAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.QI) * 0.5;
+                    double qiMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.QI) * 0.5;
                     double bodyAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.BODY);
                     double bodyMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.BODY);
 

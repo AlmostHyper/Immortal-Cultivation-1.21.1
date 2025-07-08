@@ -3,8 +3,10 @@ package net.hyper.immortalcultivation.network.server;
 import io.netty.buffer.ByteBuf;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
+import net.hyper.immortalcultivation.cultivation.CultivationRealm;
 import net.hyper.immortalcultivation.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -407,30 +409,37 @@ public record UnifiedDeltaSyncPacket(
      * Apply cultivation-specific delta changes
      */
     private void applyCultivationDelta(PlayerCultivationAttachment cultivation) {
-        // Realm changes
+        // Realm changes - need to look up realm by ID, not set ID directly
         if ((cultivationFieldMask & CULT_QI_REALM) != 0 && currentQiRealmId.isPresent()) {
-            cultivation.setCurrentRealm(ICultivationData.CultivationType.QI, currentQiRealmId);
+            CultivationRealm qiRealm = ICModCultivationRealms.get(currentQiRealmId.get());
+            if (qiRealm != null) {
+                cultivation.setCurrentRealm(ICultivationData.CultivationType.QI, qiRealm);
+            }
         }
 
         if ((cultivationFieldMask & CULT_BODY_REALM) != 0 && currentBodyRealmId.isPresent()) {
-            cultivation.setCurrentBodyRealmId(currentBodyRealmId.get());
+            CultivationRealm bodyRealm = ICModCultivationRealms.get(currentBodyRealmId.get());
+            if (bodyRealm != null) {
+                cultivation.setCurrentRealm(ICultivationData.CultivationType.BODY, bodyRealm);
+            }
         }
 
-        // Cultivation progress changes
+        // Cultivation progress changes - use generic interface methods
         if ((cultivationFieldMask & CULT_QI_CURRENT) != 0 && currentQiCultivation.isPresent()) {
-            cultivation.setCurrentQiCultivation(currentQiCultivation.get());
+            cultivation.setCurrentCultivation(ICultivationData.CultivationType.QI, currentQiCultivation.get());
         }
 
         if ((cultivationFieldMask & CULT_QI_MAX) != 0 && maxQiCultivation.isPresent()) {
-            cultivation.setMaxQiCultivation(maxQiCultivation.get());
+            // Note: You may need to add setMaxCultivation to ICultivationData interface if it doesn't exist
+            cultivation.setMaxCultivation(ICultivationData.CultivationType.QI, maxQiCultivation.get());
         }
 
         if ((cultivationFieldMask & CULT_BODY_CURRENT) != 0 && currentBodyCultivation.isPresent()) {
-            cultivation.setCurrentBodyCultivation(currentBodyCultivation.get());
+            cultivation.setCurrentCultivation(ICultivationData.CultivationType.BODY, currentBodyCultivation.get());
         }
 
         if ((cultivationFieldMask & CULT_BODY_MAX) != 0 && maxBodyCultivation.isPresent()) {
-            cultivation.setMaxBodyCultivation(maxBodyCultivation.get());
+            cultivation.setMaxCultivation(ICultivationData.CultivationType.BODY, maxBodyCultivation.get());
         }
 
         // Focus changes
@@ -438,24 +447,30 @@ public record UnifiedDeltaSyncPacket(
             cultivation.setCurrentFocus(currentFocus.get());
         }
 
-        // Bonus changes
+        // Bonus changes - use generic methods
         if ((cultivationFieldMask & CULT_BONUSES) != 0 && bonuses.isPresent()) {
             PackedBonuses packedBonuses = bonuses.get();
-            cultivation.setQiAdditiveBonus(packedBonuses.qiAdditiveBonus());
-            cultivation.setQiMultiplicativeBonus(packedBonuses.qiMultiplicativeBonus());
-            cultivation.setBodyAdditiveBonus(packedBonuses.bodyAdditiveBonus());
-            cultivation.setBodyMultiplicativeBonus(packedBonuses.bodyMultiplicativeBonus());
+            cultivation.setRawAdditiveBonus(ICultivationData.CultivationType.QI, packedBonuses.qiAdditiveBonus());
+            cultivation.setRawMultiplicativeBonus(ICultivationData.CultivationType.QI, packedBonuses.qiMultiplicativeBonus());
+            cultivation.setRawAdditiveBonus(ICultivationData.CultivationType.BODY, packedBonuses.bodyAdditiveBonus());
+            cultivation.setRawMultiplicativeBonus(ICultivationData.CultivationType.BODY, packedBonuses.bodyMultiplicativeBonus());
         }
 
-        // Breakthrough data changes
+        // Breakthrough data changes - access through breakthrough attachment, not cultivation
         if ((cultivationFieldMask & CULT_BREAKTHROUGH) != 0 && breakthroughData.isPresent()) {
-            PackedBreakthroughData breakthrough = breakthroughData.get();
-            cultivation.setQiBreakthroughAttempts(breakthrough.qiBreakthroughAttempts());
-            cultivation.setBodyBreakthroughAttempts(breakthrough.bodyBreakthroughAttempts());
-            cultivation.setQiBreakthroughCooldown(breakthrough.qiBreakthroughCooldown());
-            cultivation.setBodyBreakthroughCooldown(breakthrough.bodyBreakthroughCooldown());
-            cultivation.setLastQiBreakthroughAttempt(breakthrough.lastQiBreakthroughAttempt());
-            cultivation.setLastBodyBreakthroughAttempt(breakthrough.lastBodyBreakthroughAttempt());
+            Player player = cultivation.getPlayerSafe();
+            if (player != null) {
+                PlayerBreakthroughAttachment breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
+                if (breakthrough != null) {
+                    PackedBreakthroughData btData = breakthroughData.get();
+                    breakthrough.setBreakthroughAttempts(PlayerCultivationAttachment.CultivationType.QI, btData.qiBreakthroughAttempts());
+                    breakthrough.setBreakthroughAttempts(PlayerCultivationAttachment.CultivationType.BODY, btData.bodyBreakthroughAttempts());
+                    breakthrough.setBreakthroughCooldown(PlayerCultivationAttachment.CultivationType.QI, btData.hasQiCooldown());
+                    breakthrough.setBreakthroughCooldown(PlayerCultivationAttachment.CultivationType.BODY, btData.hasBodyCooldown());
+                    breakthrough.setLastBreakthroughAttempt(PlayerCultivationAttachment.CultivationType.QI, btData.lastQiBreakthroughAttempt());
+                    breakthrough.setLastBreakthroughAttempt(PlayerCultivationAttachment.CultivationType.BODY, btData.lastBodyBreakthroughAttempt());
+                }
+            }
         }
     }
 
@@ -492,14 +507,15 @@ public record UnifiedDeltaSyncPacket(
      * Apply combat stats-specific delta changes
      */
     private void applyCombatStatsDelta(PlayerCombatStatsAttachment combatStats) {
-        if ((combatStatsFieldMask & COMBAT_ALL) != 0 && combatStats.isPresent()) {
+        if ((combatStatsFieldMask & COMBAT_ALL) != 0 && this.combatStats.isPresent()) {
             PackedCombatStats packed = this.combatStats.get();
-            combatStats.setAttackDamageBonus(packed.attackDamageBonus());
-            combatStats.setMovementSpeedBonus(packed.movementSpeedBonus());
-            combatStats.setJumpHeightBonus(packed.jumpHeightBonus());
-            combatStats.setPermanentAttackDamageBonus(packed.permanentAttackDamageBonus());
-            combatStats.setPermanentMovementSpeedBonus(packed.permanentMovementSpeedBonus());
-            combatStats.setPermanentJumpHeightBonus(packed.permanentJumpHeightBonus());
+
+            combatStats.setAttackDamageBonus(packed.attackBonus());
+            combatStats.setMovementSpeedBonus(packed.speedBonus());
+            combatStats.setJumpHeightBonus(packed.jumpBonus());
+            combatStats.setPermanentAttackDamageBonus(packed.permanentAttackBonus());
+            combatStats.setPermanentMovementSpeedBonus(packed.permanentSpeedBonus());
+            combatStats.setPermanentJumpHeightBonus(packed.permanentJumpBonus());
         }
     }
 }

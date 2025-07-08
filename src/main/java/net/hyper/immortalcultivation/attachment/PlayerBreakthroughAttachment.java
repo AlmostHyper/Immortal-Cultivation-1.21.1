@@ -147,12 +147,12 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerHelper implements 
 
     // === GETTERS ===
 
-    public long getQiBreakthroughAttempts() {
-        return qiBreakthroughAttempts;
-    }
-
-    public long getBodyBreakthroughAttempts() {
-        return bodyBreakthroughAttempts;
+    /**
+     * Generic method to get breakthrough attempts for any cultivation type
+     */
+    public long getBreakthroughAttempts(PlayerCultivationAttachment.CultivationType type) {
+        return (type == PlayerCultivationAttachment.CultivationType.QI) ?
+            qiBreakthroughAttempts : bodyBreakthroughAttempts;
     }
 
     public boolean isQiBreakthroughOnCooldown() {
@@ -163,8 +163,12 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerHelper implements 
         return bodyBreakthroughCooldown;
     }
 
+    /**
+     * Generic method to check if breakthrough is on cooldown for any cultivation type
+     */
     public boolean isBreakthroughOnCooldown(PlayerCultivationAttachment.CultivationType type) {
-        return (type == PlayerCultivationAttachment.CultivationType.QI) ? qiBreakthroughCooldown : bodyBreakthroughCooldown;
+        return (type == PlayerCultivationAttachment.CultivationType.QI) ?
+            qiBreakthroughCooldown : bodyBreakthroughCooldown;
     }
 
     public long getTimeSinceLastBreakthroughAttempt(PlayerCultivationAttachment.CultivationType type) {
@@ -173,6 +177,14 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerHelper implements 
         long lastAttempt = (type == PlayerCultivationAttachment.CultivationType.QI) ?
             lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
         return player.level().getGameTime() - lastAttempt;
+    }
+
+    /**
+     * Generic method to get last breakthrough attempt time for any cultivation type
+     */
+    public long getLastBreakthroughAttemptTime(PlayerCultivationAttachment.CultivationType type) {
+        return (type == PlayerCultivationAttachment.CultivationType.QI) ?
+            lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
     }
 
     // === CULTIVATION ATTACHMENT INTEGRATION ===
@@ -203,6 +215,54 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerHelper implements 
 
     public BreakthroughResult attemptBodyBreakthrough() {
         return attemptTypedBreakthrough(PlayerCultivationAttachment.CultivationType.BODY, BreakthroughType.MINOR);
+    }
+
+    /**
+     * Generic method to set breakthrough attempts for any cultivation type (for network sync)
+     */
+    public void setBreakthroughAttempts(PlayerCultivationAttachment.CultivationType type, long attempts) {
+        if (type == PlayerCultivationAttachment.CultivationType.QI) {
+            if (this.qiBreakthroughAttempts != attempts) {
+                this.qiBreakthroughAttempts = attempts;
+                markDirty();
+            }
+        } else {
+            if (this.bodyBreakthroughAttempts != attempts) {
+                this.bodyBreakthroughAttempts = attempts;
+                markDirty();
+            }
+        }
+    }
+
+    public void setBreakthroughCooldown(PlayerCultivationAttachment.CultivationType type, boolean cooldown) {
+        if (type == PlayerCultivationAttachment.CultivationType.QI) {
+            if (this.qiBreakthroughCooldown != cooldown) {
+                this.qiBreakthroughCooldown = cooldown;
+                markDirty();
+            }
+        } else {
+            if (this.bodyBreakthroughCooldown != cooldown) {
+                this.bodyBreakthroughCooldown = cooldown;
+                markDirty();
+            }
+        }
+    }
+
+    /**
+     * Generic method to set last breakthrough attempt time for any cultivation type (for network sync)
+     */
+    public void setLastBreakthroughAttempt(PlayerCultivationAttachment.CultivationType type, long attemptTime) {
+        if (type == PlayerCultivationAttachment.CultivationType.QI) {
+            if (this.lastQiBreakthroughAttempt != attemptTime) {
+                this.lastQiBreakthroughAttempt = attemptTime;
+                markDirty();
+            }
+        } else {
+            if (this.lastBodyBreakthroughAttempt != attemptTime) {
+                this.lastBodyBreakthroughAttempt = attemptTime;
+                markDirty();
+            }
+        }
     }
 
     /**

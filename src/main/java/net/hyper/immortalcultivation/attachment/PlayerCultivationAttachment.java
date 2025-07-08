@@ -215,6 +215,23 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
         return maxCultivation.get(type);
     }
 
+    /**
+     * Set maximum cultivation for specified type
+     */
+    public void setMaxCultivation(ICultivationData.CultivationType type, long value) {
+        long newMax = Math.max(1, value); // Same validation as updateCultivationLimit
+        if (newMax != maxCultivation.get(type)) {
+            maxCultivation.put(type, newMax);
+
+            // Ensure current cultivation doesn't exceed new max (same as updateCultivationLimit)
+            if (currentCultivation.get(type) > newMax) {
+                currentCultivation.put(type, newMax);
+            }
+
+            markDirty();
+        }
+    }
+
     @Override
     public long addCultivation(CultivationType type, long amount) {
         if (amount <= 0) return 0;
@@ -438,6 +455,27 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
         return currentFocus;
     }
 
+    /**
+     * Set current cultivation focus
+     */
+    public void setCurrentFocus(PlayerCultivationAttachment.CultivationType focus) {
+        if (this.currentFocus != focus) {
+            PlayerCultivationAttachment.CultivationType oldFocus = this.currentFocus;
+            this.currentFocus = focus;
+
+            // Update last change time (same as toggleFocus)
+            if (player != null) {
+                this.lastFocusChangeTime = player.level().getGameTime();
+
+                ImmortalCultivation.LOGGER.debug("Focus set from {} to {} for player {} (network sync)",
+                    oldFocus.getDisplayName(), focus.getDisplayName(),
+                    player.getName().getString());
+            }
+
+            markDirty();
+        }
+    }
+
     public boolean toggleFocus() {
         if (player == null) return false;
 
@@ -479,8 +517,31 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
         return additiveBonus.get(type);
     }
 
+    /**
+     * Set raw additive bonus for specified cultivation type
+     */
+    public void setRawAdditiveBonus(ICultivationData.CultivationType type, double bonus) {
+        Double currentValue = additiveBonus.get(type);
+        if (currentValue == null || Math.abs(currentValue - bonus) > 0.001) {
+            additiveBonus.put(type, bonus); // Direct assignment like in addBonus
+            markDirty();
+        }
+    }
+
     public double getRawMultiplicativeBonus(CultivationType type) {
         return multiplicativeBonus.get(type);
+    }
+
+
+    /**
+     * Set raw multiplicative bonus for specified cultivation type
+     */
+    public void setRawMultiplicativeBonus(ICultivationData.CultivationType type, double bonus) {
+        Double currentValue = multiplicativeBonus.get(type);
+        if (currentValue == null || Math.abs(currentValue - bonus) > 0.001) {
+            multiplicativeBonus.put(type, bonus); // Direct assignment like in addBonus
+            markDirty();
+        }
     }
 
     // === BREAKTHROUGH DELEGATION === //
@@ -559,8 +620,8 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
         if (breakthrough == null) return 0L;
 
         return (type == CultivationType.QI) ?
-            breakthrough.getQiBreakthroughAttempts() :
-            breakthrough.getBodyBreakthroughAttempts();
+            breakthrough.getBreakthroughAttempts(CultivationType.QI) :
+            breakthrough.getBreakthroughAttempts(CultivationType.BODY);
     }
 
     // === TICK PROCESSING ===
