@@ -632,4 +632,15 @@ public class ICModTickEvent {
         // Default to normal priority
         return NetworkSyncManager.SyncPriority.NORMAL;
     }
+
+    /**
+     * Invalidate cache for a specific player (used by ICModDimensionChangeEvent)
+     */
+    public static void invalidatePlayerCache(UUID playerId) {
+        AttachmentCache cache = attachmentCache.get(playerId);
+        if (cache != null) {
+            cache.invalidate();
+            ImmortalCultivation.LOGGER.debug("Invalidated cache for player: {}", playerId);
+        }
+    }
 }
