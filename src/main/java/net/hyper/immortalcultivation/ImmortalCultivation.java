@@ -1,8 +1,9 @@
 package net.hyper.immortalcultivation;
 
-import net.hyper.immortalcultivation.event.ICModTickEvent;
-import net.hyper.immortalcultivation.registry.*;
-import net.hyper.immortalcultivation.ui.screens.PillFurnaceScreen;
+import net.hyper.immortalcultivation.common.config.ImmortalCultivationConfig;
+import net.hyper.immortalcultivation.server.event.world.ICModTickEvent;
+import net.hyper.immortalcultivation.common.registry.*;
+import net.hyper.immortalcultivation.client.gui.screens.PillFurnaceScreen;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
