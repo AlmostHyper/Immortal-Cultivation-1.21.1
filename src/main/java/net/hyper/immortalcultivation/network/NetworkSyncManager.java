@@ -720,4 +720,18 @@ public class NetworkSyncManager {
             return packets.isEmpty() ? null : packets.get(packets.size() - 1);
         }
     }
+
+    /**
+     * Send unified delta sync immediately without batching
+     */
+    public static void sendUnifiedDeltaSync(ServerPlayer player, UnifiedDeltaSyncPacket packet) {
+        try {
+            ICModNetwork.sendToPlayer(packet, player);
+            ImmortalCultivation.LOGGER.debug("Sent unified delta sync packet to player: {}",
+                player.getName().getString());
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Failed to send unified sync packet to player {}: {}",
+                player.getName().getString(), e.getMessage());
+        }
+    }
 }

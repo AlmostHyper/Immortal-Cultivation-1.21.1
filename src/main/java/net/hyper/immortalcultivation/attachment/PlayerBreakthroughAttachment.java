@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.attachment;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.helper.DirtyTrackerHelper;
 import net.hyper.immortalcultivation.interfaces.ITickable;
+import net.hyper.immortalcultivation.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.cultivation.CultivationRealm;
 import net.minecraft.core.HolderLookup;
@@ -536,17 +537,12 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerHelper implements 
 
     @Override
     public void forceSync() {
-        if (player instanceof ServerPlayer serverPlayer) {
+        if (getPlayerSafe() instanceof ServerPlayer serverPlayer) {
             try {
-                // Create and send breakthrough sync packet
-                // Note: This will need to be implemented when we create the specific sync packet
-                markDirtyAndIncrement();
+                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.CRITICAL);
                 clearDirty();
-
-                ImmortalCultivation.LOGGER.debug("Synced breakthrough data for player: {}",
-                    serverPlayer.getName().getString());
             } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Failed to sync breakthrough data for player: {}",
+                ImmortalCultivation.LOGGER.error("Failed to force sync attachment data for player: {}",
                     serverPlayer.getName().getString(), e);
             }
         }

@@ -7,7 +7,7 @@ import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.helper.DirtyTrackerHelper;
 import net.hyper.immortalcultivation.interfaces.IDirtyTrackable;
 import net.hyper.immortalcultivation.interfaces.ITickable;
-import net.hyper.immortalcultivation.network.server.CombatStatsSyncPacket;
+import net.hyper.immortalcultivation.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -16,7 +16,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
-import net.neoforged.neoforge.common.util.INBTSerializable;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
@@ -518,25 +517,13 @@ public class PlayerCombatStatsAttachment implements IDirtyTrackable, ITickable {
 
     @Override
     public void forceSync() {
-        if (player instanceof ServerPlayer serverPlayer) {
+        if (getPlayerSafe() instanceof ServerPlayer serverPlayer) {
             try {
-                CombatStatsSyncPacket packet = new CombatStatsSyncPacket(
-                    getEffectiveAttackDamageMultiplier(),
-                    getEffectiveMovementSpeedMultiplier(),
-                    getEffectiveJumpHeightMultiplier(),
-                    permanentAttackDamageBonus,
-                    permanentMovementSpeedBonus,
-                    permanentJumpHeightBonus
-                );
-
-                PacketDistributor.sendToPlayer(serverPlayer, packet);
-                clearDirty(); // This already updates lastSyncTime in DirtyTrackerHelper
-
-                ImmortalCultivation.LOGGER.debug("Synced combat stats for player: {}",
-                    serverPlayer.getName().getString());
+                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.CRITICAL);
+                clearDirty();
             } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Failed to sync combat stats for player {}: {}",
-                    player.getName().getString(), e.getMessage());
+                ImmortalCultivation.LOGGER.error("Failed to force sync attachment data for player: {}",
+                    serverPlayer.getName().getString(), e);
             }
         }
     }

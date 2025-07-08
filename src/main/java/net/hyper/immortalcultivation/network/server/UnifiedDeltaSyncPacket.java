@@ -287,10 +287,10 @@ public record UnifiedDeltaSyncPacket(
             }
             if ((cultivationFieldMask & CULT_BONUSES) != 0) {
                 bonuses = Optional.of(new PackedBonuses(
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf)
+                    ByteBufCodecs.DOUBLE.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf)
                 ));
             }
             if ((cultivationFieldMask & CULT_BREAKTHROUGH) != 0) {
@@ -320,11 +320,11 @@ public record UnifiedDeltaSyncPacket(
             if ((resourceFieldMask & RES_PERMANENT) != 0) {
                 permanentBonuses = Optional.of(new PackedPermanentBonuses(
                     ByteBufCodecs.VAR_LONG.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf),
                     ByteBufCodecs.VAR_LONG.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf),
                     ByteBufCodecs.VAR_LONG.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf)
+                    ByteBufCodecs.DOUBLE.decode(buf)
                 ));
             }
         }
@@ -335,12 +335,12 @@ public record UnifiedDeltaSyncPacket(
 
             if ((combatStatsFieldMask & COMBAT_ALL) != 0) {
                 combatStats = Optional.of(new PackedCombatStats(
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf),
-                    ByteBufCodecs.FLOAT.decode(buf)
+                    ByteBufCodecs.DOUBLE.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf),
+                    ByteBufCodecs.DOUBLE.decode(buf)
                 ));
             }
         }

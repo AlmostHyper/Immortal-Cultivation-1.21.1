@@ -28,6 +28,12 @@ public class ICModNetwork {
         // === SERVER -> CLIENT === //
 
         REGISTRY.playToClient(
+            UnifiedDeltaSyncPacket.TYPE,
+            UnifiedDeltaSyncPacket.STREAM_CODEC,
+            UnifiedDeltaSyncPacket::handleClient
+        );
+
+        REGISTRY.playToClient(
             RaceSyncPacket.TYPE,
             RaceSyncPacket.STREAM_CODEC,
             RaceSyncPacket::handleClient
@@ -40,33 +46,9 @@ public class ICModNetwork {
         );
 
         REGISTRY.playToClient(
-            CultivationSyncPacket.TYPE,
-            CultivationSyncPacket.STREAM_CODEC,
-            CultivationSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            ResourceSyncPacket.TYPE,
-            ResourceSyncPacket.STREAM_CODEC,
-            ResourceSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
             TalentSyncPacket.TYPE,
             TalentSyncPacket.STREAM_CODEC,
             TalentSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            BreakthroughSyncPacket.TYPE,
-            BreakthroughSyncPacket.STREAM_CODEC,
-            BreakthroughSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            CombatStatsSyncPacket.TYPE,
-            CombatStatsSyncPacket.STREAM_CODEC,
-            CombatStatsSyncPacket::handleClient
         );
 
         REGISTRY.playToClient(

@@ -5,7 +5,7 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.interfaces.*;
 import net.hyper.immortalcultivation.helper.DirtyTrackerHelper;
-import net.hyper.immortalcultivation.network.server.ResourceSyncPacket;
+import net.hyper.immortalcultivation.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -541,38 +541,72 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     // === REGENERATION METHODS ===
 
     public void regenerateHealth(double rate) {
-        if (getCurrentHealth() >= getMaxHealth()) return;
+        if (getCurrentHealth() >= getMaxHealth()) {
+            healthRegenFraction = 0.0;
+            return;
+        }
 
         healthRegenFraction += rate;
-        long wholePoints = (long) healthRegenFraction;
-        healthRegenFraction -= wholePoints;
 
-        if (wholePoints > 0) {
-            healHealth(wholePoints);
+        // Prevent fraction from getting too large
+        if (healthRegenFraction > 1000.0) {
+            long overflow = (long) healthRegenFraction;
+            healthRegenFraction -= overflow;
+            healHealth(overflow);
+        } else {
+            long wholePoints = (long) healthRegenFraction;
+            healthRegenFraction -= wholePoints;
+
+            if (wholePoints > 0) {
+                healHealth(wholePoints);
+            }
         }
     }
 
+
     public void regenerateQi(double rate) {
-        if (getCurrentQi() >= getMaxQi()) return;
+        if (getCurrentQi() >= getMaxQi()) {
+            qiRegenFraction = 0.0;
+            return;
+        }
 
         qiRegenFraction += rate;
-        long wholePoints = (long) qiRegenFraction;
-        qiRegenFraction -= wholePoints;
 
-        if (wholePoints > 0) {
-            restoreQi(wholePoints);
+        // Prevent fraction from getting too large
+        if (qiRegenFraction > 1000.0) {
+            long overflow = (long) qiRegenFraction;
+            qiRegenFraction -= overflow;
+            setCurrentQi(overflow);
+        } else {
+            long wholePoints = (long) qiRegenFraction;
+            qiRegenFraction -= wholePoints;
+
+            if (wholePoints > 0) {
+                setCurrentQi(wholePoints);
+            }
         }
     }
 
     public void regenerateBody(double rate) {
-        if (getCurrentBody() >= getMaxBody()) return;
+        if (getCurrentQi() >= getMaxQi()) {
+            bodyRegenFraction = 0.0;
+            return;
+        }
 
         bodyRegenFraction += rate;
-        long wholePoints = (long) bodyRegenFraction;
-        bodyRegenFraction -= wholePoints;
 
-        if (wholePoints > 0) {
-            restoreBody(wholePoints);
+        // Prevent fraction from getting too large
+        if (bodyRegenFraction > 1000.0) {
+            long overflow = (long) bodyRegenFraction;
+            bodyRegenFraction -= overflow;
+            setCurrentBody(overflow);
+        } else {
+            long wholePoints = (long) bodyRegenFraction;
+            bodyRegenFraction -= wholePoints;
+
+            if (wholePoints > 0) {
+                setCurrentBody(wholePoints);
+            }
         }
     }
 
@@ -642,27 +676,54 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     // === SYNC MANAGEMENT ===
 
-    private void syncToClient() {
-        if (player instanceof ServerPlayer serverPlayer) {
+    @Override
+    public boolean shouldSyncNow() {
+        return dirtyTrackerHelper.shouldSync(1500, 1);
+    }
+
+    @Override
+    public void forceSync() {
+        if (getPlayerSafe() instanceof ServerPlayer serverPlayer) {
             try {
-                ResourceSyncPacket packet = new ResourceSyncPacket(
-                    currentHealth, currentQi, currentBody,
-                    permanentHealthBonus, permanentHealthRegenBonus,
-                    permanentMaxQiBonus, permanentQiRegenBonus,
-                    permanentMaxBodyBonus, permanentBodyRegenBonus
-                );
-                PacketDistributor.sendToPlayer(serverPlayer, packet);
+                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.CRITICAL);
 
-                // Clear dirty flag after successful sync
-                clearDirty();
-
-                ImmortalCultivation.LOGGER.debug("Synced resource data to client for player: {}",
+                ImmortalCultivation.LOGGER.debug("Force synced resource data for player: {}",
                     serverPlayer.getName().getString());
             } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error syncing resource data for player {}",
-                    player.getName().getString(), e);
+                ImmortalCultivation.LOGGER.error("Failed to force sync resource data for player: {}",
+                    serverPlayer.getName().getString(), e);
             }
         }
+    }
+
+    @Override
+    public void markDirty() {
+        dirtyTrackerHelper.markDirty();
+    }
+
+    @Override
+    public boolean isDirty() {
+        return dirtyTrackerHelper.isDirty();
+    }
+
+    @Override
+    public void clearDirty() {
+        dirtyTrackerHelper.clearDirty();
+    }
+
+    @Override
+    public long getChangeCounter() {
+        return dirtyTrackerHelper.getChangeCounter();
+    }
+
+    @Override
+    public void incrementChangeCounter() {
+        dirtyTrackerHelper.incrementChangeCounter();
+    }
+
+    @Override
+    public void resetChangeCounter() {
+        dirtyTrackerHelper.resetChangeCounter();
     }
 
     // === GETTERS FOR PERMANENT BONUSES ===
@@ -806,46 +867,5 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
                 .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerResourceAttachment: {}", error))
                 .orElse(new CompoundTag());
         }
-    }
-
-    // === DIRTY FLAG IMPLEMENTATION === //
-
-    @Override
-    public boolean shouldSyncNow() {
-        return dirtyTrackerHelper.shouldSync(1500, 1);
-    }
-
-    @Override
-    public void forceSync() {
-    }
-
-    @Override
-    public void markDirty() {
-        dirtyTrackerHelper.markDirty();
-    }
-
-    @Override
-    public boolean isDirty() {
-        return dirtyTrackerHelper.isDirty();
-    }
-
-    @Override
-    public void clearDirty() {
-        dirtyTrackerHelper.clearDirty();
-    }
-
-    @Override
-    public long getChangeCounter() {
-        return dirtyTrackerHelper.getChangeCounter();
-    }
-
-    @Override
-    public void incrementChangeCounter() {
-        dirtyTrackerHelper.incrementChangeCounter();
-    }
-
-    @Override
-    public void resetChangeCounter() {
-        dirtyTrackerHelper.resetChangeCounter();
     }
 }

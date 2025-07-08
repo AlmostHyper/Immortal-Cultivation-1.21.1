@@ -337,8 +337,6 @@ public class ICModTickEvent {
                 // Schedule sync through the unified system
                 NetworkSyncManager.scheduleSync(player, priority);
 
-                // Mark as processed for the attachment to avoid double-syncing
-                attachment.clearDirty();
             }
 
             return true;
@@ -601,23 +599,37 @@ public class ICModTickEvent {
 
     // === NETWORK DELEGATION === //
 
+    /**
+     * Determines sync priority based on attachment type and change patterns.
+     * Critical changes (health, combat) get higher priority than informational changes (statistics).
+     */
     private static NetworkSyncManager.SyncPriority determineSyncPriority(IDirtyTrackable attachment, String attachmentName) {
-        // Critical priority for high-frequency changes or health-related data
-        if (attachmentName.equals("resources") && attachment.getChangeCounter() > 5) {
-            return NetworkSyncManager.SyncPriority.CRITICAL;
+        // Critical priority for health/combat-related changes
+        if (attachment instanceof PlayerResourceAttachment) {
+            PlayerResourceAttachment resources = (PlayerResourceAttachment) attachment;
+            // High priority for health changes, normal for resource changes
+            return resources.getCurrentHealth() <= resources.getMaxHealth() * 0.2 ?
+                NetworkSyncManager.SyncPriority.CRITICAL : NetworkSyncManager.SyncPriority.HIGH;
         }
 
-        // High priority for cultivation progression and combat stats
-        if (attachmentName.equals("cultivation") || attachmentName.equals("combat stats")) {
+        if (attachment instanceof PlayerCombatStatsAttachment) {
+            return NetworkSyncManager.SyncPriority.HIGH; // Combat stats need fast sync
+        }
+
+        // Breakthrough events are important but not critical
+        if (attachment instanceof PlayerBreakthroughAttachment) {
             return NetworkSyncManager.SyncPriority.HIGH;
         }
 
-        // Normal priority for most other changes
-        if (attachment.getChangeCounter() > 2) {
-            return NetworkSyncManager.SyncPriority.NORMAL;
+        // Cultivation progress is normal priority
+        if (attachment instanceof PlayerCultivationAttachment) {
+            PlayerCultivationAttachment cultivation = (PlayerCultivationAttachment) attachment;
+            // Use change counter to determine if this is a burst of changes
+            return cultivation.getChangeCounter() > 5 ?
+                NetworkSyncManager.SyncPriority.HIGH : NetworkSyncManager.SyncPriority.NORMAL;
         }
 
-        // Low priority for infrequent changes
-        return NetworkSyncManager.SyncPriority.LOW;
+        // Default to normal priority
+        return NetworkSyncManager.SyncPriority.NORMAL;
     }
 }

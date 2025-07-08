@@ -7,7 +7,7 @@ import net.hyper.immortalcultivation.interfaces.ITickable;
 import net.hyper.immortalcultivation.cultivation.CultivationRealm;
 import net.hyper.immortalcultivation.cultivation.data.CultivationRealmData;
 import net.hyper.immortalcultivation.cultivation.data.JsonCultivationRealm;
-import net.hyper.immortalcultivation.network.server.CultivationSyncPacket;
+import net.hyper.immortalcultivation.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
@@ -669,33 +669,16 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
 
     @Override
     public void forceSync() {
-        if (!(player instanceof ServerPlayer serverPlayer)) {
-            return;
-        }
-
-        try {
-            CultivationSyncPacket packet = new CultivationSyncPacket(
-                currentRealms.get(CultivationType.QI).getId(),
-                previousRealms.get(CultivationType.QI) != null ? previousRealms.get(CultivationType.QI).getId() : "",
-                currentRealms.get(CultivationType.BODY).getId(),
-                previousRealms.get(CultivationType.BODY) != null ? previousRealms.get(CultivationType.BODY).getId() : "",
-                currentCultivation.get(CultivationType.QI),
-                maxCultivation.get(CultivationType.QI),
-                currentCultivation.get(CultivationType.BODY),
-                maxCultivation.get(CultivationType.BODY),
-                currentFocus,
-                additiveBonus.get(CultivationType.QI),
-                multiplicativeBonus.get(CultivationType.QI),
-                additiveBonus.get(CultivationType.BODY),
-                multiplicativeBonus.get(CultivationType.BODY)
-            );
-
-            ICModNetwork.sendToPlayer(packet, serverPlayer);
-            clearDirty();
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error syncing cultivation data for player {}",
-                serverPlayer.getName().getString(), e);
+        if (getPlayerSafe() instanceof ServerPlayer serverPlayer) {
+            try {
+                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.CRITICAL);
+                clearDirty();
+                ImmortalCultivation.LOGGER.debug("Force synced cultivation data for player: {}",
+                    serverPlayer.getName().getString());
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("Failed to force sync cultivation data for player: {}",
+                    serverPlayer.getName().getString(), e);
+            }
         }
     }
 
