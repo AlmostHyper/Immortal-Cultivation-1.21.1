@@ -253,6 +253,27 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
     }
 
     @Override
+    public long subtractCultivation(CultivationType type, long amount) {
+        if (amount <= 0) return 0;
+
+        totalCultivationEarned.merge(type, amount, Long::sum);
+
+        if (player != null) {
+            ImmortalCultivation.LOGGER.info("DEBUG: Player {} lost {} {} cultivation points (direct). Total lost: {}",
+                player.getName().getString(), amount, type.getDisplayName(), totalCultivationEarned.get(type));
+        }
+
+        long currentBefore = currentCultivation.get(type);
+        setCurrentCultivation(type, currentBefore - amount);
+        long actualSubtracted = currentCultivation.get(type) + currentBefore;
+
+        checkMilestones(type);
+        return actualSubtracted;
+    }
+
+
+
+    @Override
     public double getProgress(CultivationType type) {
         long max = maxCultivation.get(type);
         return max > 0 ? (double) currentCultivation.get(type) / max : 0.0;
