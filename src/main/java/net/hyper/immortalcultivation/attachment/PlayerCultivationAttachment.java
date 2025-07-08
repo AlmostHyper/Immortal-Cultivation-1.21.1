@@ -218,7 +218,8 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
     /**
      * Set maximum cultivation for specified type
      */
-    public void setMaxCultivation(ICultivationData.CultivationType type, long value) {
+    @Override
+    public void setMaxCultivation(CultivationType type, long value) {
         long newMax = Math.max(1, value); // Same validation as updateCultivationLimit
         if (newMax != maxCultivation.get(type)) {
             maxCultivation.put(type, newMax);
