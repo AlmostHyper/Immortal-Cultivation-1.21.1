@@ -3,7 +3,6 @@ package net.hyper.immortalcultivation.attachment;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.helper.DirtyTrackerHelper;
 import net.hyper.immortalcultivation.interfaces.IDirtyTrackable;
 import net.hyper.immortalcultivation.interfaces.ITickable;
@@ -16,7 +15,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
 

@@ -2,7 +2,6 @@ package net.hyper.immortalcultivation.util;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.PlayerCombatStatsAttachment;
-import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;

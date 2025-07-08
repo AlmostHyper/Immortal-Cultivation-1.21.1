@@ -2,7 +2,6 @@ package net.hyper.immortalcultivation.event;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
-import net.hyper.immortalcultivation.handler.CombatStatsEventHandler;
 import net.hyper.immortalcultivation.interfaces.IDirtyTrackable;
 import net.hyper.immortalcultivation.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
