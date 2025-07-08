@@ -1,7 +1,9 @@
 package net.hyper.immortalcultivation.network.server;
 
 import io.netty.buffer.ByteBuf;
+import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.attachment.*;
+import net.hyper.immortalcultivation.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -357,30 +359,147 @@ public record UnifiedDeltaSyncPacket(
     public static void handleClient(UnifiedDeltaSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
-
-            // Update cultivation data if present
-            if ((packet.attachmentMask & CULTIVATION_MASK) != 0) {
-                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                if (cultivation != null) {
-                    cultivation.applyDeltaSync(packet);
-                }
-            }
-
-            // Update resource data if present
-            if ((packet.attachmentMask & RESOURCE_MASK) != 0) {
-                PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-                if (resources != null) {
-                    resources.applyDeltaSync(packet);
-                }
-            }
-
-            // Update combat stats data if present
-            if ((packet.attachmentMask & COMBAT_STATS_MASK) != 0) {
-                PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-                if (combatStats != null) {
-                    combatStats.applyDeltaSync(packet);
-                }
+            if (player != null) {
+                packet.applyDeltaSync(player);
             }
         });
+    }
+
+    /**
+     * Apply delta sync changes to client-side attachments.
+     * Only updates fields that are marked as changed in the bitmasks.
+     */
+    private void applyDeltaSync(Player player) {
+        try {
+            // Apply cultivation changes
+            if ((attachmentMask & CULTIVATION_MASK) != 0) {
+                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                if (cultivation != null) {
+                    applyCultivationDelta(cultivation);
+                }
+            }
+
+            // Apply resource changes
+            if ((attachmentMask & RESOURCE_MASK) != 0) {
+                PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+                if (resources != null) {
+                    applyResourceDelta(resources);
+                }
+            }
+
+            // Apply combat stats changes
+            if ((attachmentMask & COMBAT_STATS_MASK) != 0) {
+                PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+                if (combatStats != null) {
+                    applyCombatStatsDelta(combatStats);
+                }
+            }
+
+            ImmortalCultivation.LOGGER.debug("Applied unified delta sync for player: {}", player.getName().getString());
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying unified delta sync for player {}: {}",
+                player.getName().getString(), e.getMessage());
+        }
+    }
+
+    /**
+     * Apply cultivation-specific delta changes
+     */
+    private void applyCultivationDelta(PlayerCultivationAttachment cultivation) {
+        // Realm changes
+        if ((cultivationFieldMask & CULT_QI_REALM) != 0 && currentQiRealmId.isPresent()) {
+            cultivation.setCurrentRealm(ICultivationData.CultivationType.QI, currentQiRealmId);
+        }
+
+        if ((cultivationFieldMask & CULT_BODY_REALM) != 0 && currentBodyRealmId.isPresent()) {
+            cultivation.setCurrentBodyRealmId(currentBodyRealmId.get());
+        }
+
+        // Cultivation progress changes
+        if ((cultivationFieldMask & CULT_QI_CURRENT) != 0 && currentQiCultivation.isPresent()) {
+            cultivation.setCurrentQiCultivation(currentQiCultivation.get());
+        }
+
+        if ((cultivationFieldMask & CULT_QI_MAX) != 0 && maxQiCultivation.isPresent()) {
+            cultivation.setMaxQiCultivation(maxQiCultivation.get());
+        }
+
+        if ((cultivationFieldMask & CULT_BODY_CURRENT) != 0 && currentBodyCultivation.isPresent()) {
+            cultivation.setCurrentBodyCultivation(currentBodyCultivation.get());
+        }
+
+        if ((cultivationFieldMask & CULT_BODY_MAX) != 0 && maxBodyCultivation.isPresent()) {
+            cultivation.setMaxBodyCultivation(maxBodyCultivation.get());
+        }
+
+        // Focus changes
+        if ((cultivationFieldMask & CULT_FOCUS) != 0 && currentFocus.isPresent()) {
+            cultivation.setCurrentFocus(currentFocus.get());
+        }
+
+        // Bonus changes
+        if ((cultivationFieldMask & CULT_BONUSES) != 0 && bonuses.isPresent()) {
+            PackedBonuses packedBonuses = bonuses.get();
+            cultivation.setQiAdditiveBonus(packedBonuses.qiAdditiveBonus());
+            cultivation.setQiMultiplicativeBonus(packedBonuses.qiMultiplicativeBonus());
+            cultivation.setBodyAdditiveBonus(packedBonuses.bodyAdditiveBonus());
+            cultivation.setBodyMultiplicativeBonus(packedBonuses.bodyMultiplicativeBonus());
+        }
+
+        // Breakthrough data changes
+        if ((cultivationFieldMask & CULT_BREAKTHROUGH) != 0 && breakthroughData.isPresent()) {
+            PackedBreakthroughData breakthrough = breakthroughData.get();
+            cultivation.setQiBreakthroughAttempts(breakthrough.qiBreakthroughAttempts());
+            cultivation.setBodyBreakthroughAttempts(breakthrough.bodyBreakthroughAttempts());
+            cultivation.setQiBreakthroughCooldown(breakthrough.qiBreakthroughCooldown());
+            cultivation.setBodyBreakthroughCooldown(breakthrough.bodyBreakthroughCooldown());
+            cultivation.setLastQiBreakthroughAttempt(breakthrough.lastQiBreakthroughAttempt());
+            cultivation.setLastBodyBreakthroughAttempt(breakthrough.lastBodyBreakthroughAttempt());
+        }
+    }
+
+    /**
+     * Apply resource-specific delta changes
+     */
+    private void applyResourceDelta(PlayerResourceAttachment resources) {
+        // Current resource values
+        if ((resourceFieldMask & RES_HEALTH) != 0 && currentHealth.isPresent()) {
+            resources.setCurrentHealth(currentHealth.get());
+        }
+
+        if ((resourceFieldMask & RES_QI) != 0 && currentQi.isPresent()) {
+            resources.setCurrentQi(currentQi.get());
+        }
+
+        if ((resourceFieldMask & RES_BODY) != 0 && currentBody.isPresent()) {
+            resources.setCurrentBody(currentBody.get());
+        }
+
+        // Permanent bonuses
+        if ((resourceFieldMask & RES_PERMANENT) != 0 && permanentBonuses.isPresent()) {
+            PackedPermanentBonuses packed = permanentBonuses.get();
+            resources.setPermanentHealthBonus(packed.permanentHealthBonus());
+            resources.setPermanentHealthRegenBonus(packed.permanentHealthRegenBonus());
+            resources.setPermanentMaxQiBonus(packed.permanentMaxQiBonus());
+            resources.setPermanentQiRegenBonus(packed.permanentQiRegenBonus());
+            resources.setPermanentMaxBodyBonus(packed.permanentMaxBodyBonus());
+            resources.setPermanentBodyRegenBonus(packed.permanentBodyRegenBonus());
+        }
+    }
+
+    /**
+     * Apply combat stats-specific delta changes
+     */
+    private void applyCombatStatsDelta(PlayerCombatStatsAttachment combatStats) {
+        if ((combatStatsFieldMask & COMBAT_ALL) != 0 && combatStats.isPresent()) {
+            PackedCombatStats packed = this.combatStats.get();
+            combatStats.setAttackDamageBonus(packed.attackDamageBonus());
+            combatStats.setMovementSpeedBonus(packed.movementSpeedBonus());
+            combatStats.setJumpHeightBonus(packed.jumpHeightBonus());
+            combatStats.setPermanentAttackDamageBonus(packed.permanentAttackDamageBonus());
+            combatStats.setPermanentMovementSpeedBonus(packed.permanentMovementSpeedBonus());
+            combatStats.setPermanentJumpHeightBonus(packed.permanentJumpHeightBonus());
+        }
     }
 }

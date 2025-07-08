@@ -56,12 +56,6 @@ public class GetQiRegenCommand {
                 Component.literal(String.format("Effective Regeneration: %.3f/sec", effectiveRate))
                     .withStyle(ChatFormatting.AQUA), false);
 
-            // Meditation/circulation rate
-            double circulationRate = resources.getEffectiveCirculatingQiRegenerationRate();
-            context.getSource().sendSuccess(() ->
-                Component.literal(String.format("Meditation Rate: %.3f/sec (9x base)", circulationRate))
-                    .withStyle(ChatFormatting.DARK_AQUA), false);
-
             // Time to full calculation
             if (currentQi < maxQi && effectiveRate > 0) {
                 double timeToFull = (maxQi - currentQi) / (effectiveRate);

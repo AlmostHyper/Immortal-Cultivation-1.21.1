@@ -7,6 +7,7 @@ import net.hyper.immortalcultivation.network.server.UnifiedDeltaSyncPacket;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.registry.ICModNetwork;
 import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -459,36 +460,25 @@ public class NetworkSyncManager {
     }
 
     private static ServerPlayer getServerPlayer(UUID playerId) {
-        // Implementation depends on your server access pattern
-        // This is a simplified version
-        try {
-            return net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer()
-                .getPlayerList().getPlayer(playerId);
-        } catch (Exception e) {
-            return null;
-        }
+
+        return ServerLifecycleHooks.getCurrentServer()
+            .getPlayerList()
+            .getPlayer(playerId);
     }
 
     private static void updateSyncState(PlayerSyncState syncState, PlayerCultivationAttachment cultivation,
                                         PlayerResourceAttachment resources, PlayerCombatStatsAttachment combatStats) {
         if (cultivation != null) {
-            syncState.lastQiRealmId = cultivation.getCurrentQiRealmId();
-            syncState.lastBodyRealmId = cultivation.getCurrentBodyRealmId();
-            syncState.lastQiCultivation = cultivation.getCurrentQiCultivation();
+            syncState.lastCurrentQiRealmId = cultivation.getCurrentQiRealmId();
+            syncState.lastCurrentBodyRealmId = cultivation.getCurrentBodyRealmId();
+            syncState.lastCurrentQiCultivation = cultivation.getCurrentQiCultivation();
             syncState.lastMaxQiCultivation = cultivation.getMaxQiCultivation();
-            syncState.lastBodyCultivation = cultivation.getCurrentBodyCultivation();
+            syncState.lastCurrentBodyCultivation = cultivation.getCurrentBodyCultivation();
             syncState.lastMaxBodyCultivation = cultivation.getMaxBodyCultivation();
             syncState.lastFocus = cultivation.getCurrentFocus();
-            syncState.lastQiAdditiveBonus = cultivation.getQiAdditiveBonus();
-            syncState.lastQiMultiplicativeBonus = cultivation.getQiMultiplicativeBonus();
-            syncState.lastBodyAdditiveBonus = cultivation.getBodyAdditiveBonus();
-            syncState.lastBodyMultiplicativeBonus = cultivation.getBodyMultiplicativeBonus();
-            syncState.lastQiBreakthroughAttempts = cultivation.getQiBreakthroughAttempts();
-            syncState.lastBodyBreakthroughAttempts = cultivation.getBodyBreakthroughAttempts();
-            syncState.lastQiBreakthroughCooldown = cultivation.isQiBreakthroughCooldown();
-            syncState.lastBodyBreakthroughCooldown = cultivation.isBodyBreakthroughCooldown();
-            syncState.lastQiBreakthroughAttempt = cultivation.getLastQiBreakthroughAttempt();
-            syncState.lastBodyBreakthroughAttempt = cultivation.getLastBodyBreakthroughAttempt();
+
+            // Reset change counters for processed attachments
+            cultivation.resetChangeCounter();
         }
 
         if (resources != null) {
@@ -501,6 +491,8 @@ public class NetworkSyncManager {
             syncState.lastPermanentQiRegenBonus = resources.getPermanentQiRegenBonus();
             syncState.lastPermanentMaxBodyBonus = resources.getPermanentMaxBodyBonus();
             syncState.lastPermanentBodyRegenBonus = resources.getPermanentBodyRegenBonus();
+
+            resources.resetChangeCounter();
         }
 
         if (combatStats != null) {
@@ -510,6 +502,8 @@ public class NetworkSyncManager {
             syncState.lastPermanentAttackBonus = combatStats.getPermanentAttackDamageBonus();
             syncState.lastPermanentSpeedBonus = combatStats.getPermanentMovementSpeedBonus();
             syncState.lastPermanentJumpBonus = combatStats.getPermanentJumpHeightBonus();
+
+            combatStats.resetChangeCounter();
         }
     }
 

@@ -81,25 +81,11 @@ public interface IBodyData {
     double getBaseBodyRegenerationRate();
 
     /**
-     * Gets the base circulating Body regeneration rate per second
-     * @return Circulating regeneration rate
-     */
-    double getBaseCirculatingBodyRegenerationRate();
-
-    /**
      * Gets the effective Body regeneration rate (including modifiers)
      * @return Effective regeneration rate
      */
     default double getEffectiveBodyRegenerationRate() {
         return getBaseBodyRegenerationRate(); // Override for modifiers
-    }
-
-    /**
-     * Gets the effective circulating Body regeneration rate (including modifiers)
-     * @return Effective circulating regeneration rate
-     */
-    default double getEffectiveCirculatingBodyRegenerationRate() {
-        return getBaseCirculatingBodyRegenerationRate(); // Override for modifiers
     }
 
     /**

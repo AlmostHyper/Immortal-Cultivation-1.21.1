@@ -84,25 +84,11 @@ public interface IHealthData {
     double getBaseHealthRegenerationRate();
 
     /**
-     * Gets the base circulating Health regeneration rate per second
-     * @return Circulating regeneration rate
-     */
-    double getBaseCirculatingHealthRegenerationRate();
-
-    /**
      * Gets the effective Health regeneration rate (including modifiers)
      * @return Effective regeneration rate
      */
     default double getEffectiveHealthRegenerationRate() {
         return getBaseHealthRegenerationRate(); // Override for modifiers
-    }
-
-    /**
-     * Gets the effective circulating Health regeneration rate (including modifiers)
-     * @return Effective circulating regeneration rate
-     */
-    default double getEffectiveCirculatingHealthRegenerationRate() {
-        return getBaseCirculatingHealthRegenerationRate(); // Override for modifiers
     }
 
     /**

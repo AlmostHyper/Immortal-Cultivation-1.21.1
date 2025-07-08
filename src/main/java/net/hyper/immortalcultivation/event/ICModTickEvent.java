@@ -5,6 +5,7 @@ import net.hyper.immortalcultivation.attachment.*;
 import net.hyper.immortalcultivation.helper.DirtyTrackerHelper;
 import net.hyper.immortalcultivation.interfaces.IDirtyTrackable;
 import net.hyper.immortalcultivation.interfaces.ITickable;
+import net.hyper.immortalcultivation.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.registry.ICModAttachmentTypes;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -284,6 +285,11 @@ public class ICModTickEvent {
             }
         }
 
+        // Process pending unified syncs every few ticks to batch efficiently
+        if (currentTick % 4 == 0) { // Every 4 ticks = 5 times per second
+            NetworkSyncManager.processPendingSyncs();
+        }
+
         // Periodic maintenance
         if (currentTick % CACHE_CLEANUP_INTERVAL == 0) {
             performCacheCleanup();
@@ -322,9 +328,17 @@ public class ICModTickEvent {
                 }
             }
 
-            // Use the attachment's intelligent sync system
+            // Instead of calling forceSync() directly, let NetworkSyncManager handle it
+            // The individual attachment's shouldSyncNow() logic is still respected
             if (attachment.shouldSyncNow()) {
-                attachment.forceSync();
+                // Determine sync priority based on attachment type and change frequency
+                NetworkSyncManager.SyncPriority priority = determineSyncPriority(attachment, attachmentName);
+
+                // Schedule sync through the unified system
+                NetworkSyncManager.scheduleSync(player, priority);
+
+                // Mark as processed for the attachment to avoid double-syncing
+                attachment.clearDirty();
             }
 
             return true;
@@ -583,5 +597,27 @@ public class ICModTickEvent {
         double avgProcessingTime = (double) totalProcessingTime.get() / totalPlayers / 1_000_000.0;
         return String.format("Players: %d, Avg Time: %.3fms, Cache Size: %d",
             totalPlayers, avgProcessingTime, attachmentCache.size());
+    }
+
+    // === NETWORK DELEGATION === //
+
+    private static NetworkSyncManager.SyncPriority determineSyncPriority(IDirtyTrackable attachment, String attachmentName) {
+        // Critical priority for high-frequency changes or health-related data
+        if (attachmentName.equals("resources") && attachment.getChangeCounter() > 5) {
+            return NetworkSyncManager.SyncPriority.CRITICAL;
+        }
+
+        // High priority for cultivation progression and combat stats
+        if (attachmentName.equals("cultivation") || attachmentName.equals("combat stats")) {
+            return NetworkSyncManager.SyncPriority.HIGH;
+        }
+
+        // Normal priority for most other changes
+        if (attachment.getChangeCounter() > 2) {
+            return NetworkSyncManager.SyncPriority.NORMAL;
+        }
+
+        // Low priority for infrequent changes
+        return NetworkSyncManager.SyncPriority.LOW;
     }
 }

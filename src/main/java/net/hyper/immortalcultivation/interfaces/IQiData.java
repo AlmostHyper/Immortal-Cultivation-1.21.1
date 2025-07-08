@@ -81,25 +81,11 @@ public interface IQiData {
     double getBaseQiRegenerationRate();
 
     /**
-     * Gets the base circulating Qi regeneration rate per second
-     * @return Circulating regeneration rate
-     */
-    double getBaseCirculatingQiRegenerationRate();
-
-    /**
      * Gets the effective Qi regeneration rate (including modifiers)
      * @return Effective regeneration rate
      */
     default double getEffectiveQiRegenerationRate() {
         return getBaseQiRegenerationRate(); // Override for modifiers
-    }
-
-    /**
-     * Gets the effective circulating Qi regeneration rate (including modifiers)
-     * @return Effective circulating regeneration rate
-     */
-    default double getEffectiveCirculatingQiRegenerationRate() {
-        return getBaseCirculatingQiRegenerationRate(); // Override for modifiers
     }
 
     /**

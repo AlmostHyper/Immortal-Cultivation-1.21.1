@@ -483,7 +483,7 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
         return multiplicativeBonus.get(type);
     }
 
-    // === BREAKTHROUGH DELEGATION ===
+    // === BREAKTHROUGH DELEGATION === //
 
     private PlayerBreakthroughAttachment getBreakthroughAttachment() {
         if (player == null) return null;
@@ -495,6 +495,23 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
         return breakthrough;
     }
 
+    /**
+     * Check if a breakthrough can be attempted for the specified cultivation type.
+     * A breakthrough is possible when current cultivation reaches maximum cultivation.
+     */
+    public boolean canBreakthrough(CultivationType type) {
+        if (player == null) return false;
+
+        switch (type) {
+            case QI:
+                return currentCultivation.get(CultivationType.QI) >= maxCultivation.get(CultivationType.QI);
+            case BODY:
+                return currentCultivation.get(CultivationType.BODY) >= maxCultivation.get(CultivationType.BODY);
+            default:
+                return false;
+        }
+    }
+
     public PlayerBreakthroughAttachment.BreakthroughResult attemptBreakthrough(CultivationType type) {
         PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
         if (breakthrough == null) {
@@ -502,7 +519,48 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
                 PlayerBreakthroughAttachment.BreakthroughType.MINOR, 0.0, 0L);
         }
 
-        return (type == CultivationType.QI) ? breakthrough.attemptQiBreakthrough() : breakthrough.attemptBodyBreakthrough();
+        return breakthrough.attemptTypedBreakthrough(type, PlayerBreakthroughAttachment.BreakthroughType.MINOR);
+    }
+
+    // Add these convenience methods for backward compatibility
+    public PlayerBreakthroughAttachment.BreakthroughResult attemptQiBreakthrough() {
+        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
+        if (breakthrough == null) {
+            return new PlayerBreakthroughAttachment.BreakthroughResult(false, "Breakthrough system unavailable", null,
+                PlayerBreakthroughAttachment.BreakthroughType.MINOR, 0.0, 0L);
+        }
+        return breakthrough.attemptQiBreakthrough();
+    }
+
+    public PlayerBreakthroughAttachment.BreakthroughResult attemptBodyBreakthrough() {
+        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
+        if (breakthrough == null) {
+            return new PlayerBreakthroughAttachment.BreakthroughResult(false, "Breakthrough system unavailable", null,
+                PlayerBreakthroughAttachment.BreakthroughType.MINOR, 0.0, 0L);
+        }
+        return breakthrough.attemptBodyBreakthrough();
+    }
+
+    // Delegate success rate calculations
+    public double calculateBreakthroughSuccessRate(CultivationType type) {
+        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
+        return breakthrough != null ? breakthrough.calculateBreakthroughSuccessRate(type) : 0.0;
+    }
+
+    // Delegate cooldown checks
+    public boolean isBreakthroughOnCooldown(CultivationType type) {
+        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
+        return breakthrough != null && breakthrough.isBreakthroughOnCooldown(type);
+    }
+
+    // Delegate attempt count access
+    public long getBreakthroughAttempts(CultivationType type) {
+        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
+        if (breakthrough == null) return 0L;
+
+        return (type == CultivationType.QI) ?
+            breakthrough.getQiBreakthroughAttempts() :
+            breakthrough.getBodyBreakthroughAttempts();
     }
 
     // === TICK PROCESSING ===

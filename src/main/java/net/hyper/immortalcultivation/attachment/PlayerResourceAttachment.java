@@ -316,11 +316,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     }
 
     @Override
-    public double getBaseCirculatingHealthRegenerationRate() {
-        return getBaseHealthRegenerationRate() * 3.0;
-    }
-
-    @Override
     public double getEffectiveHealthRegenerationRate() {
         double baseRate = getBaseHealthRegenerationRate();
 
@@ -338,25 +333,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
 
         return baseRate;
-    }
-
-    @Override
-    public double getEffectiveCirculatingHealthRegenerationRate() {
-        double baseCirculatingRate = getBaseCirculatingHealthRegenerationRate();
-
-        Player player = getPlayerSafe();
-        if (player != null) {
-            try {
-                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                if (cultivation != null && cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.BODY) {
-                    baseCirculatingRate *= 1.2;
-                }
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error applying focus bonus to circulating health regen", e);
-            }
-        }
-
-        return baseCirculatingRate;
     }
 
     @Override
@@ -412,11 +388,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     }
 
     @Override
-    public double getBaseCirculatingQiRegenerationRate() {
-        return getBaseQiRegenerationRate() * 9.0;
-    }
-
-    @Override
     public double getEffectiveQiRegenerationRate() {
         double baseRate = getBaseQiRegenerationRate();
 
@@ -425,34 +396,28 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
             try {
                 PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                 if (cultivation != null) {
-                    baseRate *= cultivation.getQiRegenerationBonus();
+                    // Applies additive and multiplicative bonuses from realm definitions
+                    double qiAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.QI);
+                    double qiMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.QI);
+                    double bodyAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.BODY);
+                    double bodyMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.BODY);
+
+                    // Combine bonuses from both cultivation types
+                    double totalAdditiveBonus = qiAdditive + bodyAdditive;
+                    double totalMultiplicativeBonus = qiMultiplicative + bodyMultiplicative;
+
+                    // Apply combined bonuses: additive first, then multiplicative
+                    baseRate += totalAdditiveBonus;
+                    baseRate *= (1.0 + totalMultiplicativeBonus);
                 }
             } catch (Exception e) {
                 ImmortalCultivation.LOGGER.error("Error applying cultivation bonus to qi regen", e);
             }
         }
 
-        return baseRate;
+        return Math.max(0.0, baseRate);
     }
 
-    @Override
-    public double getEffectiveCirculatingQiRegenerationRate() {
-        double baseCirculatingRate = getBaseCirculatingQiRegenerationRate();
-
-        Player player = getPlayerSafe();
-        if (player != null) {
-            try {
-                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                if (cultivation != null) {
-                    baseCirculatingRate *= cultivation.getQiRegenerationBonus();
-                }
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error applying cultivation bonus to circulating qi regen", e);
-            }
-        }
-
-        return baseCirculatingRate;
-    }
 
     // === BODY INTERFACE IMPLEMENTATION ===
 
@@ -492,11 +457,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     }
 
     @Override
-    public double getBaseCirculatingBodyRegenerationRate() {
-        return getBaseBodyRegenerationRate() * 9.0;
-    }
-
-    @Override
     public double getEffectiveBodyRegenerationRate() {
         double baseRate = getBaseBodyRegenerationRate();
 
@@ -505,33 +465,26 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
             try {
                 PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
                 if (cultivation != null) {
-                    baseRate *= cultivation.getBodyRegenerationBonus();
+                    // Applies additive and multiplicative bonuses from realm definitions
+                    double qiAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.QI);
+                    double qiMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.QI);
+                    double bodyAdditive = cultivation.getRawAdditiveBonus(PlayerCultivationAttachment.CultivationType.BODY);
+                    double bodyMultiplicative = cultivation.getRawMultiplicativeBonus(PlayerCultivationAttachment.CultivationType.BODY);
+
+                    // Combine bonuses from both cultivation types
+                    double totalAdditiveBonus = qiAdditive + bodyAdditive;
+                    double totalMultiplicativeBonus = qiMultiplicative + bodyMultiplicative;
+
+                    // Apply combined bonuses: additive first, then multiplicative
+                    baseRate += totalAdditiveBonus;
+                    baseRate *= (1.0 + totalMultiplicativeBonus);
                 }
             } catch (Exception e) {
                 ImmortalCultivation.LOGGER.error("Error applying cultivation bonus to body regen", e);
             }
         }
 
-        return baseRate;
-    }
-
-    @Override
-    public double getEffectiveCirculatingBodyRegenerationRate() {
-        double baseCirculatingRate = getBaseCirculatingBodyRegenerationRate();
-
-        Player player = getPlayerSafe();
-        if (player != null) {
-            try {
-                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                if (cultivation != null) {
-                    baseCirculatingRate *= cultivation.getBodyRegenerationBonus();
-                }
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error applying cultivation bonus to circulating body regen", e);
-            }
-        }
-
-        return baseCirculatingRate;
+        return Math.max(0.0, baseRate);
     }
 
     // === UTILITY METHODS ===
@@ -587,7 +540,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     // === REGENERATION METHODS ===
 
-    public void regenerateHealth(double rate, boolean circulating) {
+    public void regenerateHealth(double rate) {
         if (getCurrentHealth() >= getMaxHealth()) return;
 
         healthRegenFraction += rate;
@@ -599,7 +552,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
-    public void regenerateQi(double rate, boolean circulating) {
+    public void regenerateQi(double rate) {
         if (getCurrentQi() >= getMaxQi()) return;
 
         qiRegenFraction += rate;
@@ -611,7 +564,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
-    public void regenerateBody(double rate, boolean circulating) {
+    public void regenerateBody(double rate) {
         if (getCurrentBody() >= getMaxBody()) return;
 
         bodyRegenFraction += rate;
@@ -640,7 +593,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (canRegenerateHealth()) {
             double healthRegenRate = getEffectiveHealthRegenerationRate();
             if (healthRegenRate > 0) {
-                regenerateHealth(healthRegenRate / 20.0, false); // Convert per-second to per-tick
+                regenerateHealth(healthRegenRate / 20.0); // Convert per-second to per-tick
             }
         }
 
@@ -648,7 +601,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (canRegenerateQi()) {
             double qiRegenRate = getEffectiveQiRegenerationRate();
             if (qiRegenRate > 0) {
-                regenerateQi(qiRegenRate / 20.0, false); // Convert per-second to per-tick
+                regenerateQi(qiRegenRate / 20.0); // Convert per-second to per-tick
             }
         }
 
@@ -656,7 +609,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (canRegenerateBody()) {
             double bodyRegenRate = getEffectiveBodyRegenerationRate();
             if (bodyRegenRate > 0) {
-                regenerateBody(bodyRegenRate / 20.0, false); // Convert per-second to per-tick
+                regenerateBody(bodyRegenRate / 20.0); // Convert per-second to per-tick
             }
         }
     }
