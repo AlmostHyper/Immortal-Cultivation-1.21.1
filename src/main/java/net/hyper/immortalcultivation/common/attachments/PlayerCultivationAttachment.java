@@ -140,17 +140,6 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         }
     }
 
-    public CultivationRealm getCurrentRealm(CultivationType type) {
-        return currentRealms.get(type);
-    }
-
-    public void setCurrentRealm(CultivationType type, CultivationRealm realm) {
-        if (realm != null && !realm.equals(this.currentRealms.get(type))) {
-            this.currentRealms.put(type, realm);
-            this.markDirty();
-        }
-    }
-
 
     // === CORE LOGIC === //
 
