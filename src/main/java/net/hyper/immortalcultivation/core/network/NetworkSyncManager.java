@@ -1,20 +1,24 @@
 package net.hyper.immortalcultivation.core.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.core.network.packets.server.UnifiedDeltaSyncPacket;
+import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
+import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
+import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
+import net.hyper.immortalcultivation.core.network.packets.server.UnifiedDeltaSyncPacket;
+import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * High-performance network sync manager that handles delta syncing, batching,
- * and prioritization for all cultivation attachments.
+ * and prioritization for all cultivation attachments including race, talent, and pill consumption data.
  */
 public class NetworkSyncManager {
 
@@ -50,7 +54,8 @@ public class NetworkSyncManager {
     }
 
     /**
-     * Main sync method - analyzes all attachments and schedules appropriate syncs
+     * Main sync method - analyzes all attachments and schedules appropriate syncs.
+     * Now includes support for race, talent, and pill consumption attachments.
      */
     public static void scheduleSync(ServerPlayer player, SyncPriority priority) {
         UUID playerId = player.getUUID();
@@ -60,15 +65,19 @@ public class NetworkSyncManager {
         PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
         PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+        PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        PlayerTalentAttachment talent = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        PlayerPillConsumptionAttachment pillConsumption = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
 
         // Detect changes and build delta packet
-        UnifiedDeltaSyncPacket deltaPacket = buildDeltaPacket(player, syncState, cultivation, resources, combatStats);
+        UnifiedDeltaSyncPacket deltaPacket = buildDeltaPacket(player, syncState, cultivation, resources, combatStats,
+            race, talent, pillConsumption);
 
         if (deltaPacket != null) {
             // Add to pending batch or send immediately based on priority
             if (priority == SyncPriority.CRITICAL) {
                 sendImmediately(player, deltaPacket);
-                updateSyncState(syncState, cultivation, resources, combatStats);
+                updateSyncState(syncState, cultivation, resources, combatStats, race, talent, pillConsumption);
             } else {
                 addToPendingBatch(player, deltaPacket, priority);
             }
@@ -83,150 +92,51 @@ public class NetworkSyncManager {
 
         for (SyncPriority priority : SyncPriority.values()) {
             Map<UUID, PendingSyncBatch> batches = pendingSyncs.get(priority);
+            Iterator<Map.Entry<UUID, PendingSyncBatch>> iterator = batches.entrySet().iterator();
 
-            batches.entrySet().removeIf(entry -> {
+            while (iterator.hasNext()) {
+                Map.Entry<UUID, PendingSyncBatch> entry = iterator.next();
                 UUID playerId = entry.getKey();
                 PendingSyncBatch batch = entry.getValue();
 
-                // Check if batch should be sent now
                 if (shouldSendBatch(batch, priority, currentTime)) {
                     ServerPlayer player = getServerPlayer(playerId);
                     if (player != null) {
                         sendBatch(player, batch);
-                        // Update sync state after sending batch
                         PlayerSyncState syncState = playerSyncStates.get(playerId);
                         if (syncState != null) {
-                            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-                            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-                            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-                            updateSyncState(syncState, cultivation, resources, combatStats);
+                            updateSyncStateFromLatestPacket(player, syncState);
                         }
                     }
-                    return true; // Remove from pending
+                    iterator.remove();
                 }
-                return false; // Keep in pending
-            });
+            }
         }
     }
 
     /**
-     * Force sync all data for a player (e.g., on login)
-     */
-    public static void forceSyncAll(ServerPlayer player) {
-        UUID playerId = player.getUUID();
-        long currentTime = System.currentTimeMillis();
-
-        // Prevent force sync spam (max once per 5 seconds)
-        Long lastSync = lastFullSyncTime.get(playerId);
-        if (lastSync != null && (currentTime - lastSync) < 5000L) {
-            ImmortalCultivation.LOGGER.debug("Skipping force sync for {} - too recent",
-                player.getName().getString());
-            return;
-        }
-
-        lastFullSyncTime.put(playerId, currentTime);
-
-        // Reset sync state to force full sync
-        playerSyncStates.remove(playerId);
-        PlayerSyncState syncState = new PlayerSyncState();
-        playerSyncStates.put(playerId, syncState);
-
-        // Ensure player references are set
-        ensurePlayerReferences(player);
-
-        // Build full sync packet
-        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-        PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-
-        UnifiedDeltaSyncPacket packet = buildFullSyncPacket(cultivation, resources, combatStats);
-        if (packet != null) {
-            sendImmediately(player, packet);
-            updateSyncState(syncState, cultivation, resources, combatStats);
-        }
-    }
-
-    /**
-     * Clean up sync state when player leaves
-     */
-    public static void cleanupPlayer(UUID playerId) {
-        playerSyncStates.remove(playerId);
-        lastFullSyncTime.remove(playerId);
-        for (Map<UUID, PendingSyncBatch> batches : pendingSyncs.values()) {
-            batches.remove(playerId);
-        }
-    }
-
-    /**
-     * Ensure all attachments have proper player references
-     */
-    public static void ensurePlayerReferences(ServerPlayer player) {
-        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-        PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-        PlayerBreakthroughAttachment breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
-
-        if (cultivation != null && cultivation.getPlayerSafe() == null) {
-            cultivation.setPlayer(player);
-        }
-        if (resources != null && resources.getPlayerSafe() == null) {
-            resources.setPlayer(player);
-        }
-        if (combatStats != null && combatStats.getPlayerSafe() == null) {
-            combatStats.setPlayer(player);
-        }
-        if (breakthrough != null && breakthrough.getPlayerSafe() == null) {
-            breakthrough.setPlayer(player);
-        }
-    }
-
-    /**
-     * Emergency sync recovery for sync issues
-     */
-    public static void emergencySync(ServerPlayer player) {
-        ImmortalCultivation.LOGGER.warn("Emergency sync triggered for player: {}",
-            player.getName().getString());
-
-        // Clear all sync state and force complete resync
-        cleanupPlayer(player.getUUID());
-        ensurePlayerReferences(player);
-        forceSyncAll(player);
-    }
-
-    /**
-     * Periodic cleanup - call this from tick handler occasionally
-     */
-    public static void performPeriodicCleanup() {
-        long currentTime = System.currentTimeMillis();
-
-        // Clean up old sync states (remove players offline for more than 1 hour)
-        playerSyncStates.entrySet().removeIf(entry -> {
-            UUID playerId = entry.getKey();
-            ServerPlayer player = getServerPlayer(playerId);
-            return player == null; // Player is offline
-        });
-
-        // Clean up old full sync times
-        lastFullSyncTime.entrySet().removeIf(entry ->
-            (currentTime - entry.getValue()) > 3600000L); // 1 hour
-    }
-
-    // === PRIVATE HELPER METHODS ===
-
-    /**
-     * Build delta sync packet by comparing current state with cached state
+     * Build delta packet with support for all attachment types including the new ones.
+     * Performs comprehensive change detection and only includes changed data in the packet.
      */
     private static UnifiedDeltaSyncPacket buildDeltaPacket(ServerPlayer player, PlayerSyncState syncState,
                                                            PlayerCultivationAttachment cultivation,
                                                            PlayerResourceAttachment resources,
-                                                           PlayerCombatStatsAttachment combatStats) {
+                                                           PlayerCombatStatsAttachment combatStats,
+                                                           PlayerRaceAttachment race,
+                                                           PlayerTalentAttachment talent,
+                                                           PlayerPillConsumptionAttachment pillConsumption) {
 
         byte attachmentMask = 0;
         short cultivationFieldMask = 0;
         short resourceFieldMask = 0;
         byte combatStatsFieldMask = 0;
+        byte raceFieldMask = 0;
+        byte talentFieldMask = 0;
+        byte pillConsumptionFieldMask = 0;
 
-        // Check cultivation changes
+        boolean hasChanges = false;
+
+        // === CULTIVATION CHANGES ===
         Optional<String> currentQiRealmId = Optional.empty();
         Optional<String> currentBodyRealmId = Optional.empty();
         Optional<Long> currentQiCultivation = Optional.empty();
@@ -237,212 +147,269 @@ public class NetworkSyncManager {
         Optional<UnifiedDeltaSyncPacket.PackedBonuses> bonuses = Optional.empty();
         Optional<UnifiedDeltaSyncPacket.PackedBreakthroughData> breakthroughData = Optional.empty();
 
-        if (cultivation != null && cultivation.isDirty()) {
-            // Use generic realm access: getCurrentRealm(type).getId()
+        if (cultivation != null) {
             String qiRealmId = cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getId();
             String bodyRealmId = cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getId();
+            long qiCultivationVal = cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
+            long maxQiCultivationVal = cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
+            long bodyCultivationVal = cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+            long maxBodyCultivationVal = cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
+            PlayerCultivationAttachment.CultivationType focus = cultivation.getCurrentFocus();
 
-            if (!Objects.equals(qiRealmId, syncState.lastQiRealmId)) {
-                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            if (!qiRealmId.equals(syncState.lastQiRealmId)) {
                 cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_QI_REALM;
                 currentQiRealmId = Optional.of(qiRealmId);
-                syncState.lastQiRealmId = qiRealmId;
+                hasChanges = true;
             }
-
-            if (!Objects.equals(bodyRealmId, syncState.lastBodyRealmId)) {
-                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            if (!bodyRealmId.equals(syncState.lastBodyRealmId)) {
                 cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_BODY_REALM;
                 currentBodyRealmId = Optional.of(bodyRealmId);
-                syncState.lastBodyRealmId = bodyRealmId;
+                hasChanges = true;
             }
-
-            // Use generic cultivation access methods from ICultivationData
-            if (cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI) != syncState.lastCurrentQiCultivation) {
-                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            if (qiCultivationVal != syncState.lastCurrentQiCultivation) {
                 cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_QI_CURRENT;
-                currentQiCultivation = Optional.of(cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI));
-                syncState.lastCurrentQiCultivation = cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
+                currentQiCultivation = Optional.of(qiCultivationVal);
+                hasChanges = true;
             }
-
-            if (cultivation.getMaxCultivation(ICultivationData.CultivationType.QI) != syncState.lastMaxQiCultivation) {
-                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            if (maxQiCultivationVal != syncState.lastMaxQiCultivation) {
                 cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_QI_MAX;
-                maxQiCultivation = Optional.of(cultivation.getMaxCultivation(ICultivationData.CultivationType.QI));
-                syncState.lastMaxQiCultivation = cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
+                maxQiCultivation = Optional.of(maxQiCultivationVal);
+                hasChanges = true;
             }
-
-            if (cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY) != syncState.lastCurrentBodyCultivation) {
-                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            if (bodyCultivationVal != syncState.lastCurrentBodyCultivation) {
                 cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_BODY_CURRENT;
-                currentBodyCultivation = Optional.of(cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY));
-                syncState.lastCurrentBodyCultivation = cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+                currentBodyCultivation = Optional.of(bodyCultivationVal);
+                hasChanges = true;
             }
-
-            if (cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY) != syncState.lastMaxBodyCultivation) {
-                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            if (maxBodyCultivationVal != syncState.lastMaxBodyCultivation) {
                 cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_BODY_MAX;
-                maxBodyCultivation = Optional.of(cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY));
-                syncState.lastMaxBodyCultivation = cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
+                maxBodyCultivation = Optional.of(maxBodyCultivationVal);
+                hasChanges = true;
             }
-
-            if (cultivation.getCurrentFocus() != syncState.lastCurrentFocus) {
-                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            if (focus != syncState.lastCurrentFocus) {
                 cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_FOCUS;
-                currentFocus = Optional.of(cultivation.getCurrentFocus());
-                syncState.lastCurrentFocus = cultivation.getCurrentFocus();
+                currentFocus = Optional.of(focus);
+                hasChanges = true;
             }
 
-            // Check bonuses (using correct method names with proper CultivationType)
-            if (hasChanged(cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI), syncState.lastQiAdditiveBonus, 0.001) ||
-                hasChanged(cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.QI), syncState.lastQiMultiplicativeBonus, 0.001) ||
-                hasChanged(cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY), syncState.lastBodyAdditiveBonus, 0.001) ||
-                hasChanged(cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.BODY), syncState.lastBodyMultiplicativeBonus, 0.001)) {
+            // Check bonuses
+            double qiAdditiveBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
+            double qiMultiplicativeBonus = cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.QI);
+            double bodyAdditiveBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
+            double bodyMultiplicativeBonus = cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.BODY);
 
-                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            if (hasChanged(qiAdditiveBonus, syncState.lastQiAdditiveBonus, 0.001) ||
+                hasChanged(qiMultiplicativeBonus, syncState.lastQiMultiplicativeBonus, 0.001) ||
+                hasChanged(bodyAdditiveBonus, syncState.lastBodyAdditiveBonus, 0.001) ||
+                hasChanged(bodyMultiplicativeBonus, syncState.lastBodyMultiplicativeBonus, 0.001)) {
+
                 cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_BONUSES;
                 bonuses = Optional.of(new UnifiedDeltaSyncPacket.PackedBonuses(
-                    (float)cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI),
-                    (float)cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.QI),
-                    (float)cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY),
-                    (float)cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.BODY)
-                ));
-
-                syncState.lastQiAdditiveBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
-                syncState.lastQiMultiplicativeBonus = cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.QI);
-                syncState.lastBodyAdditiveBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
-                syncState.lastBodyMultiplicativeBonus = cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.BODY);
+                    qiAdditiveBonus, qiMultiplicativeBonus, bodyAdditiveBonus, bodyMultiplicativeBonus));
+                hasChanges = true;
             }
 
-            // Check breakthrough data (access through breakthrough attachment)
+            // Check breakthrough data
             PlayerBreakthroughAttachment breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
-            if (breakthrough != null && breakthrough.isDirty()) {
-                long qiAttempts = breakthrough.getBreakthroughAttempts(PlayerCultivationAttachment.CultivationType.QI);
-                long bodyAttempts = breakthrough.getBreakthroughAttempts(PlayerCultivationAttachment.CultivationType.BODY);
-                boolean qiCooldown = breakthrough.isBreakthroughOnCooldown(PlayerCultivationAttachment.CultivationType.QI);
-                boolean bodyCooldown = breakthrough.isBreakthroughOnCooldown(PlayerCultivationAttachment.CultivationType.BODY);
-                long lastQiAttempt = breakthrough.getTimeSinceLastBreakthroughAttempt(PlayerCultivationAttachment.CultivationType.QI);
-                long lastBodyAttempt = breakthrough.getTimeSinceLastBreakthroughAttempt(PlayerCultivationAttachment.CultivationType.BODY);
+            if (breakthrough != null) {
+                long qiBreakthroughAttempts = breakthrough.getBreakthroughAttempts(ICultivationData.CultivationType.QI);
+                long bodyBreakthroughAttempts = breakthrough.getBreakthroughAttempts(ICultivationData.CultivationType.BODY);
+                boolean qiBreakthroughCooldown = breakthrough.isBreakthroughOnCooldown(ICultivationData.CultivationType.QI);
+                boolean bodyBreakthroughCooldown = breakthrough.isBreakthroughOnCooldown(ICultivationData.CultivationType.BODY);
+                long qiBreakthroughAttempt = breakthrough.getLastBreakthroughAttemptTime(ICultivationData.CultivationType.QI);
+                long bodyBreakthroughAttempt = breakthrough.getLastBreakthroughAttemptTime(ICultivationData.CultivationType.BODY);
 
-                if (qiAttempts != syncState.lastQiBreakthroughAttempts ||
-                    bodyAttempts != syncState.lastBodyBreakthroughAttempts ||
-                    qiCooldown != syncState.lastQiBreakthroughCooldown ||
-                    bodyCooldown != syncState.lastBodyBreakthroughCooldown ||
-                    lastQiAttempt != syncState.lastQiBreakthroughAttempt ||
-                    lastBodyAttempt != syncState.lastBodyBreakthroughAttempt) {
+                if (qiBreakthroughAttempts != syncState.lastQiBreakthroughAttempts ||
+                    bodyBreakthroughAttempts != syncState.lastBodyBreakthroughAttempts ||
+                    qiBreakthroughCooldown != syncState.lastQiBreakthroughCooldown ||
+                    bodyBreakthroughCooldown != syncState.lastBodyBreakthroughCooldown ||
+                    qiBreakthroughAttempt != syncState.lastQiBreakthroughAttempt ||
+                    bodyBreakthroughAttempt != syncState.lastBodyBreakthroughAttempt) {
 
-                    attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
                     cultivationFieldMask |= UnifiedDeltaSyncPacket.CULT_BREAKTHROUGH;
-                    breakthroughData = Optional.of(UnifiedDeltaSyncPacket.PackedBreakthroughData.create(
-                        qiAttempts, bodyAttempts, qiCooldown, bodyCooldown, lastQiAttempt, lastBodyAttempt
-                    ));
-
-                    syncState.lastQiBreakthroughAttempts = qiAttempts;
-                    syncState.lastBodyBreakthroughAttempts = bodyAttempts;
-                    syncState.lastQiBreakthroughCooldown = qiCooldown;
-                    syncState.lastBodyBreakthroughCooldown = bodyCooldown;
-                    syncState.lastQiBreakthroughAttempt = lastQiAttempt;
-                    syncState.lastBodyBreakthroughAttempt = lastBodyAttempt;
+                    breakthroughData = Optional.of(new UnifiedDeltaSyncPacket.PackedBreakthroughData(
+                        qiBreakthroughAttempts, bodyBreakthroughAttempts,
+                        qiBreakthroughCooldown, bodyBreakthroughCooldown,
+                        qiBreakthroughAttempt, bodyBreakthroughAttempt));
+                    hasChanges = true;
                 }
+            }
+
+            if (cultivationFieldMask != 0) {
+                attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
             }
         }
 
-        // Check resource changes
+        // === RESOURCE CHANGES ===
         Optional<Long> currentHealth = Optional.empty();
         Optional<Long> currentQi = Optional.empty();
         Optional<Long> currentBody = Optional.empty();
         Optional<UnifiedDeltaSyncPacket.PackedPermanentBonuses> permanentBonuses = Optional.empty();
 
-        if (resources != null && resources.isDirty()) {
-            if (resources.getCurrentHealth() != syncState.lastCurrentHealth) {
-                attachmentMask |= UnifiedDeltaSyncPacket.RESOURCE_MASK;
+        if (resources != null) {
+            long healthVal = resources.getCurrentHealth();
+            long qiVal = resources.getCurrentQi();
+            long bodyVal = resources.getCurrentBody();
+
+            if (healthVal != syncState.lastCurrentHealth) {
                 resourceFieldMask |= UnifiedDeltaSyncPacket.RES_HEALTH;
-                currentHealth = Optional.of(resources.getCurrentHealth());
-                syncState.lastCurrentHealth = resources.getCurrentHealth();
+                currentHealth = Optional.of(healthVal);
+                hasChanges = true;
             }
-
-            if (resources.getCurrentQi() != syncState.lastCurrentQi) {
-                attachmentMask |= UnifiedDeltaSyncPacket.RESOURCE_MASK;
+            if (qiVal != syncState.lastCurrentQi) {
                 resourceFieldMask |= UnifiedDeltaSyncPacket.RES_QI;
-                currentQi = Optional.of(resources.getCurrentQi());
-                syncState.lastCurrentQi = resources.getCurrentQi();
+                currentQi = Optional.of(qiVal);
+                hasChanges = true;
             }
-
-            if (resources.getCurrentBody() != syncState.lastCurrentBody) {
-                attachmentMask |= UnifiedDeltaSyncPacket.RESOURCE_MASK;
+            if (bodyVal != syncState.lastCurrentBody) {
                 resourceFieldMask |= UnifiedDeltaSyncPacket.RES_BODY;
-                currentBody = Optional.of(resources.getCurrentBody());
-                syncState.lastCurrentBody = resources.getCurrentBody();
+                currentBody = Optional.of(bodyVal);
+                hasChanges = true;
             }
 
             // Check permanent bonuses
-            if (resources.getPermanentHealthBonus() != syncState.lastPermanentHealthBonus ||
-                hasChanged(resources.getPermanentHealthRegenBonus(), syncState.lastPermanentHealthRegenBonus, 0.001) ||
-                resources.getPermanentMaxQiBonus() != syncState.lastPermanentMaxQiBonus ||
-                hasChanged(resources.getPermanentQiRegenBonus(), syncState.lastPermanentQiRegenBonus, 0.001) ||
-                resources.getPermanentMaxBodyBonus() != syncState.lastPermanentMaxBodyBonus ||
-                hasChanged(resources.getPermanentBodyRegenBonus(), syncState.lastPermanentBodyRegenBonus, 0.001)) {
+            long permHealthBonus = resources.getPermanentHealthBonus();
+            double permHealthRegenBonus = resources.getPermanentHealthRegenBonus();
+            long permMaxQiBonus = resources.getPermanentMaxQiBonus();
+            double permQiRegenBonus = resources.getPermanentQiRegenBonus();
+            long permMaxBodyBonus = resources.getPermanentMaxBodyBonus();
+            double permBodyRegenBonus = resources.getPermanentBodyRegenBonus();
 
-                attachmentMask |= UnifiedDeltaSyncPacket.RESOURCE_MASK;
+            if (permHealthBonus != syncState.lastPermanentHealthBonus ||
+                hasChanged(permHealthRegenBonus, syncState.lastPermanentHealthRegenBonus, 0.001) ||
+                permMaxQiBonus != syncState.lastPermanentMaxQiBonus ||
+                hasChanged(permQiRegenBonus, syncState.lastPermanentQiRegenBonus, 0.001) ||
+                permMaxBodyBonus != syncState.lastPermanentMaxBodyBonus ||
+                hasChanged(permBodyRegenBonus, syncState.lastPermanentBodyRegenBonus, 0.001)) {
+
                 resourceFieldMask |= UnifiedDeltaSyncPacket.RES_PERMANENT;
                 permanentBonuses = Optional.of(new UnifiedDeltaSyncPacket.PackedPermanentBonuses(
-                    resources.getPermanentHealthBonus(),
-                    (float)resources.getPermanentHealthRegenBonus(),
-                    resources.getPermanentMaxQiBonus(),
-                    (float)resources.getPermanentQiRegenBonus(),
-                    resources.getPermanentMaxBodyBonus(),
-                    (float)resources.getPermanentBodyRegenBonus()
-                ));
+                    permHealthBonus, permHealthRegenBonus, permMaxQiBonus,
+                    permQiRegenBonus, permMaxBodyBonus, permBodyRegenBonus));
+                hasChanges = true;
+            }
 
-                syncState.lastPermanentHealthBonus = resources.getPermanentHealthBonus();
-                syncState.lastPermanentHealthRegenBonus = resources.getPermanentHealthRegenBonus();
-                syncState.lastPermanentMaxQiBonus = resources.getPermanentMaxQiBonus();
-                syncState.lastPermanentQiRegenBonus = resources.getPermanentQiRegenBonus();
-                syncState.lastPermanentMaxBodyBonus = resources.getPermanentMaxBodyBonus();
-                syncState.lastPermanentBodyRegenBonus = resources.getPermanentBodyRegenBonus();
+            if (resourceFieldMask != 0) {
+                attachmentMask |= UnifiedDeltaSyncPacket.RESOURCE_MASK;
             }
         }
 
-        // Check combat stats changes
+        // === COMBAT STATS CHANGES ===
         Optional<UnifiedDeltaSyncPacket.PackedCombatStats> combatStatsData = Optional.empty();
 
-        if (combatStats != null && combatStats.isDirty()) {
-            if (hasChanged(combatStats.getAttackDamageBonus(), syncState.lastAttackBonus, 0.001) ||
-                hasChanged(combatStats.getMovementSpeedBonus(), syncState.lastSpeedBonus, 0.001) ||
-                hasChanged(combatStats.getJumpHeightBonus(), syncState.lastJumpBonus, 0.001) ||
-                hasChanged(combatStats.getPermanentAttackDamageBonus(), syncState.lastPermanentAttackBonus, 0.001) ||
-                hasChanged(combatStats.getPermanentMovementSpeedBonus(), syncState.lastPermanentSpeedBonus, 0.001) ||
-                hasChanged(combatStats.getPermanentJumpHeightBonus(), syncState.lastPermanentJumpBonus, 0.001)) {
+        if (combatStats != null) {
+            double attackBonus = combatStats.getAttackDamageBonus();
+            double speedBonus = combatStats.getMovementSpeedBonus();
+            double jumpBonus = combatStats.getJumpHeightBonus();
+            double permAttackBonus = combatStats.getPermanentAttackDamageBonus();
+            double permSpeedBonus = combatStats.getPermanentMovementSpeedBonus();
+            double permJumpBonus = combatStats.getPermanentJumpHeightBonus();
 
-                attachmentMask |= UnifiedDeltaSyncPacket.COMBAT_STATS_MASK;
+            if (hasChanged(attackBonus, syncState.lastAttackBonus, 0.001) ||
+                hasChanged(speedBonus, syncState.lastSpeedBonus, 0.001) ||
+                hasChanged(jumpBonus, syncState.lastJumpBonus, 0.001) ||
+                hasChanged(permAttackBonus, syncState.lastPermanentAttackBonus, 0.001) ||
+                hasChanged(permSpeedBonus, syncState.lastPermanentSpeedBonus, 0.001) ||
+                hasChanged(permJumpBonus, syncState.lastPermanentJumpBonus, 0.001)) {
+
                 combatStatsFieldMask |= UnifiedDeltaSyncPacket.COMBAT_ALL;
                 combatStatsData = Optional.of(new UnifiedDeltaSyncPacket.PackedCombatStats(
-                    (float)combatStats.getAttackDamageBonus(),
-                    (float)combatStats.getMovementSpeedBonus(),
-                    (float)combatStats.getJumpHeightBonus(),
-                    (float)combatStats.getPermanentAttackDamageBonus(),
-                    (float)combatStats.getPermanentMovementSpeedBonus(),
-                    (float)combatStats.getPermanentJumpHeightBonus()
-                ));
-
-                syncState.lastAttackBonus = combatStats.getAttackDamageBonus();
-                syncState.lastSpeedBonus = combatStats.getMovementSpeedBonus();
-                syncState.lastJumpBonus = combatStats.getJumpHeightBonus();
-                syncState.lastPermanentAttackBonus = combatStats.getPermanentAttackDamageBonus();
-                syncState.lastPermanentSpeedBonus = combatStats.getPermanentMovementSpeedBonus();
-                syncState.lastPermanentJumpBonus = combatStats.getPermanentJumpHeightBonus();
+                    attackBonus, speedBonus, jumpBonus, permAttackBonus, permSpeedBonus, permJumpBonus));
+                attachmentMask |= UnifiedDeltaSyncPacket.COMBAT_STATS_MASK;
+                hasChanges = true;
             }
         }
 
-        // Return packet only if there are changes
-        // Return packet only if there are changes
-        if (attachmentMask != 0) {
+        // === RACE CHANGES ===
+        Optional<String> raceType = Optional.empty();
+        Optional<Boolean> raceAssigned = Optional.empty();
+
+        if (race != null) {
+            RaceType currentRaceType = race.getRaceType();
+            boolean currentRaceAssigned = race.hasRaceAssigned();
+
+            if (!currentRaceType.equals(syncState.lastRaceType)) {
+                raceFieldMask |= UnifiedDeltaSyncPacket.RACE_TYPE;
+                raceType = Optional.of(currentRaceType.name());
+                hasChanges = true;
+            }
+            if (currentRaceAssigned != syncState.lastRaceAssigned) {
+                raceFieldMask |= UnifiedDeltaSyncPacket.RACE_ASSIGNED;
+                raceAssigned = Optional.of(currentRaceAssigned);
+                hasChanges = true;
+            }
+
+            if (raceFieldMask != 0) {
+                attachmentMask |= UnifiedDeltaSyncPacket.RACE_MASK;
+            }
+        }
+
+        // === TALENT CHANGES ===
+        Optional<String> spiritualRootType = Optional.empty();
+        Optional<Boolean> spiritualRootAssigned = Optional.empty();
+        Optional<String> physiqueType = Optional.empty();
+        Optional<Boolean> physiqueAssigned = Optional.empty();
+
+        if (talent != null) {
+            SpiritualRootType currentSpiritualRootType = talent.getSpiritualRootType();
+            boolean currentSpiritualRootAssigned = talent.hasSpiritualRootAssigned();
+            PhysiqueType currentPhysiqueType = talent.getPhysiqueType();
+            boolean currentPhysiqueAssigned = talent.hasPhysiqueAssigned();
+
+            if (!currentSpiritualRootType.equals(syncState.lastSpiritualRootType)) {
+                talentFieldMask |= UnifiedDeltaSyncPacket.TALENT_SPIRITUAL_ROOT_TYPE;
+                spiritualRootType = Optional.of(currentSpiritualRootType.name());
+                hasChanges = true;
+            }
+            if (currentSpiritualRootAssigned != syncState.lastSpiritualRootAssigned) {
+                talentFieldMask |= UnifiedDeltaSyncPacket.TALENT_SPIRITUAL_ROOT_ASSIGNED;
+                spiritualRootAssigned = Optional.of(currentSpiritualRootAssigned);
+                hasChanges = true;
+            }
+            if (!currentPhysiqueType.equals(syncState.lastPhysiqueType)) {
+                talentFieldMask |= UnifiedDeltaSyncPacket.TALENT_PHYSIQUE_TYPE;
+                physiqueType = Optional.of(currentPhysiqueType.name());
+                hasChanges = true;
+            }
+            if (currentPhysiqueAssigned != syncState.lastPhysiqueAssigned) {
+                talentFieldMask |= UnifiedDeltaSyncPacket.TALENT_PHYSIQUE_ASSIGNED;
+                physiqueAssigned = Optional.of(currentPhysiqueAssigned);
+                hasChanges = true;
+            }
+
+            if (talentFieldMask != 0) {
+                attachmentMask |= UnifiedDeltaSyncPacket.TALENT_MASK;
+            }
+        }
+
+        // === PILL CONSUMPTION CHANGES ===
+        Optional<CompoundTag> pillConsumptionData = Optional.empty();
+
+        if (pillConsumption != null) {
+            CompoundTag currentPillData = pillConsumption.getPillConsumptionManager().serializeNBT();
+
+            // For pill consumption, we compare the serialized data hash since it's complex data
+            int currentPillDataHash = currentPillData.hashCode();
+            if (currentPillDataHash != syncState.lastPillConsumptionDataHash) {
+                pillConsumptionFieldMask |= UnifiedDeltaSyncPacket.PILL_CONSUMPTION_DATA;
+                pillConsumptionData = Optional.of(currentPillData);
+                attachmentMask |= UnifiedDeltaSyncPacket.PILL_CONSUMPTION_MASK;
+                hasChanges = true;
+            }
+        }
+
+        // Build and return packet if there are changes
+        if (hasChanges) {
             return new UnifiedDeltaSyncPacket(
                 attachmentMask, cultivationFieldMask, resourceFieldMask, combatStatsFieldMask,
+                raceFieldMask, talentFieldMask, pillConsumptionFieldMask,
                 currentQiRealmId, currentBodyRealmId, currentQiCultivation, maxQiCultivation,
                 currentBodyCultivation, maxBodyCultivation, currentFocus, bonuses, breakthroughData,
                 currentHealth, currentQi, currentBody, permanentBonuses, combatStatsData,
-                Optional.empty(), // damageAmount
-                Optional.empty()  // damageSourceId
+                Optional.empty(), Optional.empty(), // damage feedback (not changed)
+                raceType, raceAssigned,
+                spiritualRootType, spiritualRootAssigned, physiqueType, physiqueAssigned,
+                pillConsumptionData
             );
         }
 
@@ -450,91 +417,96 @@ public class NetworkSyncManager {
     }
 
     /**
-     * Build full sync packet (for login)
+     * Update sync state after successful sync to track changes for future delta detection.
+     * Now includes the new attachment types.
      */
-    private static UnifiedDeltaSyncPacket buildFullSyncPacket(PlayerCultivationAttachment cultivation,
-                                                              PlayerResourceAttachment resources,
-                                                              PlayerCombatStatsAttachment combatStats) {
-
-        byte attachmentMask = 0;
-        short cultivationFieldMask = 0;
-        short resourceFieldMask = 0;
-        byte combatStatsFieldMask = 0;
-
-        // Include all cultivation data
+    private static void updateSyncState(PlayerSyncState syncState, PlayerCultivationAttachment cultivation,
+                                        PlayerResourceAttachment resources, PlayerCombatStatsAttachment combatStats,
+                                        PlayerRaceAttachment race, PlayerTalentAttachment talent,
+                                        PlayerPillConsumptionAttachment pillConsumption) {
         if (cultivation != null) {
-            attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
-            cultivationFieldMask = UnifiedDeltaSyncPacket.CULT_QI_REALM | UnifiedDeltaSyncPacket.CULT_BODY_REALM |
-                UnifiedDeltaSyncPacket.CULT_QI_CURRENT | UnifiedDeltaSyncPacket.CULT_QI_MAX |
-                UnifiedDeltaSyncPacket.CULT_BODY_CURRENT | UnifiedDeltaSyncPacket.CULT_BODY_MAX |
-                UnifiedDeltaSyncPacket.CULT_FOCUS | UnifiedDeltaSyncPacket.CULT_BONUSES |
-                UnifiedDeltaSyncPacket.CULT_BREAKTHROUGH;
+            syncState.lastQiRealmId = cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getId();
+            syncState.lastBodyRealmId = cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getId();
+            syncState.lastCurrentQiCultivation = cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
+            syncState.lastMaxQiCultivation = cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
+            syncState.lastCurrentBodyCultivation = cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+            syncState.lastMaxBodyCultivation = cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
+            syncState.lastCurrentFocus = cultivation.getCurrentFocus();
+            syncState.lastQiAdditiveBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
+            syncState.lastQiMultiplicativeBonus = cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.QI);
+            syncState.lastBodyAdditiveBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
+            syncState.lastBodyMultiplicativeBonus = cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.BODY);
+
+            // Update breakthrough data if available
+            if (cultivation.getPlayerSafe() != null) {
+                PlayerBreakthroughAttachment breakthrough = cultivation.getPlayerSafe().getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
+                if (breakthrough != null) {
+                    syncState.lastQiBreakthroughAttempts = breakthrough.getBreakthroughAttempts(ICultivationData.CultivationType.QI);
+                    syncState.lastBodyBreakthroughAttempts = breakthrough.getBreakthroughAttempts(ICultivationData.CultivationType.BODY);
+                    syncState.lastQiBreakthroughCooldown = breakthrough.isBreakthroughOnCooldown(ICultivationData.CultivationType.QI);
+                    syncState.lastBodyBreakthroughCooldown = breakthrough.isBreakthroughOnCooldown(ICultivationData.CultivationType.BODY);
+                    syncState.lastQiBreakthroughAttempt = breakthrough.getLastBreakthroughAttemptTime(ICultivationData.CultivationType.QI);
+                    syncState.lastBodyBreakthroughAttempt = breakthrough.getLastBreakthroughAttemptTime(ICultivationData.CultivationType.BODY);
+                }
+            }
+
+            // Reset change counters for processed attachments
+            cultivation.resetChangeCounter();
         }
 
-        // Include all resource data
         if (resources != null) {
-            attachmentMask |= UnifiedDeltaSyncPacket.RESOURCE_MASK;
-            resourceFieldMask = UnifiedDeltaSyncPacket.RES_HEALTH | UnifiedDeltaSyncPacket.RES_QI |
-                UnifiedDeltaSyncPacket.RES_BODY | UnifiedDeltaSyncPacket.RES_PERMANENT;
+            syncState.lastCurrentHealth = resources.getCurrentHealth();
+            syncState.lastCurrentQi = resources.getCurrentQi();
+            syncState.lastCurrentBody = resources.getCurrentBody();
+            syncState.lastPermanentHealthBonus = resources.getPermanentHealthBonus();
+            syncState.lastPermanentHealthRegenBonus = resources.getPermanentHealthRegenBonus();
+            syncState.lastPermanentMaxQiBonus = resources.getPermanentMaxQiBonus();
+            syncState.lastPermanentQiRegenBonus = resources.getPermanentQiRegenBonus();
+            syncState.lastPermanentMaxBodyBonus = resources.getPermanentMaxBodyBonus();
+            syncState.lastPermanentBodyRegenBonus = resources.getPermanentBodyRegenBonus();
         }
 
-        // Include all combat stats data
         if (combatStats != null) {
-            attachmentMask |= UnifiedDeltaSyncPacket.COMBAT_STATS_MASK;
-            combatStatsFieldMask = UnifiedDeltaSyncPacket.COMBAT_ALL;
+            syncState.lastAttackBonus = combatStats.getAttackDamageBonus();
+            syncState.lastSpeedBonus = combatStats.getMovementSpeedBonus();
+            syncState.lastJumpBonus = combatStats.getJumpHeightBonus();
+            syncState.lastPermanentAttackBonus = combatStats.getPermanentAttackDamageBonus();
+            syncState.lastPermanentSpeedBonus = combatStats.getPermanentMovementSpeedBonus();
+            syncState.lastPermanentJumpBonus = combatStats.getPermanentJumpHeightBonus();
         }
 
-        // Get breakthrough data
-        PlayerBreakthroughAttachment breakthrough = null;
-        if (cultivation != null && cultivation.getPlayerSafe() != null) {
-            breakthrough = cultivation.getPlayerSafe().getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
+        // Update state for new attachment types
+        if (race != null) {
+            syncState.lastRaceType = race.getRaceType();
+            syncState.lastRaceAssigned = race.hasRaceAssigned();
         }
 
-        return new UnifiedDeltaSyncPacket(
-            attachmentMask, cultivationFieldMask, resourceFieldMask, combatStatsFieldMask,
-            cultivation != null ? Optional.of(cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getId()) : Optional.empty(),
-            cultivation != null ? Optional.of(cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getId()) : Optional.empty(),
-            cultivation != null ? Optional.of(cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI)) : Optional.empty(),
-            cultivation != null ? Optional.of(cultivation.getMaxCultivation(ICultivationData.CultivationType.QI)) : Optional.empty(),
-            cultivation != null ? Optional.of(cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY)) : Optional.empty(),
-            cultivation != null ? Optional.of(cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY)) : Optional.empty(),
-            cultivation != null ? Optional.of(cultivation.getCurrentFocus()) : Optional.empty(),
-            cultivation != null ? Optional.of(new UnifiedDeltaSyncPacket.PackedBonuses(
-                (float)cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI),
-                (float)cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.QI),
-                (float)cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY),
-                (float)cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.BODY)
-            )) : Optional.empty(),
-            breakthrough != null ? Optional.of(UnifiedDeltaSyncPacket.PackedBreakthroughData.create(
-                breakthrough.getBreakthroughAttempts(PlayerCultivationAttachment.CultivationType.QI),
-                breakthrough.getBreakthroughAttempts(PlayerCultivationAttachment.CultivationType.BODY),
-                breakthrough.isBreakthroughOnCooldown(PlayerCultivationAttachment.CultivationType.QI),
-                breakthrough.isBreakthroughOnCooldown(PlayerCultivationAttachment.CultivationType.BODY),
-                breakthrough.getLastBreakthroughAttemptTime(PlayerCultivationAttachment.CultivationType.QI),
-                breakthrough.getLastBreakthroughAttemptTime(PlayerCultivationAttachment.CultivationType.BODY)
-            )) : Optional.empty(),
-            resources != null ? Optional.of(resources.getCurrentHealth()) : Optional.empty(),
-            resources != null ? Optional.of(resources.getCurrentQi()) : Optional.empty(),
-            resources != null ? Optional.of(resources.getCurrentBody()) : Optional.empty(),
-            resources != null ? Optional.of(new UnifiedDeltaSyncPacket.PackedPermanentBonuses(
-                resources.getPermanentHealthBonus(),
-                (float)resources.getPermanentHealthRegenBonus(),
-                resources.getPermanentMaxQiBonus(),
-                (float)resources.getPermanentQiRegenBonus(),
-                resources.getPermanentMaxBodyBonus(),
-                (float)resources.getPermanentBodyRegenBonus()
-            )) : Optional.empty(),
-            combatStats != null ? Optional.of(new UnifiedDeltaSyncPacket.PackedCombatStats(
-                (float)combatStats.getAttackDamageBonus(),
-                (float)combatStats.getMovementSpeedBonus(),
-                (float)combatStats.getJumpHeightBonus(),
-                (float)combatStats.getPermanentAttackDamageBonus(),
-                (float)combatStats.getPermanentMovementSpeedBonus(),
-                (float)combatStats.getPermanentJumpHeightBonus()
-            )) : Optional.empty(),
-            Optional.empty(), // damageAmount
-            Optional.empty()  // damageSourceId
-        );
+        if (talent != null) {
+            syncState.lastSpiritualRootType = talent.getSpiritualRootType();
+            syncState.lastSpiritualRootAssigned = talent.hasSpiritualRootAssigned();
+            syncState.lastPhysiqueType = talent.getPhysiqueType();
+            syncState.lastPhysiqueAssigned = talent.hasPhysiqueAssigned();
+        }
+
+        if (pillConsumption != null) {
+            CompoundTag pillData = pillConsumption.getPillConsumptionManager().serializeNBT();
+            syncState.lastPillConsumptionDataHash = pillData.hashCode();
+        }
+    }
+
+    /**
+     * Update sync state from the latest packet data - used when processing batched syncs
+     */
+    private static void updateSyncStateFromLatestPacket(ServerPlayer player, PlayerSyncState syncState) {
+        // Get all attachments and update sync state
+        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+        PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+        PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        PlayerTalentAttachment talent = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        PlayerPillConsumptionAttachment pillConsumption = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+        updateSyncState(syncState, cultivation, resources, combatStats, race, talent, pillConsumption);
     }
 
     // === UTILITY METHODS ===
@@ -551,18 +523,7 @@ public class NetworkSyncManager {
      */
     private static void sendImmediately(ServerPlayer player, UnifiedDeltaSyncPacket packet) {
         try {
-            PacketDistributor.sendToPlayer(player, packet);
-
-            // Clear dirty flags for all attachments after successful send
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-            PlayerBreakthroughAttachment breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
-
-            if (cultivation != null && cultivation.isDirty()) cultivation.clearDirty();
-            if (resources != null && resources.isDirty()) resources.clearDirty();
-            if (combatStats != null && combatStats.isDirty()) combatStats.clearDirty();
-            if (breakthrough != null && breakthrough.isDirty()) breakthrough.clearDirty();
+            ICModPacketRegistry.sendToPlayer(packet, player);
 
             ImmortalCultivation.LOGGER.debug("Sent unified delta sync packet to player: {}",
                 player.getName().getString());
@@ -605,61 +566,30 @@ public class NetworkSyncManager {
      * Get server player by UUID
      */
     private static ServerPlayer getServerPlayer(UUID playerId) {
-        return ServerLifecycleHooks.getCurrentServer()
+        return net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer()
             .getPlayerList()
             .getPlayer(playerId);
     }
 
     /**
-     * Update sync state after successful sync
+     * Send unified delta sync immediately without batching
      */
-    private static void updateSyncState(PlayerSyncState syncState, PlayerCultivationAttachment cultivation,
-                                        PlayerResourceAttachment resources, PlayerCombatStatsAttachment combatStats) {
-        if (cultivation != null) {
-            syncState.lastQiRealmId = cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getId();
-            syncState.lastBodyRealmId = cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getId();
-            syncState.lastCurrentQiCultivation = cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
-            syncState.lastMaxQiCultivation = cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
-            syncState.lastCurrentBodyCultivation = cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
-            syncState.lastMaxBodyCultivation = cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
-            syncState.lastCurrentFocus = cultivation.getCurrentFocus();
-            syncState.lastQiAdditiveBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
-            syncState.lastQiMultiplicativeBonus = cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.QI);
-            syncState.lastBodyAdditiveBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
-            syncState.lastBodyMultiplicativeBonus = cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.BODY);
-
-            // Reset change counters for processed attachments
-            cultivation.resetChangeCounter();
-        }
-
-        if (resources != null) {
-            syncState.lastCurrentHealth = resources.getCurrentHealth();
-            syncState.lastCurrentQi = resources.getCurrentQi();
-            syncState.lastCurrentBody = resources.getCurrentBody();
-            syncState.lastPermanentHealthBonus = resources.getPermanentHealthBonus();
-            syncState.lastPermanentHealthRegenBonus = resources.getPermanentHealthRegenBonus();
-            syncState.lastPermanentMaxQiBonus = resources.getPermanentMaxQiBonus();
-            syncState.lastPermanentQiRegenBonus = resources.getPermanentQiRegenBonus();
-            syncState.lastPermanentMaxBodyBonus = resources.getPermanentMaxBodyBonus();
-            syncState.lastPermanentBodyRegenBonus = resources.getPermanentBodyRegenBonus();
-
-            resources.resetChangeCounter();
-        }
-
-        if (combatStats != null) {
-            syncState.lastAttackBonus = combatStats.getAttackDamageBonus();
-            syncState.lastSpeedBonus = combatStats.getMovementSpeedBonus();
-            syncState.lastJumpBonus = combatStats.getJumpHeightBonus();
-            syncState.lastPermanentAttackBonus = combatStats.getPermanentAttackDamageBonus();
-            syncState.lastPermanentSpeedBonus = combatStats.getPermanentMovementSpeedBonus();
-            syncState.lastPermanentJumpBonus = combatStats.getPermanentJumpHeightBonus();
-
-            combatStats.resetChangeCounter();
+    public static void sendUnifiedDeltaSync(ServerPlayer player, UnifiedDeltaSyncPacket packet) {
+        try {
+            ICModPacketRegistry.sendToPlayer(packet, player);
+            ImmortalCultivation.LOGGER.debug("Sent unified delta sync packet to player: {}",
+                player.getName().getString());
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Failed to send unified sync packet to player {}: {}",
+                player.getName().getString(), e.getMessage());
         }
     }
 
+    // === SYNC STATE CLASSES ===
+
     /**
-     * Stores the last synced state for a player to enable delta detection
+     * Tracks the last known state of all attachments for a player to enable delta detection.
+     * Extended to include race, talent, and pill consumption data.
      */
     private static class PlayerSyncState {
         // Cultivation state
@@ -699,6 +629,19 @@ public class NetworkSyncManager {
         double lastPermanentAttackBonus = 0.0;
         double lastPermanentSpeedBonus = 0.0;
         double lastPermanentJumpBonus = 0.0;
+
+        // Race state
+        RaceType lastRaceType = RaceType.HUMAN;
+        boolean lastRaceAssigned = false;
+
+        // Talent state
+        SpiritualRootType lastSpiritualRootType = SpiritualRootType.MORTAL_ROOT;
+        boolean lastSpiritualRootAssigned = false;
+        PhysiqueType lastPhysiqueType = PhysiqueType.MORTAL_PHYSIQUE;
+        boolean lastPhysiqueAssigned = false;
+
+        // Pill consumption state
+        int lastPillConsumptionDataHash = 0;
     }
 
     /**
@@ -726,16 +669,213 @@ public class NetworkSyncManager {
     }
 
     /**
-     * Send unified delta sync immediately without batching
+     * Ensure all attachments have proper player references
+     * Updated to include race, talent, and pill consumption attachments
      */
-    public static void sendUnifiedDeltaSync(ServerPlayer player, UnifiedDeltaSyncPacket packet) {
-        try {
-            ICModPacketRegistry.sendToPlayer(packet, player);
-            ImmortalCultivation.LOGGER.debug("Sent unified delta sync packet to player: {}",
-                player.getName().getString());
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Failed to send unified sync packet to player {}: {}",
-                player.getName().getString(), e.getMessage());
+    public static void ensurePlayerReferences(ServerPlayer player) {
+        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+        PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+        PlayerBreakthroughAttachment breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
+        PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        PlayerTalentAttachment talent = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        PlayerPillConsumptionAttachment pillConsumption = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+        if (cultivation != null && cultivation.getPlayerSafe() == null) {
+            cultivation.setPlayer(player);
         }
+        if (resources != null && resources.getPlayerSafe() == null) {
+            resources.setPlayer(player);
+        }
+        if (combatStats != null && combatStats.getPlayerSafe() == null) {
+            combatStats.setPlayer(player);
+        }
+        if (breakthrough != null && breakthrough.getPlayerSafe() == null) {
+            breakthrough.setPlayer(player);
+        }
+        if (race != null && race.getPlayerSafe() == null) {
+            race.setPlayer(player);
+        }
+        if (talent != null && talent.getPlayerSafe() == null) {
+            talent.setPlayer(player);
+        }
+        if (pillConsumption != null && pillConsumption.getPlayerSafe() == null) {
+            pillConsumption.setPlayer(player);
+        }
+    }
+
+    /**
+     * Force sync all data for a player (e.g., on login)
+     * Updated to include race, talent, and pill consumption attachments
+     */
+    public static void forceSyncAll(ServerPlayer player) {
+        UUID playerId = player.getUUID();
+        long currentTime = System.currentTimeMillis();
+
+        // Prevent force sync spam (max once per 5 seconds)
+        Long lastSync = lastFullSyncTime.get(playerId);
+        if (lastSync != null && (currentTime - lastSync) < 5000L) {
+            ImmortalCultivation.LOGGER.debug("Skipping force sync for {} - too recent",
+                player.getName().getString());
+            return;
+        }
+
+        lastFullSyncTime.put(playerId, currentTime);
+
+        // Reset sync state to force full sync
+        playerSyncStates.remove(playerId);
+        PlayerSyncState syncState = new PlayerSyncState();
+        playerSyncStates.put(playerId, syncState);
+
+        // Ensure player references are set
+        ensurePlayerReferences(player);
+
+        // Get all attachments
+        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+        PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+        PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        PlayerTalentAttachment talent = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        PlayerPillConsumptionAttachment pillConsumption = player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+
+        // Build full sync packet with all attachment types
+        UnifiedDeltaSyncPacket packet = buildFullSyncPacket(cultivation, resources, combatStats, race, talent, pillConsumption);
+        if (packet != null) {
+            sendImmediately(player, packet);
+            updateSyncState(syncState, cultivation, resources, combatStats, race, talent, pillConsumption);
+        }
+    }
+
+    /**
+     * Build full sync packet (for login) - Updated to include all attachment types
+     */
+    private static UnifiedDeltaSyncPacket buildFullSyncPacket(PlayerCultivationAttachment cultivation,
+                                                              PlayerResourceAttachment resources,
+                                                              PlayerCombatStatsAttachment combatStats,
+                                                              PlayerRaceAttachment race,
+                                                              PlayerTalentAttachment talent,
+                                                              PlayerPillConsumptionAttachment pillConsumption) {
+
+        byte attachmentMask = 0;
+        short cultivationFieldMask = 0;
+        short resourceFieldMask = 0;
+        byte combatStatsFieldMask = 0;
+        byte raceFieldMask = 0;
+        byte talentFieldMask = 0;
+        byte pillConsumptionFieldMask = 0;
+
+        // Include all cultivation data
+        if (cultivation != null) {
+            attachmentMask |= UnifiedDeltaSyncPacket.CULTIVATION_MASK;
+            cultivationFieldMask = UnifiedDeltaSyncPacket.CULT_QI_REALM | UnifiedDeltaSyncPacket.CULT_BODY_REALM |
+                UnifiedDeltaSyncPacket.CULT_QI_CURRENT | UnifiedDeltaSyncPacket.CULT_QI_MAX |
+                UnifiedDeltaSyncPacket.CULT_BODY_CURRENT | UnifiedDeltaSyncPacket.CULT_BODY_MAX |
+                UnifiedDeltaSyncPacket.CULT_FOCUS | UnifiedDeltaSyncPacket.CULT_BONUSES |
+                UnifiedDeltaSyncPacket.CULT_BREAKTHROUGH;
+        }
+
+        // Include all resource data
+        if (resources != null) {
+            attachmentMask |= UnifiedDeltaSyncPacket.RESOURCE_MASK;
+            resourceFieldMask = UnifiedDeltaSyncPacket.RES_HEALTH | UnifiedDeltaSyncPacket.RES_QI |
+                UnifiedDeltaSyncPacket.RES_BODY | UnifiedDeltaSyncPacket.RES_PERMANENT;
+        }
+
+        // Include all combat stats data
+        if (combatStats != null) {
+            attachmentMask |= UnifiedDeltaSyncPacket.COMBAT_STATS_MASK;
+            combatStatsFieldMask = UnifiedDeltaSyncPacket.COMBAT_ALL;
+        }
+
+        // Include all race data
+        if (race != null) {
+            attachmentMask |= UnifiedDeltaSyncPacket.RACE_MASK;
+            raceFieldMask = UnifiedDeltaSyncPacket.RACE_ALL;
+        }
+
+        // Include all talent data
+        if (talent != null) {
+            attachmentMask |= UnifiedDeltaSyncPacket.TALENT_MASK;
+            talentFieldMask = UnifiedDeltaSyncPacket.TALENT_ALL;
+        }
+
+        // Include all pill consumption data
+        if (pillConsumption != null) {
+            attachmentMask |= UnifiedDeltaSyncPacket.PILL_CONSUMPTION_MASK;
+            pillConsumptionFieldMask = UnifiedDeltaSyncPacket.PILL_CONSUMPTION_DATA;
+        }
+
+        // Get breakthrough data
+        PlayerBreakthroughAttachment breakthrough = null;
+        if (cultivation != null && cultivation.getPlayerSafe() != null) {
+            breakthrough = cultivation.getPlayerSafe().getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
+        }
+
+        return new UnifiedDeltaSyncPacket(
+            attachmentMask, cultivationFieldMask, resourceFieldMask, combatStatsFieldMask,
+            raceFieldMask, talentFieldMask, pillConsumptionFieldMask,
+
+            // Cultivation data
+            cultivation != null ? Optional.of(cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getId()) : Optional.empty(),
+            cultivation != null ? Optional.of(cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getId()) : Optional.empty(),
+            cultivation != null ? Optional.of(cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI)) : Optional.empty(),
+            cultivation != null ? Optional.of(cultivation.getMaxCultivation(ICultivationData.CultivationType.QI)) : Optional.empty(),
+            cultivation != null ? Optional.of(cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY)) : Optional.empty(),
+            cultivation != null ? Optional.of(cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY)) : Optional.empty(),
+            cultivation != null ? Optional.of(cultivation.getCurrentFocus()) : Optional.empty(),
+            cultivation != null ? Optional.of(new UnifiedDeltaSyncPacket.PackedBonuses(
+                cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI),
+                cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.QI),
+                cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY),
+                cultivation.getRawMultiplicativeBonus(ICultivationData.CultivationType.BODY)
+            )) : Optional.empty(),
+            breakthrough != null ? Optional.of(new UnifiedDeltaSyncPacket.PackedBreakthroughData(
+                breakthrough.getBreakthroughAttempts(ICultivationData.CultivationType.QI),
+                breakthrough.getBreakthroughAttempts(ICultivationData.CultivationType.BODY),
+                breakthrough.isBreakthroughOnCooldown(ICultivationData.CultivationType.QI),
+                breakthrough.isBreakthroughOnCooldown(ICultivationData.CultivationType.BODY),
+                breakthrough.getLastBreakthroughAttemptTime(ICultivationData.CultivationType.QI),
+                breakthrough.getLastBreakthroughAttemptTime(ICultivationData.CultivationType.BODY)
+            )) : Optional.empty(),
+
+            // Resource data
+            resources != null ? Optional.of(resources.getCurrentHealth()) : Optional.empty(),
+            resources != null ? Optional.of(resources.getCurrentQi()) : Optional.empty(),
+            resources != null ? Optional.of(resources.getCurrentBody()) : Optional.empty(),
+            resources != null ? Optional.of(new UnifiedDeltaSyncPacket.PackedPermanentBonuses(
+                resources.getPermanentHealthBonus(),
+                resources.getPermanentHealthRegenBonus(),
+                resources.getPermanentMaxQiBonus(),
+                resources.getPermanentQiRegenBonus(),
+                resources.getPermanentMaxBodyBonus(),
+                resources.getPermanentBodyRegenBonus()
+            )) : Optional.empty(),
+
+            // Combat stats data
+            combatStats != null ? Optional.of(new UnifiedDeltaSyncPacket.PackedCombatStats(
+                combatStats.getAttackDamageBonus(),
+                combatStats.getMovementSpeedBonus(),
+                combatStats.getJumpHeightBonus(),
+                combatStats.getPermanentAttackDamageBonus(),
+                combatStats.getPermanentMovementSpeedBonus(),
+                combatStats.getPermanentJumpHeightBonus()
+            )) : Optional.empty(),
+
+            // Damage feedback data (empty for full sync)
+            Optional.empty(), Optional.empty(),
+
+            // Race data
+            race != null ? Optional.of(race.getRaceType().name()) : Optional.empty(),
+            race != null ? Optional.of(race.hasRaceAssigned()) : Optional.empty(),
+
+            // Talent data
+            talent != null ? Optional.of(talent.getSpiritualRootType().name()) : Optional.empty(),
+            talent != null ? Optional.of(talent.hasSpiritualRootAssigned()) : Optional.empty(),
+            talent != null ? Optional.of(talent.getPhysiqueType().name()) : Optional.empty(),
+            talent != null ? Optional.of(talent.hasPhysiqueAssigned()) : Optional.empty(),
+
+            // Pill consumption data
+            pillConsumption != null ? Optional.of(pillConsumption.getPillConsumptionManager().serializeNBT()) : Optional.empty()
+        );
     }
 }

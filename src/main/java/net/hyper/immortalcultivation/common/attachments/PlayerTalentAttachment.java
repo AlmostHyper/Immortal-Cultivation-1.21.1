@@ -5,7 +5,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
-import net.hyper.immortalcultivation.core.network.packets.server.TalentSyncPacket;
+import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
+import net.hyper.immortalcultivation.core.network.packets.server.UnifiedDeltaSyncPacket;
+import net.hyper.immortalcultivation.core.network.sync.PlayerTalentAttachmentPacketBuilder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -275,12 +277,7 @@ public class PlayerTalentAttachment {
     private void syncToClient() {
         if (player instanceof ServerPlayer serverPlayer) {
             try {
-                TalentSyncPacket packet = new TalentSyncPacket(
-                    spiritualRootType.name(),
-                    spiritualRootAssigned,
-                    physiqueType.name(),
-                    physiqueAssigned
-                );
+                UnifiedDeltaSyncPacket packet = PlayerTalentAttachmentPacketBuilder.createFullSyncPacket(this);
                 PacketDistributor.sendToPlayer(serverPlayer, packet);
 
                 ImmortalCultivation.LOGGER.debug("Synced talent data to client for player: {}",
@@ -293,19 +290,14 @@ public class PlayerTalentAttachment {
     }
 
     /**
-     * CRITICAL: Force sync method for dimension changes and initialization.
+     * Force sync talent data using the unified sync system.
      * This ensures the client receives updated data even if internal state hasn't changed.
      */
     public void forceSync() {
         try {
             if (player instanceof ServerPlayer serverPlayer) {
-                TalentSyncPacket packet = new TalentSyncPacket(
-                    spiritualRootType.name(),
-                    spiritualRootAssigned,
-                    physiqueType.name(),
-                    physiqueAssigned
-                );
-                PacketDistributor.sendToPlayer(serverPlayer, packet);
+                // Use the unified sync system with HIGH priority for talent changes
+                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.HIGH);
 
                 ImmortalCultivation.LOGGER.debug("Force synced {} for player: {}",
                     this.getClass().getSimpleName(),

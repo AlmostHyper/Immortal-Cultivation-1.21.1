@@ -2,8 +2,8 @@ package net.hyper.immortalcultivation.common.attachments;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.content.item.pills.PillConsumptionManager;
-import net.hyper.immortalcultivation.core.network.packets.server.PillConsumptionSyncPacket;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -90,17 +90,16 @@ public class PlayerPillConsumptionAttachment {
 
     // === SYNC MANAGEMENT ===
 
+
     /**
-     * CRITICAL: Force sync method for dimension changes and initialization.
+     * Force sync pill consumption data using the unified sync system.
      * This ensures the client receives updated data even if internal state hasn't changed.
      */
     public void forceSync() {
         try {
             if (player instanceof ServerPlayer serverPlayer) {
-                CompoundTag data = pillConsumptionManager.serializeNBT();
-                PillConsumptionSyncPacket packet = new PillConsumptionSyncPacket(data);
-
-                ICModPacketRegistry.sendToPlayer(packet, serverPlayer);
+                // Use the unified sync system with NORMAL priority for pill consumption changes
+                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.NORMAL);
 
                 ImmortalCultivation.LOGGER.debug("Force synced {} for player: {}",
                     this.getClass().getSimpleName(),

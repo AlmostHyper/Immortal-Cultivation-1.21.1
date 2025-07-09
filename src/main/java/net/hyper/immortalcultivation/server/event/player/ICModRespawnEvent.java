@@ -165,7 +165,7 @@ public class ICModRespawnEvent {
                     player.getName().getString());
 
                 // Emergency sync as last resort
-                NetworkSyncManager.emergencySync(player);
+                NetworkSyncManager.forceSyncAll(player);
 
                 // Still continue with respawn processing but log the issue
                 ImmortalCultivation.LOGGER.warn("Continuing respawn processing for player {} despite attachment issues",
@@ -203,7 +203,7 @@ public class ICModRespawnEvent {
             // Emergency recovery attempt
             try {
                 AttachmentRecoveryUtil.ensureAttachmentIntegrity(player);
-                NetworkSyncManager.emergencySync(player);
+                NetworkSyncManager.forceSyncAll(player);
             } catch (Exception recoveryError) {
                 ImmortalCultivation.LOGGER.error("Emergency recovery also failed for player {}: {}",
                     player.getName().getString(), recoveryError);
@@ -417,7 +417,7 @@ public class ICModRespawnEvent {
                 player.getName().getString(), e);
 
             // Attempt emergency sync
-            NetworkSyncManager.emergencySync(player);
+            NetworkSyncManager.forceSyncAll(player);
         } finally {
             long duration = System.nanoTime() - operationStart;
             operationTimes.get(RespawnOperation.SYNC_OPERATIONS).addAndGet(duration);

@@ -34,27 +34,9 @@ public class ICModPacketRegistry {
         );
 
         REGISTRY.playToClient(
-            RaceSyncPacket.TYPE,
-            RaceSyncPacket.STREAM_CODEC,
-            RaceSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
             OpenRaceSelectionSyncPacket.TYPE,
             OpenRaceSelectionSyncPacket.STREAM_CODEC,
             OpenRaceSelectionSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            TalentSyncPacket.TYPE,
-            TalentSyncPacket.STREAM_CODEC,
-            TalentSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
-            PillConsumptionSyncPacket.TYPE,
-            PillConsumptionSyncPacket.STREAM_CODEC,
-            PillConsumptionSyncPacket::handleClient
         );
 
         // === CLIENT -> SERVER === //

@@ -5,7 +5,9 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
-import net.hyper.immortalcultivation.core.network.packets.server.RaceSyncPacket;
+import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
+import net.hyper.immortalcultivation.core.network.packets.server.UnifiedDeltaSyncPacket;
+import net.hyper.immortalcultivation.core.network.sync.PlayerRaceAttachmentPacketBuilder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -155,10 +157,7 @@ public class PlayerRaceAttachment {
     private void syncToClient() {
         if (player instanceof ServerPlayer serverPlayer) {
             try {
-                RaceSyncPacket packet = new RaceSyncPacket(
-                    raceType.name(),
-                    raceAssigned
-                );
+                UnifiedDeltaSyncPacket packet = PlayerRaceAttachmentPacketBuilder.createFullSyncPacket(this);
                 PacketDistributor.sendToPlayer(serverPlayer, packet);
 
                 ImmortalCultivation.LOGGER.debug("Synced race data to client for player: {}",
@@ -171,17 +170,14 @@ public class PlayerRaceAttachment {
     }
 
     /**
-     * CRITICAL: Force sync method for dimension changes and initialization.
+     * Force sync race data using the unified sync system.
      * This ensures the client receives updated data even if internal state hasn't changed.
      */
     public void forceSync() {
         try {
             if (player instanceof ServerPlayer serverPlayer) {
-                RaceSyncPacket packet = new RaceSyncPacket(
-                    raceType.name(),
-                    raceAssigned
-                );
-                PacketDistributor.sendToPlayer(serverPlayer, packet);
+                // Use the unified sync system with HIGH priority for race changes
+                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.HIGH);
 
                 ImmortalCultivation.LOGGER.debug("Force synced {} for player: {}",
                     this.getClass().getSimpleName(),
