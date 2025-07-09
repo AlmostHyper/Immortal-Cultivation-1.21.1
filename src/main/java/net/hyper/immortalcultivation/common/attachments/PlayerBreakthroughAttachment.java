@@ -711,23 +711,73 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerUtil implements IT
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerBreakthroughAttachment> {
         @Override
         public PlayerBreakthroughAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
-            PlayerBreakthroughAttachment attachment = CODEC.parse(NbtOps.INSTANCE, tag)
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to deserialize PlayerBreakthroughAttachment: {}", error))
-                .orElse(new PlayerBreakthroughAttachment());
+            // Check for empty tag first
+            if (tag.isEmpty()) {
+                ImmortalCultivation.LOGGER.error("CRITICAL: Empty NBT tag detected for PlayerBreakthroughAttachment! Player: {}",
+                    holder instanceof Player player ? player.getName().getString() : "unknown");
 
-            // Set player reference during deserialization
-            if (holder instanceof Player player) {
-                attachment.setPlayer(player);
+                PlayerBreakthroughAttachment newAttachment = new PlayerBreakthroughAttachment();
+                if (holder instanceof Player player) {
+                    newAttachment.setPlayer(player);
+                }
+                return newAttachment;
             }
 
-            return attachment;
+            try {
+                PlayerBreakthroughAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+                    .resultOrPartial(error -> {
+                        ImmortalCultivation.LOGGER.error("CRITICAL: Failed to decode PlayerBreakthroughAttachment for player {}: {}",
+                            holder instanceof Player player ? player.getName().getString() : "unknown", error);
+                    })
+                    .map(pair -> pair.getFirst())
+                    .orElse(null);
+
+                if (attachment == null) {
+                    ImmortalCultivation.LOGGER.error("CRITICAL: PlayerBreakthroughAttachment deserialization returned null! Creating fallback.");
+                    attachment = new PlayerBreakthroughAttachment();
+                }
+
+                // CRITICAL: Set player reference during deserialization
+                if (holder instanceof Player player) {
+                    attachment.setPlayer(player);
+                    ImmortalCultivation.LOGGER.debug("Set player reference during breakthrough attachment deserialization: {}",
+                        player.getName().getString());
+                }
+
+                return attachment;
+
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("CRITICAL: Exception during PlayerBreakthroughAttachment deserialization: {}", e);
+
+                PlayerBreakthroughAttachment fallback = new PlayerBreakthroughAttachment();
+                if (holder instanceof Player player) {
+                    fallback.setPlayer(player);
+                }
+                return fallback;
+            }
         }
 
         @Override
         public CompoundTag write(PlayerBreakthroughAttachment attachment, HolderLookup.Provider provider) {
-            return (CompoundTag) CODEC.encodeStart(NbtOps.INSTANCE, attachment)
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to serialize PlayerBreakthroughAttachment: {}", error))
-                .orElse(new CompoundTag());
+            try {
+                CompoundTag result = (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
+                    .resultOrPartial(error -> {
+                        ImmortalCultivation.LOGGER.error("CRITICAL: Failed to encode PlayerBreakthroughAttachment: {}", error);
+                    })
+                    .orElse(null);
+
+                if (result == null || result.isEmpty()) {
+                    ImmortalCultivation.LOGGER.error("CRITICAL: PlayerBreakthroughAttachment serialization produced empty result!");
+                    return new CompoundTag();
+                }
+
+                ImmortalCultivation.LOGGER.debug("Successfully serialized PlayerBreakthroughAttachment - {} keys", result.size());
+                return result;
+
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("CRITICAL: Exception during PlayerBreakthroughAttachment serialization: {}", e);
+                return new CompoundTag();
+            }
         }
     }
 

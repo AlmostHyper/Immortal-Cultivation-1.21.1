@@ -986,23 +986,88 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerCultivationAttachment> {
         @Override
         public PlayerCultivationAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
-            PlayerCultivationAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerCultivationAttachment: {}", error))
-                .map(pair -> pair.getFirst())
-                .orElse(new PlayerCultivationAttachment());
+            // CRITICAL: Check if tag is empty - this indicates complete data loss
+            if (tag.isEmpty()) {
+                ImmortalCultivation.LOGGER.error("CRITICAL: Empty NBT tag detected for PlayerCultivationAttachment! " +
+                        "This indicates complete data loss. Player: {}",
+                    holder instanceof Player player ? player.getName().getString() : "unknown");
 
-            if (holder instanceof Player player) {
-                attachment.setPlayer(player);
+                // Create new attachment but mark it as requiring emergency restoration
+                PlayerCultivationAttachment newAttachment = new PlayerCultivationAttachment();
+                if (holder instanceof Player player) {
+                    newAttachment.setPlayer(player);
+                    // TODO: Add emergency data restoration logic here
+                }
+                return newAttachment;
             }
 
-            return attachment;
+            try {
+                PlayerCultivationAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+                    .resultOrPartial(error -> {
+                        ImmortalCultivation.LOGGER.error("CRITICAL: Failed to decode PlayerCultivationAttachment for player {}: {}. " +
+                                "This will cause complete cultivation data loss!",
+                            holder instanceof Player player ? player.getName().getString() : "unknown", error);
+                        // Log the NBT structure for debugging
+                        ImmortalCultivation.LOGGER.error("NBT data that failed to decode: {}", tag);
+                    })
+                    .map(pair -> pair.getFirst())
+                    .orElse(null); // Don't create new instance on failure
+
+                if (attachment == null) {
+                    ImmortalCultivation.LOGGER.error("CRITICAL: Attachment deserialization returned null! Creating emergency fallback.");
+                    attachment = new PlayerCultivationAttachment();
+                    // TODO: Add emergency data restoration from backup
+                }
+
+                // CRITICAL: Set player reference during deserialization
+                if (holder instanceof Player player) {
+                    attachment.setPlayer(player);
+                    ImmortalCultivation.LOGGER.debug("Set player reference during cultivation attachment deserialization: {}",
+                        player.getName().getString());
+                }
+
+                return attachment;
+
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("CRITICAL: Exception during PlayerCultivationAttachment deserialization for player {}: {}",
+                    holder instanceof Player player ? player.getName().getString() : "unknown", e);
+
+                PlayerCultivationAttachment fallback = new PlayerCultivationAttachment();
+                if (holder instanceof Player player) {
+                    fallback.setPlayer(player);
+                }
+                return fallback;
+            }
         }
 
         @Override
         public @Nullable CompoundTag write(PlayerCultivationAttachment attachment, HolderLookup.Provider provider) {
-            return (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerCultivationAttachment: {}", error))
-                .orElse(new CompoundTag());
+            try {
+                CompoundTag result = (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
+                    .resultOrPartial(error -> {
+                        ImmortalCultivation.LOGGER.error("CRITICAL: Failed to encode PlayerCultivationAttachment for player {}: {}. " +
+                                "This will cause data loss on next load!",
+                            attachment.getPlayerSafe() != null ? attachment.getPlayerSafe().getName().getString() : "unknown", error);
+                    })
+                    .orElse(null);
+
+                if (result == null || result.isEmpty()) {
+                    ImmortalCultivation.LOGGER.error("CRITICAL: PlayerCultivationAttachment serialization produced empty result for player {}!",
+                        attachment.getPlayerSafe() != null ? attachment.getPlayerSafe().getName().getString() : "unknown");
+                    return new CompoundTag(); // Return empty tag rather than null
+                }
+
+                ImmortalCultivation.LOGGER.debug("Successfully serialized PlayerCultivationAttachment for player {} - {} keys",
+                    attachment.getPlayerSafe() != null ? attachment.getPlayerSafe().getName().getString() : "unknown",
+                    result.size());
+
+                return result;
+
+            } catch (Exception e) {
+                ImmortalCultivation.LOGGER.error("CRITICAL: Exception during PlayerCultivationAttachment serialization for player {}: {}",
+                    attachment.getPlayerSafe() != null ? attachment.getPlayerSafe().getName().getString() : "unknown", e);
+                return new CompoundTag();
+            }
         }
     }
 }
