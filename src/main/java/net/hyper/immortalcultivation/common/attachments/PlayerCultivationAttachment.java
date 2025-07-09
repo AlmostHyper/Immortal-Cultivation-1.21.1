@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
@@ -15,7 +16,6 @@ import net.hyper.immortalcultivation.core.network.packets.server.PlayerCultivati
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
@@ -122,6 +122,14 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         }
     }
 
+    public void setRealm(CultivationType type, CultivationRealm realm) {
+        if (realm != null && !realm.equals(this.currentRealms.get(type))) {
+            this.currentRealms.put(type, realm);
+            this.markDirty();
+        }
+    }
+
+
     // === CORE LOGIC === //
 
     private void initializeDefaults() {
@@ -196,7 +204,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
     // === IMPLEMENTATIONS === //
 
     @Override
-    public Optional<CustomPacketPayload> createSyncPacket(boolean isFullSync) {
+    public Optional<ISyncPacket> createPacket(boolean isFullSync) {
         if (player == null || player.level().isClientSide()) {
             return Optional.empty();
         }
@@ -266,24 +274,6 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         }
 
         return Optional.empty();
-    }
-
-    @Override
-    public void handleSyncPacket(CustomPacketPayload payload) {
-        if (payload instanceof PlayerCultivationSyncPacket packet) {
-            packet.qiCultivationData().ifPresent(data -> {
-                data.realmId().ifPresent(id -> this.currentRealms.put(CultivationType.QI, ICModCultivationRealms.get(id)));
-                data.current().ifPresent(val -> this.currentCultivation.put(CultivationType.QI, val));
-                data.max().ifPresent(val -> this.maxCultivation.put(CultivationType.QI, val));
-            });
-            packet.bodyCultivationData().ifPresent(data -> {
-                data.realmId().ifPresent(id -> this.currentRealms.put(CultivationType.BODY, ICModCultivationRealms.get(id)));
-                data.current().ifPresent(val -> this.currentCultivation.put(CultivationType.BODY, val));
-                data.max().ifPresent(val -> this.maxCultivation.put(CultivationType.BODY, val));
-            });
-            packet.focus().ifPresent(f -> this.currentFocus = f);
-            ImmortalCultivation.LOGGER.debug("Applied cultivation sync packet on client.");
-        }
     }
 
     @Override

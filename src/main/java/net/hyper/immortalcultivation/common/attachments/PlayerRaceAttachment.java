@@ -3,65 +3,44 @@ package net.hyper.immortalcultivation.common.attachments;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
+import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
-import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
-import net.hyper.immortalcultivation.core.network.packets.server.UnifiedDeltaSyncPacket;
-import net.hyper.immortalcultivation.core.network.sync.PlayerRaceAttachmentPacketBuilder;
+import net.hyper.immortalcultivation.core.network.packets.server.PlayerRaceSyncPacket;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
-import net.neoforged.neoforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
+import java.util.Optional;
 
-/**
- * Manages player race data for the cultivation system.
- * Races provide permanent multipliers to cultivation paths.
- * Enhanced with proper dimension change handling.
- */
-public class PlayerRaceAttachment {
+public class PlayerRaceAttachment implements ISyncable {
 
-    // === Player Reference ===
+    // === INSTANCES === //
+
     @Nullable
-    private Player player;
+    private transient Player player;
 
-    // === Race Data ===
+    // --- Race Data ---
     private RaceType raceType = RaceType.HUMAN;
     private boolean raceAssigned = false;
 
-    // === Sync Management ===
-    private boolean needsSync = false;
+    // --- System Data ---
+    private transient boolean isDirty = false;
+    private transient PlayerRaceAttachment lastSyncedState = null;
 
-    // === CONSTRUCTORS ===
+    // === CONSTRUCTORS === //
+
     public PlayerRaceAttachment() {}
 
-    // === PLAYER REFERENCE MANAGEMENT ===
+    // === GETTERS & SETTERS === //
 
-    /**
-     * CRITICAL: Set player reference for sync and calculation purposes.
-     * Must be called after dimension changes and during initialization.
-     */
     public void setPlayer(Player player) {
         this.player = player;
-        ImmortalCultivation.LOGGER.debug("Set player reference for {}: {}",
-            this.getClass().getSimpleName(),
-            player != null ? player.getName().getString() : "null");
     }
-
-    @Nullable
-    public Player getPlayerSafe() {
-        if (player != null && player.isAlive()) {
-            return player;
-        }
-        return null;
-    }
-
-    // === RACE METHODS ===
 
     public RaceType getRaceType() {
         return raceType;
@@ -71,19 +50,7 @@ public class PlayerRaceAttachment {
         if (!raceAssigned) {
             this.raceType = type;
             this.raceAssigned = true;
-            this.needsSync = true;
-
-            ImmortalCultivation.LOGGER.info("Player {} assigned race: {} (Qi: {}x, Body: {}x)",
-                player != null ? player.getName().getString() : "Unknown",
-                type.getDisplayName(),
-                type.getQiMultiplier(),
-                type.getBodyMultiplier());
-
-            forceSync();
-        } else {
-            ImmortalCultivation.LOGGER.warn("Attempted to assign race to player {} who already has one assigned: {}",
-                player != null ? player.getName().getString() : "Unknown",
-                raceType.getDisplayName());
+            markDirty();
         }
     }
 
@@ -99,248 +66,102 @@ public class PlayerRaceAttachment {
         return raceType.getBodyMultiplier();
     }
 
-    public String getRaceDisplayName() {
-        return raceType.getDisplayName();
+    public void updateFromServer(RaceType raceType, boolean raceAssigned) {
+        this.raceType = raceType;
+        this.raceAssigned = raceAssigned;
     }
 
-    public int getRaceColor() {
-        return raceType.getColor();
-    }
+    // === IMPLEMENTATIONS === //
 
-    public String getRaceDescription() {
-        return raceType.getDescription();
-    }
-
-    public String getRaceBonusDescription() {
-        return raceType.getBonusDescription();
-    }
-
-    // === UTILITY METHODS ===
-
-    /**
-     * Reset race (for debug/admin commands)
-     */
-    public void resetRace() {
-        ImmortalCultivation.LOGGER.warn("Resetting race for player: {}",
-            player != null ? player.getName().getString() : "Unknown");
-
-        this.raceType = RaceType.HUMAN;
-        this.raceAssigned = false;
-        this.needsSync = true;
-        forceSync();
-    }
-
-    /**
-     * Force reassignment of race (for special items/events)
-     */
-    public void forceReassignRace(RaceType type) {
-        ImmortalCultivation.LOGGER.info("Force reassigning race for player {} from {} to {}",
-            player != null ? player.getName().getString() : "Unknown",
-            this.raceType.getDisplayName(),
-            type.getDisplayName());
-
-        this.raceType = type;
-        this.raceAssigned = true;
-        this.needsSync = true;
-        forceSync();
-    }
-
-    // === SYNC MANAGEMENT ===
-
-    public void tick() {
-        if (needsSync && player instanceof ServerPlayer) {
-            syncToClient();
-            needsSync = false;
+    @Override
+    public Optional<ISyncPacket> createPacket(boolean isFullSync) {
+        if (player == null || player.level().isClientSide()) {
+            return Optional.empty();
         }
-    }
 
-    private void syncToClient() {
-        if (player instanceof ServerPlayer serverPlayer) {
-            try {
-                UnifiedDeltaSyncPacket packet = PlayerRaceAttachmentPacketBuilder.createFullSyncPacket(this);
-                PacketDistributor.sendToPlayer(serverPlayer, packet);
-
-                ImmortalCultivation.LOGGER.debug("Synced race data to client for player: {}",
-                    serverPlayer.getName().getString());
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error syncing race data for player {}",
-                    player.getName().getString(), e);
-            }
+        if (lastSyncedState == null) {
+            isFullSync = true;
         }
-    }
 
-    /**
-     * Force sync race data using the unified sync system.
-     * This ensures the client receives updated data even if internal state hasn't changed.
-     */
-    public void forceSync() {
-        try {
-            if (player instanceof ServerPlayer serverPlayer) {
-                // Use the unified sync system with HIGH priority for race changes
-                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.HIGH);
-
-                ImmortalCultivation.LOGGER.debug("Force synced {} for player: {}",
-                    this.getClass().getSimpleName(),
-                    serverPlayer.getName().getString());
-
-                this.needsSync = false;
-            } else {
-                ImmortalCultivation.LOGGER.debug("Cannot sync race data - no player reference or not server player");
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error force syncing {} for player {}",
-                this.getClass().getSimpleName(),
-                player != null ? player.getName().getString() : "unknown", e);
+        byte changedFields = 0;
+        if (isFullSync || this.raceType != lastSyncedState.raceType) {
+            changedFields |= PlayerRaceSyncPacket.RACE_TYPE_MASK;
         }
-    }
-
-    // === SERIALIZATION ===
-
-    public static final Codec<PlayerRaceAttachment> CODEC = RecordCodecBuilder.create(instance ->
-        instance.group(
-            Codec.STRING.fieldOf("race_type").forGetter(d -> d.raceType.name()),
-            Codec.BOOL.fieldOf("race_assigned").forGetter(d -> d.raceAssigned)
-        ).apply(instance, PlayerRaceAttachment::decode)
-    );
-
-    private static PlayerRaceAttachment decode(String raceType, boolean raceAssigned) {
-        PlayerRaceAttachment data = new PlayerRaceAttachment();
-
-        try {
-            data.raceType = RaceType.valueOf(raceType);
-        } catch (IllegalArgumentException e) {
-            ImmortalCultivation.LOGGER.warn("Invalid race type '{}', defaulting to HUMAN", raceType);
-            data.raceType = RaceType.HUMAN;
+        if (isFullSync || this.raceAssigned != lastSyncedState.raceAssigned) {
+            changedFields |= PlayerRaceSyncPacket.RACE_ASSIGNED_MASK;
         }
-        data.raceAssigned = raceAssigned;
 
-        return data;
+        if (changedFields > 0) {
+            this.lastSyncedState = this.copy();
+            return Optional.of(new PlayerRaceSyncPacket(changedFields, raceType, raceAssigned));
+        }
+
+        return Optional.empty();
     }
 
-    // === SERIALIZER ===
+    @Override
+    public boolean isDirty() {
+        return isDirty;
+    }
+
+    @Override
+    public void markDirty() {
+        this.isDirty = true;
+    }
+
+    @Override
+    public void clearDirty() {
+        this.isDirty = false;
+    }
+
+    // === HELPER METHODS === //
+
+    public PlayerRaceAttachment copy() {
+        PlayerRaceAttachment copy = new PlayerRaceAttachment();
+        copy.raceType = this.raceType;
+        copy.raceAssigned = this.raceAssigned;
+        return copy;
+    }
+
+    // === SERIALIZATION === //
 
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerRaceAttachment> {
         @Override
         public PlayerRaceAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
-            ImmortalCultivation.LOGGER.debug("Reading PlayerRaceAttachment from NBT: {}", tag.toString());
-
             PlayerRaceAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerRaceAttachment: {}", error))
-                .map(pair -> pair.getFirst())
-                .orElse(new PlayerRaceAttachment());
+                    .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerRaceAttachment: {}", error))
+                    .map(com.mojang.datafixers.util.Pair::getFirst)
+                    .orElseGet(PlayerRaceAttachment::new);
 
-            // CRITICAL: Set player reference during deserialization
             if (holder instanceof Player player) {
                 attachment.setPlayer(player);
-                ImmortalCultivation.LOGGER.debug("Set player reference during race attachment deserialization: {} - Race: {}, Assigned: {}",
-                    player.getName().getString(), attachment.raceType.getDisplayName(), attachment.raceAssigned);
-
-                // CRITICAL: Force sync after successful deserialization during respawn
-                if (player instanceof ServerPlayer && attachment.raceAssigned) {
-                    attachment.needsSync = true;
-                    ImmortalCultivation.LOGGER.debug("Scheduling race sync after deserialization for player: {}",
-                        player.getName().getString());
-                }
             }
-
             return attachment;
         }
 
         @Override
         public @Nullable CompoundTag write(PlayerRaceAttachment attachment, HolderLookup.Provider provider) {
-            CompoundTag result = (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerRaceAttachment: {}", error))
-                .orElse(new CompoundTag());
-
-            ImmortalCultivation.LOGGER.debug("Writing PlayerRaceAttachment to NBT: {} - Race: {}, Assigned: {}",
-                result.toString(), attachment.raceType.getDisplayName(), attachment.raceAssigned);
-
-            return result;
+            return (CompoundTag) CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), attachment)
+                    .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerRaceAttachment: {}", error))
+                    .orElse(new CompoundTag());
         }
     }
 
-    // === DEBUG METHODS ===
-
-    public void debugInfo() {
-        String side = player != null ? (player.level().isClientSide() ? "Client" : "Server") : "Unknown";
-        String playerName = player != null ? player.getName().getString() : "Unknown";
-
-        ImmortalCultivation.LOGGER.info("=== Race Data Debug Info ===");
-        ImmortalCultivation.LOGGER.info("Player: {} ({})", playerName, side);
-        ImmortalCultivation.LOGGER.info("Race: {} - Assigned: {}",
-            raceType.getDisplayName(),
-            raceAssigned);
-        ImmortalCultivation.LOGGER.info("Qi Multiplier: {}x", raceType.getQiMultiplier());
-        ImmortalCultivation.LOGGER.info("Body Multiplier: {}x", raceType.getBodyMultiplier());
-        ImmortalCultivation.LOGGER.info("Description: {}", raceType.getDescription());
-        ImmortalCultivation.LOGGER.info("=============================");
-    }
-
-    /**
-     * Logs the current race assignment state for debugging purposes.
-     * This method helps track race data persistence across death/respawn cycles.
-     */
-    public void logRaceState(String context) {
-        ImmortalCultivation.LOGGER.info("Race state for player {} [{}]: Type={}, Assigned={}",
-            player != null ? player.getName().getString() : "Unknown",
-            context,
-            raceType.getDisplayName(),
-            raceAssigned);
-    }
-
-    /**
-     * Get a concise summary for command output
-     */
-    public String getSummary() {
-        return String.format("Race: %s (Qi: %.1fx, Body: %.1fx) - %s",
-            raceType.getDisplayName(),
-            raceType.getQiMultiplier(),
-            raceType.getBodyMultiplier(),
-            raceType.getDescription());
-    }
-
-    /**
-     * Safely retrieves the race attachment and ensures player reference is set.
-     * This method guarantees that the returned attachment has a valid player reference
-     * for proper sync operations and logging.
-     *
-     * @param player The player to get the race attachment for
-     * @return The race attachment with player reference properly set
-     */
-    public static PlayerRaceAttachment getOrCreate(Player player) {
-        PlayerRaceAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
-        if (attachment.player == null) {
-            attachment.setPlayer(player);
-        }
-        return attachment;
-    }
-
-    /**
-     * Updates race data from server sync packets on the client side.
-     * This method is specifically designed for client-side synchronization and does not
-     * trigger additional sync operations or server-side logic.
-     *
-     * @param raceType The race type from server
-     * @param raceAssigned Whether race is assigned
-     */
-    public void updateFromServer(RaceType raceType, boolean raceAssigned) {
-        try {
-            // Direct assignment without triggering sync or server-side logic
-            this.raceType = raceType;
-            this.raceAssigned = raceAssigned;
-
-            // Clear sync flag since we just received data from server
-            this.needsSync = false;
-
-            ImmortalCultivation.LOGGER.debug("Updated race data from server for player {}: Race: {} (assigned: {})",
-                player != null ? player.getName().getString() : "unknown",
-                raceType.getDisplayName(), raceAssigned);
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error updating race data from server for player {}: {}",
-                player != null ? player.getName().getString() : "unknown", e.getMessage());
-        }
-    }
-
-
+    // === CODEC === //
+    
+    public static final Codec<PlayerRaceAttachment> CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                    Codec.STRING.fieldOf("race_type").forGetter(d -> d.raceType.name()),
+                    Codec.BOOL.fieldOf("race_assigned").forGetter(d -> d.raceAssigned)
+            ).apply(instance, (raceType, raceAssigned) -> {
+                PlayerRaceAttachment data = new PlayerRaceAttachment();
+                try {
+                    data.raceType = RaceType.valueOf(raceType);
+                } catch (IllegalArgumentException e) {
+                    data.raceType = RaceType.HUMAN;
+                }
+                data.raceAssigned = raceAssigned;
+                return data;
+            })
+    );
 }

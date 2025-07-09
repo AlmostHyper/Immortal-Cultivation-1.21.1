@@ -17,14 +17,7 @@ public interface ISyncable {
      *                   If false, only changed ("delta") data should be serialized.
      * @return An Optional containing the packet payload if there is data to send, otherwise Optional.empty().
      */
-    Optional<CustomPacketPayload> createSyncPacket(boolean isFullSync);
-
-    /**
-     * Applies the synchronized data from a packet to this specific client-side object.
-     *
-     * @param payload The packet payload received from the server.
-     */
-    void handleSyncPacket(CustomPacketPayload payload);
+    Optional<ISyncPacket> createPacket(boolean isFullSync);
 
     /**
      * Checks if the object has changes that need to be sent to the client.

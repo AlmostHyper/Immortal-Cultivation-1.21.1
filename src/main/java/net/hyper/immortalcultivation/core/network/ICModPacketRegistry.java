@@ -1,9 +1,12 @@
 package net.hyper.immortalcultivation.core.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.core.network.packets.client.*;
 import net.hyper.immortalcultivation.core.network.packets.server.*;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.ClientboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.ServerboundCustomPayloadPacket;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -26,64 +29,75 @@ public class ICModPacketRegistry {
         REGISTRY = event.registrar(ImmortalCultivation.MOD_ID);
 
         // === SERVER -> CLIENT === //
+        registerClientPacket(PlayerCultivationSyncPacket.TYPE, PlayerCultivationSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerTalentSyncPacket.TYPE, PlayerTalentSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerRaceSyncPacket.TYPE, PlayerRaceSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerResourceSyncPacket.TYPE, PlayerResourceSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerPillConsumptionSyncPacket.TYPE, PlayerPillConsumptionSyncPacket.STREAM_CODEC);
 
         REGISTRY.playToClient(
-            UnifiedDeltaSyncPacket.TYPE,
-            UnifiedDeltaSyncPacket.STREAM_CODEC,
-            UnifiedDeltaSyncPacket::handleClient
+                UnifiedDeltaSyncPacket.TYPE,
+                UnifiedDeltaSyncPacket.STREAM_CODEC,
+                UnifiedDeltaSyncPacket::handleClient
         );
 
         REGISTRY.playToClient(
-            OpenRaceSelectionSyncPacket.TYPE,
-            OpenRaceSelectionSyncPacket.STREAM_CODEC,
-            OpenRaceSelectionSyncPacket::handleClient
+                OpenRaceSelectionSyncPacket.TYPE,
+                OpenRaceSelectionSyncPacket.STREAM_CODEC,
+                OpenRaceSelectionSyncPacket::handleClient
         );
 
         // === CLIENT -> SERVER === //
 
         REGISTRY.playToServer(
-            UnifiedActionRequestPacket.TYPE,
-            UnifiedActionRequestPacket.STREAM_CODEC,
-            UnifiedActionRequestPacket::handleServer
+                UnifiedActionRequestPacket.TYPE,
+                UnifiedActionRequestPacket.STREAM_CODEC,
+                UnifiedActionRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(
-            RaceSelectionRequestPacket.TYPE,
-            RaceSelectionRequestPacket.STREAM_CODEC,
-            RaceSelectionRequestPacket::handleServer
+                RaceSelectionRequestPacket.TYPE,
+                RaceSelectionRequestPacket.STREAM_CODEC,
+                RaceSelectionRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(
-            CultivationRequestPacket.TYPE,
-            CultivationRequestPacket.STREAM_CODEC,
-            CultivationRequestPacket::handleServer
+                CultivationRequestPacket.TYPE,
+                CultivationRequestPacket.STREAM_CODEC,
+                CultivationRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(
-            ResourceRequestPacket.TYPE,
-            ResourceRequestPacket.STREAM_CODEC,
-            ResourceRequestPacket::handleServer
+                ResourceRequestPacket.TYPE,
+                ResourceRequestPacket.STREAM_CODEC,
+                ResourceRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(
-            TalentRequestPacket.TYPE,
-            TalentRequestPacket.STREAM_CODEC,
-            TalentRequestPacket::handleServer
+                TalentRequestPacket.TYPE,
+                TalentRequestPacket.STREAM_CODEC,
+                TalentRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(
-            CultivationFocusTogglePacket.TYPE,
-            CultivationFocusTogglePacket.STREAM_CODEC,
-            CultivationFocusTogglePacket::handleServer
+                CultivationFocusTogglePacket.TYPE,
+                CultivationFocusTogglePacket.STREAM_CODEC,
+                CultivationFocusTogglePacket::handleServer
         );
 
         REGISTRY.playToServer(
-            CombatStatsRequestPacket.TYPE,
-            CombatStatsRequestPacket.STREAM_CODEC,
-            CombatStatsRequestPacket::handleServer
+                CombatStatsRequestPacket.TYPE,
+                CombatStatsRequestPacket.STREAM_CODEC,
+                CombatStatsRequestPacket::handleServer
         );
 
         ImmortalCultivation.LOGGER.info("Network packets registered successfully!");
+    }
+
+    private static <T extends ISyncPacket> void registerClientPacket(CustomPacketPayload.Type<T> type, StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
+        REGISTRY.playToClient(type, codec, (packet, context) -> {
+            context.enqueueWork(() -> packet.handleOnClient(Minecraft.getInstance().player));
+        });
     }
 
     // Utility methods for sending packets
