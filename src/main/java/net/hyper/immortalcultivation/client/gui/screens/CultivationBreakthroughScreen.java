@@ -6,9 +6,9 @@ import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachm
 import net.hyper.immortalcultivation.common.attachments.PlayerResourceAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.core.network.packets.client.BreakthroughRequestPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -844,9 +844,11 @@ public class CultivationBreakthroughScreen extends Screen {
         }
 
         try {
-            // Send breakthrough request packet
-            BreakthroughRequestPacket packet = new BreakthroughRequestPacket(
-                option.cultivationType(), option.type());
+            // Send breakthrough request packet using the convenience factory method
+            UnifiedActionRequestPacket packet = UnifiedActionRequestPacket.createBreakthroughRequest(
+                option.cultivationType(),
+                option.type()
+            );
             ICModPacketRegistry.sendToServer(packet);
 
             ImmortalCultivation.LOGGER.info("Sent {} {} breakthrough request to server",

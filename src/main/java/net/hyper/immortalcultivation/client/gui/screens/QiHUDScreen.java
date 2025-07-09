@@ -1,6 +1,7 @@
 package net.hyper.immortalcultivation.client.gui.screens;
 
 import net.hyper.immortalcultivation.common.attachments.*;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -167,23 +168,23 @@ public class QiHUDScreen {
     private static void updateAllAnimations(CultivationDataSnapshot snapshot) {
         // Update Qi Cultivation animation
         updateStatAnimation(
-            snapshot.cultivation.getCurrentQiCultivation(),
-            snapshot.cultivation.getMaxQiCultivation(),
+            snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI),
+            snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI),
             lastQiCultivation, lastMaxQiCultivation,
             (progress) -> qiCultivationDisplayProgress = progress
         );
-        lastQiCultivation = snapshot.cultivation.getCurrentQiCultivation();
-        lastMaxQiCultivation = snapshot.cultivation.getMaxQiCultivation();
+        lastQiCultivation = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
+        lastMaxQiCultivation = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
 
         // Update Body Cultivation animation
         updateStatAnimation(
-            snapshot.cultivation.getCurrentBodyCultivation(),
-            snapshot.cultivation.getMaxBodyCultivation(),
+            snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY),
+            snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY),
             lastBodyCultivation, lastMaxBodyCultivation,
             (progress) -> bodyCultivationDisplayProgress = progress
         );
-        lastBodyCultivation = snapshot.cultivation.getCurrentBodyCultivation();
-        lastMaxBodyCultivation = snapshot.cultivation.getMaxBodyCultivation();
+        lastBodyCultivation = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+        lastMaxBodyCultivation = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
 
         // Update Health animation
         updateStatAnimation(
@@ -246,18 +247,18 @@ public class QiHUDScreen {
      */
     private static void updateAllTextCache(CultivationDataSnapshot snapshot) {
         // Cache Qi Cultivation text with percentage and absolute values
-        double qiCultivationPercentage = snapshot.cultivation.getQiProgress() * 100;
+        double qiCultivationPercentage = snapshot.cultivation.getRealmProgressionPercentage(ICultivationData.CultivationType.QI) * 100;
         cachedQiCultivationText = String.format("Qi Cultivation: %.0f%% (%d/%d)",
             qiCultivationPercentage,
-            snapshot.cultivation.getCurrentQiCultivation(),
-            snapshot.cultivation.getMaxQiCultivation());
+            snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI),
+            snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI));
 
         // Cache Body Cultivation text
-        double bodyCultivationPercentage = snapshot.cultivation.getBodyProgress() * 100;
+        double bodyCultivationPercentage = snapshot.cultivation.getRealmProgressionPercentage(ICultivationData.CultivationType.BODY) * 100;
         cachedBodyCultivationText = String.format("Body Cultivation: %.0f%% (%d/%d)",
             bodyCultivationPercentage,
-            snapshot.cultivation.getCurrentBodyCultivation(),
-            snapshot.cultivation.getMaxBodyCultivation());
+            snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY),
+            snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY));
 
         // Cache Health text - show absolute values since health is more intuitive that way
         cachedHealthText = String.format("Health: %d/%d",
@@ -284,8 +285,8 @@ public class QiHUDScreen {
 
         // Cache realm summary showing both cultivation paths
         cachedRealmSummaryText = String.format("Qi: %s | Body: %s",
-            snapshot.cultivation.getCurrentQiRealm().getDisplayName(),
-            snapshot.cultivation.getCurrentBodyRealm().getDisplayName());
+            snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getDisplayName(),
+            snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getDisplayName());
 
         // Cache talent summary
         cachedTalentSummaryText = String.format("Talent: %.1fx | %.1fx",

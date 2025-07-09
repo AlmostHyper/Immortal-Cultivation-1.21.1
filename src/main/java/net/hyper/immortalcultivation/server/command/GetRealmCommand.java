@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.server.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import net.hyper.immortalcultivation.common.attachments.*;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -168,18 +169,18 @@ public class GetRealmCommand {
      */
     private void sendRealmInformation(CommandSourceStack source, CultivationDataSnapshot snapshot) {
         // Qi Realm Information
-        String qiRealm = snapshot.cultivation.getCurrentQiRealm().getDisplayName();
+        String qiRealm = snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getDisplayName();
         source.sendSuccess(() -> Component.literal("Qi Realm: " + qiRealm)
             .withStyle(ChatFormatting.AQUA), false);
 
         // Body Realm Information
-        String bodyRealm = snapshot.cultivation.getCurrentBodyRealm().getDisplayName();
+        String bodyRealm = snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getDisplayName();
         source.sendSuccess(() -> Component.literal("Body Realm: " + bodyRealm)
             .withStyle(ChatFormatting.RED), false);
 
         // Overall cultivation level comparison
-        String higherPath = snapshot.cultivation.getCurrentQiRealm().getRealmLevel() >=
-            snapshot.cultivation.getCurrentBodyRealm().getRealmLevel() ? "Qi" : "Body";
+        String higherPath = snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getRealmLevel() >=
+            snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getRealmLevel() ? "Qi" : "Body";
         source.sendSuccess(() -> Component.literal("Highest Path: " + higherPath + " Cultivation")
             .withStyle(ChatFormatting.GREEN), false);
     }
@@ -198,11 +199,11 @@ public class GetRealmCommand {
 
         // Show current bonuses
         source.sendSuccess(() -> Component.literal("Qi Cultivation Rate: " +
-                String.format("%.2f/sec", snapshot.cultivation.getEffectiveQiCultivationRate()))
+                String.format("%.2f/sec", snapshot.cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.QI)))
             .withStyle(ChatFormatting.AQUA), false);
 
         source.sendSuccess(() -> Component.literal("Body Cultivation Rate: " +
-                String.format("%.2f/sec", snapshot.cultivation.getEffectiveBodyCultivationRate()))
+                String.format("%.2f/sec", snapshot.cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY)))
             .withStyle(ChatFormatting.RED), false);
     }
 
@@ -215,24 +216,24 @@ public class GetRealmCommand {
             .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 
         // Qi Cultivation Progress
-        long qiCurrent = snapshot.cultivation.getCurrentQiCultivation();
-        long qiMax = snapshot.cultivation.getMaxQiCultivation();
-        double qiPercent = snapshot.cultivation.getQiProgress() * 100;
+        long qiCurrent = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
+        long qiMax = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
+        double qiPercent = snapshot.cultivation.getProgress(ICultivationData.CultivationType.QI) * 100;
 
         source.sendSuccess(() -> Component.literal(String.format("Qi Cultivation: %d/%d (%.1f%%)",
             qiCurrent, qiMax, qiPercent)).withStyle(ChatFormatting.AQUA), false);
 
         // Body Cultivation Progress
-        long bodyCurrent = snapshot.cultivation.getCurrentBodyCultivation();
-        long bodyMax = snapshot.cultivation.getMaxBodyCultivation();
-        double bodyPercent = snapshot.cultivation.getBodyProgress() * 100;
+        long bodyCurrent = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+        long bodyMax = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
+        double bodyPercent = snapshot.cultivation.getProgress(ICultivationData.CultivationType.BODY) * 100;
 
         source.sendSuccess(() -> Component.literal(String.format("Body Cultivation: %d/%d (%.1f%%)",
             bodyCurrent, bodyMax, bodyPercent)).withStyle(ChatFormatting.RED), false);
 
         // Show bonuses if any
-        double qiBonus = snapshot.cultivation.getQiAdditiveBonus();
-        double bodyBonus = snapshot.cultivation.getBodyAdditiveBonus();
+        double qiBonus = snapshot.cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
+        double bodyBonus = snapshot.cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
 
         if (qiBonus > 0) {
             source.sendSuccess(() -> Component.literal(String.format("Qi Bonus: +%.3f/sec from pills",
@@ -251,14 +252,14 @@ public class GetRealmCommand {
      */
     private void sendBreakthroughReadiness(CommandSourceStack source, CultivationDataSnapshot snapshot) {
         // Qi Breakthrough Readiness
-        boolean qiReady = snapshot.cultivation.getCurrentQiCultivation() >= snapshot.cultivation.getMaxQiCultivation();
+        boolean qiReady = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI) >= snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
         String qiStatus = qiReady ? "Ready" : "Not Ready";
         ChatFormatting qiColor = qiReady ? ChatFormatting.GREEN : ChatFormatting.RED;
 
         source.sendSuccess(() -> Component.literal("Qi Breakthrough: " + qiStatus).withStyle(qiColor), false);
 
         // Body Breakthrough Readiness
-        boolean bodyReady = snapshot.cultivation.getCurrentBodyCultivation() >= snapshot.cultivation.getMaxBodyCultivation();
+        boolean bodyReady = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY) >= snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
         String bodyStatus = bodyReady ? "Ready" : "Not Ready";
         ChatFormatting bodyColor = bodyReady ? ChatFormatting.GREEN : ChatFormatting.RED;
 
@@ -266,13 +267,13 @@ public class GetRealmCommand {
 
         // Show what's needed if not ready
         if (!qiReady) {
-            long needed = snapshot.cultivation.getMaxQiCultivation() - snapshot.cultivation.getCurrentQiCultivation();
+            long needed = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI) - snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
             source.sendSuccess(() -> Component.literal("Need " + needed + " more Qi cultivation for breakthrough")
                 .withStyle(ChatFormatting.YELLOW), false);
         }
 
         if (!bodyReady) {
-            long needed = snapshot.cultivation.getMaxBodyCultivation() - snapshot.cultivation.getCurrentBodyCultivation();
+            long needed = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY) - snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
             source.sendSuccess(() -> Component.literal("Need " + needed + " more Body cultivation for breakthrough")
                 .withStyle(ChatFormatting.YELLOW), false);
         }

@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -39,8 +40,8 @@ public class GetCultivationRateCommand {
                     .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 
             // Current effective rates
-            double qiRate = cultivation.getEffectiveQiCultivationRate();
-            double bodyRate = cultivation.getEffectiveBodyCultivationRate();
+            double qiRate = cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.QI);
+            double bodyRate = cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY);
 
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Current Qi Rate: %.3f/sec", qiRate))
@@ -51,8 +52,8 @@ public class GetCultivationRateCommand {
                     .withStyle(ChatFormatting.RED), false);
 
             // Base rates from realms
-            double qiBaseRate = cultivation.getBaseQiCultivationRate();
-            double bodyBaseRate = cultivation.getBaseBodyCultivationRate();
+            double qiBaseRate = cultivation.getBaseCultivationRate(ICultivationData.CultivationType.QI);
+            double bodyBaseRate = cultivation.getBaseCultivationRate(ICultivationData.CultivationType.BODY);
 
             context.getSource().sendSuccess(() ->
                 Component.literal("=== Base Rates (from realms) ===")
@@ -86,8 +87,8 @@ public class GetCultivationRateCommand {
                     .withStyle(ChatFormatting.YELLOW), false);
 
             // Pill bonuses
-            double qiBonus = cultivation.getQiAdditiveBonus();
-            double bodyBonus = cultivation.getBodyAdditiveBonus();
+            double qiBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
+            double bodyBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
 
             if (qiBonus > 0 || bodyBonus > 0) {
                 context.getSource().sendSuccess(() ->
@@ -106,19 +107,6 @@ public class GetCultivationRateCommand {
                             .withStyle(ChatFormatting.RED), false);
                 }
             }
-
-            // Circulation rates (for meditation)
-            double qiCirculationRate = cultivation.getEffectiveCirculatingQiCultivationRate();
-            double bodyCirculationRate = cultivation.getEffectiveCirculatingBodyCultivationRate();
-
-            context.getSource().sendSuccess(() ->
-                Component.literal("=== Circulation Rates (during meditation) ===")
-                    .withStyle(ChatFormatting.DARK_GREEN), false);
-
-            context.getSource().sendSuccess(() ->
-                Component.literal(String.format("Qi Circulation: %.3f/sec | Body Circulation: %.3f/sec",
-                        qiCirculationRate, bodyCirculationRate))
-                    .withStyle(ChatFormatting.DARK_GREEN), false);
 
             return 1;
         } catch (Exception e) {

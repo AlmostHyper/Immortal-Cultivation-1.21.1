@@ -7,6 +7,7 @@ import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.server.event.world.ICModCombatEvent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -47,7 +48,11 @@ public record UnifiedDeltaSyncPacket(
     Optional<PackedPermanentBonuses> permanentBonuses,
 
     // Combat stats data (only included if bits are set)
-    Optional<PackedCombatStats> combatStats
+    Optional<PackedCombatStats> combatStats,
+
+    Optional<Long> damageAmount,
+    Optional<String> damageSourceId
+
 ) implements CustomPacketPayload {
 
     public static final Type<UnifiedDeltaSyncPacket> TYPE = new Type<>(
@@ -78,6 +83,9 @@ public record UnifiedDeltaSyncPacket(
 
     // Combat stats field mask
     public static final byte COMBAT_ALL = 1;
+    private static final byte DAMAGE_FEEDBACK_MASK = 8;
+    private static final byte DAMAGE_AMOUNT = 1;
+    private static final byte DAMAGE_SOURCE = 2;
 
     /**
      * Packed cultivation bonuses to reduce network overhead
@@ -254,6 +262,9 @@ public record UnifiedDeltaSyncPacket(
 
         Optional<PackedCombatStats> combatStats = Optional.empty();
 
+        Optional<Long> damageAmount = Optional.empty();
+        Optional<String> damageSourceId = Optional.empty();
+
         // Decode cultivation data
         if ((attachmentMask & CULTIVATION_MASK) != 0) {
             cultivationFieldMask = ByteBufCodecs.SHORT.decode(buf);
@@ -344,11 +355,24 @@ public record UnifiedDeltaSyncPacket(
             }
         }
 
+        // Decode damage feedback data
+        if ((attachmentMask & DAMAGE_FEEDBACK_MASK) != 0) {
+            byte damageFieldMask = ByteBufCodecs.BYTE.decode(buf);
+
+            if ((damageFieldMask & DAMAGE_AMOUNT) != 0) {
+                damageAmount = Optional.of(ByteBufCodecs.VAR_LONG.decode(buf));
+            }
+            if ((damageFieldMask & DAMAGE_SOURCE) != 0) {
+                damageSourceId = Optional.of(ByteBufCodecs.STRING_UTF8.decode(buf));
+            }
+        }
+
         return new UnifiedDeltaSyncPacket(
             attachmentMask, cultivationFieldMask, resourceFieldMask, combatStatsFieldMask,
             currentQiRealmId, currentBodyRealmId, currentQiCultivation, maxQiCultivation,
             currentBodyCultivation, maxBodyCultivation, currentFocus, bonuses, breakthroughData,
-            currentHealth, currentQi, currentBody, permanentBonuses, combatStats
+            currentHealth, currentQi, currentBody, permanentBonuses, combatStats,
+            damageAmount, damageSourceId
         );
     }
 
@@ -394,6 +418,11 @@ public record UnifiedDeltaSyncPacket(
                 if (combatStats != null) {
                     applyCombatStatsDelta(combatStats);
                 }
+            }
+
+            // Apply damage feedback effects
+            if ((attachmentMask & DAMAGE_FEEDBACK_MASK) != 0) {
+                applyDamageFeedback(player);
             }
 
             ImmortalCultivation.LOGGER.debug("Applied unified delta sync for player: {}", player.getName().getString());
@@ -516,5 +545,55 @@ public record UnifiedDeltaSyncPacket(
             combatStats.setPermanentMovementSpeedBonus(packed.permanentSpeedBonus());
             combatStats.setPermanentJumpHeightBonus(packed.permanentJumpBonus());
         }
+    }
+
+    /**
+     * Apply damage feedback effects by delegating to the existing ICModCombatEvent system.
+     */
+    private void applyDamageFeedback(Player player) {
+        if (damageAmount.isPresent() && damageAmount.get() > 0) {
+            // Delegate to the existing combat event system for consistent feedback
+            net.hyper.immortalcultivation.server.event.world.ICModCombatEvent.applyClientSideFeedback(
+                player,
+                damageAmount.get()
+            );
+
+            ImmortalCultivation.LOGGER.debug("Applied unified damage feedback for {} damage to player: {}",
+                damageAmount.get(), player.getName().getString());
+        }
+    }
+
+    /**
+     * Creates a UnifiedDeltaSyncPacket containing only damage feedback data.
+     * This factory method simplifies sending damage feedback through the unified system
+     * without requiring all other attachment data.
+     *
+     * @param damageAmount The amount of damage taken
+     * @param damageSourceId The ID of the damage source
+     * @return A UnifiedDeltaSyncPacket configured for damage feedback only
+     */
+    public static UnifiedDeltaSyncPacket createDamageFeedbackPacket(long damageAmount, String damageSourceId) {
+        return new UnifiedDeltaSyncPacket(
+            DAMAGE_FEEDBACK_MASK, // Only damage feedback mask is set
+            (short) 0, // No cultivation fields
+            (short) 0, // No resource fields
+            (byte) 0,  // No combat stats fields
+            Optional.empty(), // No cultivation data
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(), // No resource data
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(), // No combat stats
+            Optional.of(damageAmount), // Damage amount
+            Optional.of(damageSourceId) // Damage source
+        );
     }
 }

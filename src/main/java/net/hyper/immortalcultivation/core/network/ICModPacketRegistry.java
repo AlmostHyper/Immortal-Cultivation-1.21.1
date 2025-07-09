@@ -52,18 +52,18 @@ public class ICModPacketRegistry {
         );
 
         REGISTRY.playToClient(
-            DamageFeedbackSyncPacket.TYPE,
-            DamageFeedbackSyncPacket.STREAM_CODEC,
-            DamageFeedbackSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
             PillConsumptionSyncPacket.TYPE,
             PillConsumptionSyncPacket.STREAM_CODEC,
             PillConsumptionSyncPacket::handleClient
         );
 
         // === CLIENT -> SERVER === //
+
+        REGISTRY.playToServer(
+            UnifiedActionRequestPacket.TYPE,
+            UnifiedActionRequestPacket.STREAM_CODEC,
+            UnifiedActionRequestPacket::handleServer
+        );
 
         REGISTRY.playToServer(
             RaceSelectionRequestPacket.TYPE,
@@ -93,12 +93,6 @@ public class ICModPacketRegistry {
             CultivationFocusTogglePacket.TYPE,
             CultivationFocusTogglePacket.STREAM_CODEC,
             CultivationFocusTogglePacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-            BreakthroughRequestPacket.TYPE,
-            BreakthroughRequestPacket.STREAM_CODEC,
-            BreakthroughRequestPacket::handleServer
         );
 
         REGISTRY.playToServer(

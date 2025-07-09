@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.content.item.pills;
 
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerPillConsumptionAttachment;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.content.block.entities.PillFurnaceBlockEntity;
 import net.hyper.immortalcultivation.content.item.BaseConsumableItem;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
@@ -55,7 +56,7 @@ public class CultivationPillItems {
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                         // Apply cultivation effect
-                        cultivation.addQiBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        cultivation.addBonusWithDiminishing(ICultivationData.CultivationType.QI,finalRateBonus, 0.0, 1.0);
 
                         // Sync pill consumption data to client for tooltip updates
                         pillAttachment.forceSync();
@@ -115,7 +116,7 @@ public class CultivationPillItems {
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
-                        cultivation.addQiBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        cultivation.addBonusWithDiminishing(ICultivationData.CultivationType.QI,finalRateBonus, 0.0, 1.0);
                         pillAttachment.forceSync();
 
                         // Enhanced message with diminishing returns info
@@ -173,7 +174,7 @@ public class CultivationPillItems {
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
-                        cultivation.addQiBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        cultivation.addBonusWithDiminishing(ICultivationData.CultivationType.QI,finalRateBonus, 0.0, 1.0);
                         pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "High Quality Qi Pill", rarity, finalRateBonus,
@@ -215,7 +216,7 @@ public class CultivationPillItems {
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
-                        cultivation.addQiBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        cultivation.addBonusWithDiminishing(ICultivationData.CultivationType.QI,finalRateBonus, 0.0, 1.0);
                         pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "Top Quality Qi Pill", rarity, finalRateBonus,
@@ -257,7 +258,7 @@ public class CultivationPillItems {
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
-                        cultivation.addBodyBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        cultivation.addBonusWithDiminishing(ICultivationData.CultivationType.BODY,finalRateBonus, 0.0, 1.0);
                         pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "Low Quality Body Pill", rarity, finalRateBonus,
@@ -299,7 +300,7 @@ public class CultivationPillItems {
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
-                        cultivation.addBodyBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        cultivation.addBonusWithDiminishing(ICultivationData.CultivationType.BODY,finalRateBonus, 0.0, 1.0);
                         pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "Medium Quality Body Pill", rarity, finalRateBonus,
@@ -341,7 +342,7 @@ public class CultivationPillItems {
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
-                        cultivation.addBodyBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        cultivation.addBonusWithDiminishing(ICultivationData.CultivationType.BODY,finalRateBonus, 0.0, 1.0);
                         pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "High Quality Body Pill", rarity, finalRateBonus,
@@ -383,7 +384,7 @@ public class CultivationPillItems {
                         double effectiveness = pillManager.consumePill(this, rarity);
                         double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
-                        cultivation.addBodyBonusWithDiminishing(finalRateBonus, 0.0, 1.0);
+                        cultivation.addBonusWithDiminishing(ICultivationData.CultivationType.BODY,finalRateBonus, 0.0, 1.0);
                         pillAttachment.forceSync();
 
                         sendConsumptionMessage(player, "Top Quality Body Pill", rarity, finalRateBonus,

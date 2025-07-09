@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.server.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -36,18 +37,18 @@ public class GetCultivationCommand {
                     .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 
             // Qi Cultivation
-            long qiCurrent = cultivation.getCurrentQiCultivation();
-            long qiMax = cultivation.getMaxQiCultivation();
-            double qiPercent = cultivation.getQiProgress() * 100;
+            long qiCurrent = cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
+            long qiMax = cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
+            double qiPercent = cultivation.getProgress(ICultivationData.CultivationType.QI) * 100;
 
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Qi Cultivation: %d/%d (%.1f%%)", qiCurrent, qiMax, qiPercent))
                     .withStyle(ChatFormatting.AQUA), false);
 
             // Body Cultivation
-            long bodyCurrent = cultivation.getCurrentBodyCultivation();
-            long bodyMax = cultivation.getMaxBodyCultivation();
-            double bodyPercent = cultivation.getBodyProgress() * 100;
+            long bodyCurrent = cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+            long bodyMax = cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
+            double bodyPercent = cultivation.getProgress(ICultivationData.CultivationType.BODY) * 100;
 
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Body Cultivation: %d/%d (%.1f%%)", bodyCurrent, bodyMax, bodyPercent))
@@ -62,13 +63,13 @@ public class GetCultivationCommand {
             // Cultivation Rates
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Qi Rate: %.2f/sec | Body Rate: %.2f/sec",
-                        cultivation.getEffectiveQiCultivationRate(),
-                        cultivation.getEffectiveBodyCultivationRate()))
+                        cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.QI),
+                        cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY)))
                     .withStyle(ChatFormatting.GREEN), false);
 
             // Bonuses (if any)
-            double qiBonus = cultivation.getQiAdditiveBonus();
-            double bodyBonus = cultivation.getBodyAdditiveBonus();
+            double qiBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
+            double bodyBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
 
             if (qiBonus > 0 || bodyBonus > 0) {
                 context.getSource().sendSuccess(() ->

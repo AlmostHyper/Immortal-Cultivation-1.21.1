@@ -3,9 +3,9 @@ package net.hyper.immortalcultivation.server.event.world;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerCombatStatsAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.core.network.packet.DamageFeedbackSyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.packets.server.UnifiedDeltaSyncPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -286,7 +286,7 @@ public class ICModCombatEvent {
      * @param player The player taking damage
      * @param damageAmount The damage amount for feedback intensity
      */
-    private static void applyClientSideFeedback(Player player, long damageAmount) {
+    public static void applyClientSideFeedback(Player player, long damageAmount) {
         // Convert damage to vanilla scale for proper feedback intensity
         float vanillaDamage = convertToVanillaScale(damageAmount);
 
@@ -326,10 +326,13 @@ public class ICModCombatEvent {
 
         // Send damage feedback packet to client if available
         try {
-            DamageFeedbackSyncPacket packet = new DamageFeedbackSyncPacket(damageAmount, damageSource.getMsgId());
+            UnifiedDeltaSyncPacket packet = UnifiedDeltaSyncPacket.createDamageFeedbackPacket(
+                damageAmount,
+                damageSource.getMsgId()
+            );
             ICModPacketRegistry.sendToPlayer(packet, serverPlayer);
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.debug("Could not send damage feedback packet (packet may not exist): {}", e.getMessage());
+            ImmortalCultivation.LOGGER.debug("Could not send damage feedback packet: {}", e.getMessage());
         }
 
         // Set server-side hurt time for animation sync

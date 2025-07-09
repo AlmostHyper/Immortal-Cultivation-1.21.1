@@ -1,5 +1,6 @@
 package net.hyper.immortalcultivation.content.block.entities;
 
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipe;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipeInput;
 import net.hyper.immortalcultivation.common.registry.*;
@@ -560,8 +561,9 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         if (cultivation == null) return 1.0;
 
         // Higher realms give better modifiers
-        int realmLevel = cultivation.getCurrentQiRealm().getRealmLevel();
-        return 1.0 + (realmLevel * 0.1); // +10% per realm level
+        int qiRealmLevel = cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getRealmLevel();
+        int bodyRealmLevel = cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getRealmLevel();
+        return 1.0 + ((qiRealmLevel + bodyRealmLevel) * 0.1); // +10% per realm level
     }
 
     // Get spirit stone quality modifier

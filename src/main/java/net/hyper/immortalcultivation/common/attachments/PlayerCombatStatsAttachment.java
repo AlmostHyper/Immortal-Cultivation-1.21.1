@@ -8,6 +8,7 @@ import net.hyper.immortalcultivation.common.interfaces.IDirtyTrackable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.server.event.world.ICModCombatEvent;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -112,7 +113,7 @@ public class PlayerCombatStatsAttachment implements IDirtyTrackable, ITickable {
 
             // Trigger immediate refresh for consistent behavior
             if (player instanceof ServerPlayer serverPlayer) {
-                CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+                ICModCombatEvent.refreshCombatStats(serverPlayer);
             }
 
             // Clean up trailing comma if present
@@ -139,7 +140,7 @@ public class PlayerCombatStatsAttachment implements IDirtyTrackable, ITickable {
 
         // Consistent refresh behavior
         if (player instanceof ServerPlayer serverPlayer) {
-            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+            ICModCombatEvent.refreshCombatStats(serverPlayer);
         }
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent attack damage from realm breakthrough (total: +{}%)",
@@ -163,7 +164,7 @@ public class PlayerCombatStatsAttachment implements IDirtyTrackable, ITickable {
 
         // Consistent refresh behavior
         if (player instanceof ServerPlayer serverPlayer) {
-            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+            ICModCombatEvent.refreshCombatStats(serverPlayer);
         }
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent movement speed from realm breakthrough (total: +{}%)",
@@ -187,7 +188,7 @@ public class PlayerCombatStatsAttachment implements IDirtyTrackable, ITickable {
 
         // Consistent refresh behavior
         if (player instanceof ServerPlayer serverPlayer) {
-            CombatStatsEventHandler.refreshCombatStats(serverPlayer);
+            ICModCombatEvent.refreshCombatStats(serverPlayer);
         }
 
         ImmortalCultivation.LOGGER.info("Player {} gained +{}% permanent jump height from realm breakthrough (total: +{}%)",

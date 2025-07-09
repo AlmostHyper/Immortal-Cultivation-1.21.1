@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -69,8 +70,8 @@ public class SetCultivationCommand {
             }
 
             // Store old value for comparison
-            long oldCultivation = cultivation.getCurrentQiCultivation();
-            long maxCultivation = cultivation.getMaxQiCultivation();
+            long oldCultivation = cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
+            long maxCultivation = cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
 
             // Validate the new amount against current realm limits
             if (newCultivation > maxCultivation) {
@@ -83,10 +84,10 @@ public class SetCultivationCommand {
             if (newCultivation > oldCultivation) {
                 // Calculate the difference and add it properly
                 long cultivationGained = newCultivation - oldCultivation;
-                cultivation.addQiCultivation(cultivationGained);
+                cultivation.addCultivation(ICultivationData.CultivationType.QI, cultivationGained);
             } else {
                 // If setting to a lower value, just set directly (no milestones gained)
-                cultivation.setCurrentQiCultivation(newCultivation);
+                cultivation.setCurrentCultivation(ICultivationData.CultivationType.QI, newCultivation);
             }
 
             // Provide comprehensive feedback
@@ -126,8 +127,8 @@ public class SetCultivationCommand {
             }
 
             // Store old value for comparison
-            long oldCultivation = cultivation.getCurrentBodyCultivation();
-            long maxCultivation = cultivation.getMaxBodyCultivation();
+            long oldCultivation = cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+            long maxCultivation = cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
 
             // Validate the new amount against current realm limits
             if (newCultivation > maxCultivation) {
@@ -140,10 +141,10 @@ public class SetCultivationCommand {
             if (newCultivation > oldCultivation) {
                 // Calculate the difference and add it properly
                 long cultivationGained = newCultivation - oldCultivation;
-                cultivation.addBodyCultivation(cultivationGained);
+                cultivation.addCultivation(ICultivationData.CultivationType.BODY, cultivationGained);
             } else {
                 // If setting to a lower value, just set directly (no milestones gained)
-                cultivation.setCurrentBodyCultivation(newCultivation);
+                cultivation.setCurrentCultivation(ICultivationData.CultivationType.BODY, newCultivation);
             }
 
             // Provide comprehensive feedback
@@ -231,8 +232,8 @@ public class SetCultivationCommand {
             // Show current rates
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Qi Rate: %.2f/sec | Body Rate: %.2f/sec",
-                        cultivation.getEffectiveQiCultivationRate(),
-                        cultivation.getEffectiveBodyCultivationRate()))
+                        cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.QI),
+                        cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY)))
                     .withStyle(ChatFormatting.AQUA), false);
 
             return 1;
@@ -255,11 +256,11 @@ public class SetCultivationCommand {
             String pathName = cultivationType.getDisplayName();
 
             if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
-                current = cultivation.getCurrentQiCultivation();
-                max = cultivation.getMaxQiCultivation();
+                current = cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
+                max = cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
             } else {
-                current = cultivation.getCurrentBodyCultivation();
-                max = cultivation.getMaxBodyCultivation();
+                current = cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+                max = cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
             }
 
             canBreakthrough = current >= max;

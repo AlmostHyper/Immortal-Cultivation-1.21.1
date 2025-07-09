@@ -622,6 +622,10 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
         return true;
     }
 
+    public long getLastFocusChangeTime() {
+        return lastFocusChangeTime;
+    }
+
     // === BONUS MANAGEMENT ===
 
     public void addBonus(CultivationType type, double additive, double multiplicative) {

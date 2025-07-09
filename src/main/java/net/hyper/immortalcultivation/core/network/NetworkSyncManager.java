@@ -434,12 +434,15 @@ public class NetworkSyncManager {
         }
 
         // Return packet only if there are changes
+        // Return packet only if there are changes
         if (attachmentMask != 0) {
             return new UnifiedDeltaSyncPacket(
                 attachmentMask, cultivationFieldMask, resourceFieldMask, combatStatsFieldMask,
                 currentQiRealmId, currentBodyRealmId, currentQiCultivation, maxQiCultivation,
                 currentBodyCultivation, maxBodyCultivation, currentFocus, bonuses, breakthroughData,
-                currentHealth, currentQi, currentBody, permanentBonuses, combatStatsData
+                currentHealth, currentQi, currentBody, permanentBonuses, combatStatsData,
+                Optional.empty(), // damageAmount
+                Optional.empty()  // damageSourceId
             );
         }
 
@@ -528,7 +531,9 @@ public class NetworkSyncManager {
                 (float)combatStats.getPermanentAttackDamageBonus(),
                 (float)combatStats.getPermanentMovementSpeedBonus(),
                 (float)combatStats.getPermanentJumpHeightBonus()
-            )) : Optional.empty()
+            )) : Optional.empty(),
+            Optional.empty(), // damageAmount
+            Optional.empty()  // damageSourceId
         );
     }
 

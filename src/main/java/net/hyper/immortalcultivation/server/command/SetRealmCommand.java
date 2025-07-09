@@ -6,6 +6,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
@@ -90,8 +91,8 @@ public class SetRealmCommand {
 
             // Set the realm using the unified system
             if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
-                CultivationRealm oldRealm = cultivation.getCurrentQiRealm();
-                cultivation.setCurrentQiRealm(realm);
+                CultivationRealm oldRealm = cultivation.getCurrentRealm(ICultivationData.CultivationType.QI);
+                cultivation.setCurrentRealm(ICultivationData.CultivationType.QI, realm);
 
                 context.getSource().sendSuccess(() ->
                     Component.literal("Set Qi cultivation realm of " + player.getName().getString() +
@@ -105,12 +106,12 @@ public class SetRealmCommand {
 
                 // Show new cultivation limits
                 context.getSource().sendSuccess(() ->
-                    Component.literal("New Qi cultivation limit: " + cultivation.getMaxQiCultivation() +
-                        " (Current: " + cultivation.getCurrentQiCultivation() + ")"), false);
+                    Component.literal("New Qi cultivation limit: " + cultivation.getMaxCultivation(ICultivationData.CultivationType.QI) +
+                        " (Current: " + cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI) + ")"), false);
 
             } else {
-                CultivationRealm oldRealm = cultivation.getCurrentBodyRealm();
-                cultivation.setCurrentBodyRealm(realm);
+                CultivationRealm oldRealm = cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY);
+                cultivation.setCurrentRealm(ICultivationData.CultivationType.BODY, realm);
 
                 context.getSource().sendSuccess(() ->
                     Component.literal("Set Body cultivation realm of " + player.getName().getString() +
@@ -124,8 +125,8 @@ public class SetRealmCommand {
 
                 // Show new cultivation limits
                 context.getSource().sendSuccess(() ->
-                    Component.literal("New Body cultivation limit: " + cultivation.getMaxBodyCultivation() +
-                        " (Current: " + cultivation.getCurrentBodyCultivation() + ")"), false);
+                    Component.literal("New Body cultivation limit: " + cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY) +
+                        " (Current: " + cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY) + ")"), false);
             }
 
             // Show realm benefits

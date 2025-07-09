@@ -1,11 +1,10 @@
-package net.hyper.immortalcultivation.server.event.player;
+package net.hyper.immortalcultivation.server.event.world;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.IDirtyTrackable;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.server.event.world.ICModCombatEvent;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
