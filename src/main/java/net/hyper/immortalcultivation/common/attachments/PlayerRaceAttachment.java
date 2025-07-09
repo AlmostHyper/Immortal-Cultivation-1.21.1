@@ -314,23 +314,33 @@ public class PlayerRaceAttachment {
         }
         return attachment;
     }
-    /**
-     * Updates race data from server sync packet without triggering additional syncing.
-     * This method is specifically for client-side updates from network packets
-     * and prevents sync loops by not calling forceSync().
-     *
-     * @param type The race type received from server
-     * @param assigned Whether the race is assigned
-     */
-    public void updateFromServer(RaceType type, boolean assigned) {
-        this.raceType = type;
-        this.raceAssigned = assigned;
-        this.needsSync = false; // Important: Don't trigger another sync
 
-        ImmortalCultivation.LOGGER.debug("Updated race from server for player {}: {} (assigned: {})",
-            player != null ? player.getName().getString() : "null",
-            type.getDisplayName(),
-            assigned);
+    /**
+     * Updates race data from server sync packets on the client side.
+     * This method is specifically designed for client-side synchronization and does not
+     * trigger additional sync operations or server-side logic.
+     *
+     * @param raceType The race type from server
+     * @param raceAssigned Whether race is assigned
+     */
+    public void updateFromServer(RaceType raceType, boolean raceAssigned) {
+        try {
+            // Direct assignment without triggering sync or server-side logic
+            this.raceType = raceType;
+            this.raceAssigned = raceAssigned;
+
+            // Clear sync flag since we just received data from server
+            this.needsSync = false;
+
+            ImmortalCultivation.LOGGER.debug("Updated race data from server for player {}: Race: {} (assigned: {})",
+                player != null ? player.getName().getString() : "unknown",
+                raceType.getDisplayName(), raceAssigned);
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error updating race data from server for player {}: {}",
+                player != null ? player.getName().getString() : "unknown", e.getMessage());
+        }
     }
+
 
 }

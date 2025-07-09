@@ -17,6 +17,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.util.RandomSource;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -479,17 +480,17 @@ public class ICModLoginEvent {
      */
     private static void assignInitialTalents(ServerPlayer player, PlayerTalentAttachment talentAttachment) {
         try {
-            // Check spiritual root assignment and send message if newly assigned
-            if (!talentAttachment.hasSpiritualRootAssigned()) {
-                // Talent attachment should auto-assign during initialization
-                // Check again after potential auto-assignment
-                if (talentAttachment.hasSpiritualRootAssigned()) {
-                    SpiritualRootType rootType = talentAttachment.getSpiritualRootType();
-                    sendSpiritualRootAwakeningMessage(player, rootType);
+            RandomSource random = player.getRandom();
 
-                    ImmortalCultivation.LOGGER.info("Spiritual root {} assigned to player {}",
-                        rootType.getDisplayName(), player.getName().getString());
-                }
+            // Assign spiritual root if not already assigned
+            if (!talentAttachment.hasSpiritualRootAssigned()) {
+                SpiritualRootType generatedRoot = SpiritualRootType.generateRandom(random);
+                talentAttachment.assignSpiritualRoot(generatedRoot);
+
+                sendSpiritualRootAwakeningMessage(player, generatedRoot);
+
+                ImmortalCultivation.LOGGER.info("Generated and assigned spiritual root {} to new player {}",
+                    generatedRoot.getDisplayName(), player.getName().getString());
             } else {
                 // Already assigned, just log for returning player
                 SpiritualRootType rootType = talentAttachment.getSpiritualRootType();
@@ -497,17 +498,15 @@ public class ICModLoginEvent {
                     player.getName().getString(), rootType.getDisplayName());
             }
 
-            // Check physique assignment and send message if newly assigned
+            // Assign physique if not already assigned
             if (!talentAttachment.hasPhysiqueAssigned()) {
-                // Talent attachment should auto-assign during initialization
-                // Check again after potential auto-assignment
-                if (talentAttachment.hasPhysiqueAssigned()) {
-                    PhysiqueType physiqueType = talentAttachment.getPhysiqueType();
-                    sendPhysiqueAwakeningMessage(player, physiqueType);
+                PhysiqueType generatedPhysique = PhysiqueType.generateRandom(random);
+                talentAttachment.assignPhysique(generatedPhysique);
 
-                    ImmortalCultivation.LOGGER.info("Physique {} assigned to player {}",
-                        physiqueType.getDisplayName(), player.getName().getString());
-                }
+                sendPhysiqueAwakeningMessage(player, generatedPhysique);
+
+                ImmortalCultivation.LOGGER.info("Generated and assigned physique {} to new player {}",
+                    generatedPhysique.getDisplayName(), player.getName().getString());
             } else {
                 // Already assigned, just log for returning player
                 PhysiqueType physiqueType = talentAttachment.getPhysiqueType();
@@ -515,9 +514,59 @@ public class ICModLoginEvent {
                     player.getName().getString(), physiqueType.getDisplayName());
             }
 
+            // Check for special achievement combinations after both talents are assigned
+            if (talentAttachment.hasSpiritualRootAssigned() && talentAttachment.hasPhysiqueAssigned()) {
+                checkForTalentCombinationAchievements(player, talentAttachment);
+            }
+
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Failed to assign initial talents to player {}: {}",
                 player.getName().getString(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Checks for special talent combination achievements like Divine Dao Destiny.
+     * This method evaluates the player's complete talent profile and triggers
+     * appropriate server-wide announcements for exceptional combinations.
+     *
+     * @param player The server player to check achievements for
+     * @param talentAttachment The talent attachment containing assigned talents
+     */
+    private static void checkForTalentCombinationAchievements(ServerPlayer player, PlayerTalentAttachment talentAttachment) {
+        try {
+            SpiritualRootType rootType = talentAttachment.getSpiritualRootType();
+            PhysiqueType physiqueType = talentAttachment.getPhysiqueType();
+
+            float rootMultiplier = rootType.getCultivationMultiplier();
+            float physiqueMultiplier = physiqueType.getCultivationMultiplier();
+
+            // Check for Divine Dao Destiny (both heavenly talents)
+            if (talentAttachment.hasDivineDaoDestiny()) {
+                broadcastDivineDaoDestiny(player);
+            }
+            // Check for individual legendary achievements
+            else if (rootMultiplier >= 1.4f) {
+                broadcastLegendaryAchievement(player, "spiritual root", rootType.getDisplayName(),
+                    String.format("%.1fx", rootMultiplier));
+            }
+            else if (physiqueMultiplier >= 1.4f) {
+                broadcastLegendaryAchievement(player, "physique", physiqueType.getDisplayName(),
+                    String.format("%.1fx", physiqueMultiplier));
+            }
+            // Check for heavenly achievements (1.5x multiplier)
+            else if (rootMultiplier == 1.5f) {
+                broadcastHeavenlyAchievement(player, "spiritual root", rootType.getDisplayName(),
+                    String.format("%.1fx", rootMultiplier));
+            }
+            else if (physiqueMultiplier == 1.5f) {
+                broadcastHeavenlyAchievement(player, "physique", physiqueType.getDisplayName(),
+                    String.format("%.1fx", physiqueMultiplier));
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error checking talent combination achievements for player {}: {}",
+                player.getName().getString(), e.getMessage());
         }
     }
 

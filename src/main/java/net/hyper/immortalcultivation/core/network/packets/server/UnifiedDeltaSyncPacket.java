@@ -669,48 +669,71 @@ public record UnifiedDeltaSyncPacket(
     }
 
     /**
-     * Apply race-specific delta changes
+     * Apply race delta changes using proper client-side update methods
      */
     private void applyRaceDelta(PlayerRaceAttachment raceAttachment) {
-        if ((raceFieldMask & RACE_TYPE) != 0 && raceType.isPresent()) {
+        // Check if we have race data to apply
+        boolean hasRaceType = (raceFieldMask & RACE_TYPE) != 0 && raceType.isPresent();
+        boolean hasRaceAssigned = (raceFieldMask & RACE_ASSIGNED) != 0 && raceAssigned.isPresent();
+
+        // Only apply if we have complete data
+        if (hasRaceType || hasRaceAssigned) {
             try {
-                RaceType type = RaceType.valueOf(raceType.get());
-                if ((raceFieldMask & RACE_ASSIGNED) != 0 && raceAssigned.isPresent() && raceAssigned.get()) {
-                    raceAttachment.updateFromServer(type, true);
-                }
+                // Get current values as defaults
+                RaceType currentRaceType = raceAttachment.getRaceType();
+                boolean currentRaceAssigned = raceAttachment.hasRaceAssigned();
+
+                // Use new values if present, otherwise keep current values
+                RaceType newRaceType = hasRaceType ?
+                    RaceType.valueOf(raceType.get()) : currentRaceType;
+                boolean newRaceAssigned = hasRaceAssigned ?
+                    raceAssigned.get() : currentRaceAssigned;
+
+                // Use client-side update method instead of server-side reassignment
+                raceAttachment.updateFromServer(newRaceType, newRaceAssigned);
+
             } catch (IllegalArgumentException e) {
-                ImmortalCultivation.LOGGER.warn("Invalid race type received in sync: {}", raceType.get());
+                ImmortalCultivation.LOGGER.warn("Invalid race type received in sync: {}", raceType.orElse("none"));
             }
         }
-    }
+    }w
 
     /**
-     * Apply talent-specific delta changes
+     * Apply talent delta changes using proper client-side update methods
      */
     private void applyTalentDelta(PlayerTalentAttachment talentAttachment) {
-        // Apply spiritual root changes
-        if ((talentFieldMask & TALENT_SPIRITUAL_ROOT_TYPE) != 0 && spiritualRootType.isPresent()) {
-            try {
-                SpiritualRootType rootType = SpiritualRootType.valueOf(spiritualRootType.get());
-                if ((talentFieldMask & TALENT_SPIRITUAL_ROOT_ASSIGNED) != 0 &&
-                    spiritualRootAssigned.isPresent() && spiritualRootAssigned.get()) {
-                    talentAttachment.forceReassignSpiritualRoot(rootType);
-                }
-            } catch (IllegalArgumentException e) {
-                ImmortalCultivation.LOGGER.warn("Invalid spiritual root type received in sync: {}", spiritualRootType.get());
-            }
-        }
+        // Check if we have both spiritual root and physique data to apply
+        boolean hasRootType = (talentFieldMask & TALENT_SPIRITUAL_ROOT_TYPE) != 0 && spiritualRootType.isPresent();
+        boolean hasRootAssigned = (talentFieldMask & TALENT_SPIRITUAL_ROOT_ASSIGNED) != 0 && spiritualRootAssigned.isPresent();
+        boolean hasPhysiqueType = (talentFieldMask & TALENT_PHYSIQUE_TYPE) != 0 && physiqueType.isPresent();
+        boolean hasPhysiqueAssigned = (talentFieldMask & TALENT_PHYSIQUE_ASSIGNED) != 0 && physiqueAssigned.isPresent();
 
-        // Apply physique changes
-        if ((talentFieldMask & TALENT_PHYSIQUE_TYPE) != 0 && physiqueType.isPresent()) {
+        // Only apply if we have complete data to avoid partial updates
+        if ((hasRootType && hasRootAssigned) || (hasPhysiqueType && hasPhysiqueAssigned)) {
             try {
-                PhysiqueType physType = PhysiqueType.valueOf(physiqueType.get());
-                if ((talentFieldMask & TALENT_PHYSIQUE_ASSIGNED) != 0 &&
-                    physiqueAssigned.isPresent() && physiqueAssigned.get()) {
-                    talentAttachment.forceReassignPhysique(physType);
-                }
+                // Get current values as defaults
+                SpiritualRootType currentRootType = talentAttachment.getSpiritualRootType();
+                boolean currentRootAssigned = talentAttachment.hasSpiritualRootAssigned();
+                PhysiqueType currentPhysiqueType = talentAttachment.getPhysiqueType();
+                boolean currentPhysiqueAssigned = talentAttachment.hasPhysiqueAssigned();
+
+                // Use new values if present, otherwise keep current values
+                SpiritualRootType newRootType = hasRootType ?
+                    SpiritualRootType.valueOf(spiritualRootType.get()) : currentRootType;
+                boolean newRootAssigned = hasRootAssigned ?
+                    spiritualRootAssigned.get() : currentRootAssigned;
+                PhysiqueType newPhysiqueType = hasPhysiqueType ?
+                    PhysiqueType.valueOf(physiqueType.get()) : currentPhysiqueType;
+                boolean newPhysiqueAssigned = hasPhysiqueAssigned ?
+                    physiqueAssigned.get() : currentPhysiqueAssigned;
+
+                // Use client-side update method instead of server-side reassignment
+                talentAttachment.updateFromServer(newRootType, newRootAssigned,
+                    newPhysiqueType, newPhysiqueAssigned);
+
             } catch (IllegalArgumentException e) {
-                ImmortalCultivation.LOGGER.warn("Invalid physique type received in sync: {}", physiqueType.get());
+                ImmortalCultivation.LOGGER.warn("Invalid talent type received in sync: spiritual_root={}, physique={}",
+                    spiritualRootType.orElse("none"), physiqueType.orElse("none"));
             }
         }
     }

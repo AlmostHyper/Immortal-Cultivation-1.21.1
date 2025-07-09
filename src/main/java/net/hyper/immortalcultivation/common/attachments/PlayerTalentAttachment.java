@@ -410,4 +410,37 @@ public class PlayerTalentAttachment {
             getOverallCultivationMultiplier(),
             getCombinedTalentDescription());
     }
+
+    /**
+     * Updates talent data from server sync packets on the client side.
+     * This method is specifically designed for client-side synchronization and does not
+     * trigger additional sync operations or server-side logic.
+     *
+     * @param spiritualRootType The spiritual root type from server
+     * @param spiritualRootAssigned Whether spiritual root is assigned
+     * @param physiqueType The physique type from server
+     * @param physiqueAssigned Whether physique is assigned
+     */
+    public void updateFromServer(SpiritualRootType spiritualRootType, boolean spiritualRootAssigned,
+                                 PhysiqueType physiqueType, boolean physiqueAssigned) {
+        try {
+            // Direct assignment without triggering sync or server-side logic
+            this.spiritualRootType = spiritualRootType;
+            this.spiritualRootAssigned = spiritualRootAssigned;
+            this.physiqueType = physiqueType;
+            this.physiqueAssigned = physiqueAssigned;
+
+            // Clear sync flag since we just received data from server
+            this.needsSync = false;
+
+            ImmortalCultivation.LOGGER.debug("Updated talent data from server for player {}: Root: {} (assigned: {}), Physique: {} (assigned: {})",
+                player != null ? player.getName().getString() : "unknown",
+                spiritualRootType.getDisplayName(), spiritualRootAssigned,
+                physiqueType.getDisplayName(), physiqueAssigned);
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error updating talent data from server for player {}: {}",
+                player != null ? player.getName().getString() : "unknown", e.getMessage());
+        }
+    }
 }
