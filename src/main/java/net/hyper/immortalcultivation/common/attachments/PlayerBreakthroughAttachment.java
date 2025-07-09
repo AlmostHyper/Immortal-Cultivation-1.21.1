@@ -1,8 +1,9 @@
-package net.hyper.immortalcultivation.common.capability.attachments;
+package net.hyper.immortalcultivation.common.attachments;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.util.DirtyTrackerUtil;
-import net.hyper.immortalcultivation.common.capability.interfaces.ITickable;
+import net.hyper.immortalcultivation.common.interfaces.ITickable;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
@@ -18,6 +19,7 @@ import org.jetbrains.annotations.Nullable;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -498,6 +500,146 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerUtil implements IT
 
     public double calculateBreakthroughSuccessRate(PlayerCultivationAttachment.CultivationType type, BreakthroughType breakthroughType) {
         return calculateBreakthroughSuccessChance(type, breakthroughType);
+    }
+
+    /**
+     * Gets all available breakthrough options for both Qi and Body cultivation types.
+     *
+     * This method analyzes the player's current cultivation state and determines which
+     * breakthrough types are available, calculating success rates and availability status
+     * for each option. It provides comprehensive information for the breakthrough UI.
+     *
+     * @return BreakthroughOptions containing all available Qi and Body breakthrough options
+     */
+    public BreakthroughOptions getAllAvailableBreakthroughOptions() {
+        List<BreakthroughOption> qiOptions = new ArrayList<>();
+        List<BreakthroughOption> bodyOptions = new ArrayList<>();
+
+        PlayerCultivationAttachment cultivation = getCultivationAttachment();
+        if (cultivation == null) {
+            ImmortalCultivation.LOGGER.warn("Cannot get breakthrough options: cultivation attachment unavailable");
+            return new BreakthroughOptions(qiOptions, bodyOptions);
+        }
+
+        // Generate options for Qi cultivation
+        qiOptions.addAll(generateBreakthroughOptionsForType(PlayerCultivationAttachment.CultivationType.QI, cultivation));
+
+        // Generate options for Body cultivation
+        bodyOptions.addAll(generateBreakthroughOptionsForType(PlayerCultivationAttachment.CultivationType.BODY, cultivation));
+
+        return new BreakthroughOptions(qiOptions, bodyOptions);
+    }
+
+    /**
+     * Generates breakthrough options for a specific cultivation type.
+     *
+     * This method evaluates each breakthrough type (MINOR, MAJOR, SPECIAL, BOUNDARY)
+     * for the specified cultivation type and creates appropriate BreakthroughOption
+     * objects with calculated success rates and availability status.
+     *
+     * @param cultivationType The cultivation type (QI or BODY) to generate options for
+     * @param cultivation The player's cultivation attachment for calculations
+     * @return List of breakthrough options for the specified cultivation type
+     */
+    private List<BreakthroughOption> generateBreakthroughOptionsForType(
+        PlayerCultivationAttachment.CultivationType cultivationType,
+        PlayerCultivationAttachment cultivation) {
+
+        List<BreakthroughOption> options = new ArrayList<>();
+
+        // Generate options for each breakthrough type
+        for (BreakthroughType breakthroughType : BreakthroughType.values()) {
+            BreakthroughOption option = createBreakthroughOption(cultivationType, breakthroughType, cultivation);
+            if (option != null) {
+                options.add(option);
+            }
+        }
+
+        return options;
+    }
+
+    /**
+     * Creates a single breakthrough option for the specified cultivation type and breakthrough type.
+     *
+     * This method determines the target realm, calculates success rates, and evaluates
+     * availability requirements for a specific breakthrough attempt. It handles all
+     * the complex logic for determining what breakthroughs are possible.
+     *
+     * @param cultivationType The cultivation type (QI or BODY)
+     * @param breakthroughType The type of breakthrough (MINOR, MAJOR, SPECIAL, BOUNDARY)
+     * @param cultivation The player's cultivation attachment
+     * @return A BreakthroughOption, or null if this breakthrough type is not applicable
+     */
+    private BreakthroughOption createBreakthroughOption(
+        PlayerCultivationAttachment.CultivationType cultivationType,
+        BreakthroughType breakthroughType,
+        PlayerCultivationAttachment cultivation) {
+
+        // Get current realm for this cultivation type
+        CultivationRealm currentRealm = cultivation.getCurrentRealm(
+            cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
+                ICultivationData.CultivationType.QI : ICultivationData.CultivationType.BODY
+        );
+
+        if (currentRealm == null) {
+            ImmortalCultivation.LOGGER.warn("Current realm is null for cultivation type: {}", cultivationType);
+            return null;
+        }
+
+        // Determine target realm based on breakthrough type
+        CultivationRealm targetRealm = determineTargetRealm(currentRealm, breakthroughType, cultivation, cultivationType);
+        if (targetRealm == null) {
+            // This breakthrough type doesn't apply to the current realm
+            return null;
+        }
+
+        // Calculate success chance for this breakthrough
+        double successChance = calculateBreakthroughSuccessChance(cultivationType, breakthroughType);
+
+        // Determine availability and reason
+        boolean available = canAttemptTypedBreakthrough(cultivationType, breakthroughType);
+        String unavailabilityReason = available ? "" : getUnavailabilityReason(cultivationType, breakthroughType);
+
+        return new BreakthroughOption(
+            breakthroughType,
+            targetRealm,
+            successChance,
+            cultivationType,
+            available,
+            unavailabilityReason
+        );
+    }
+
+    /**
+     * Determines the target realm for a specific breakthrough type.
+     *
+     * This method maps breakthrough types to their corresponding target realms
+     * based on the current realm and breakthrough mechanics. Different breakthrough
+     * types may target different advancement paths.
+     *
+     * @param currentRealm The player's current cultivation realm
+     * @param breakthroughType The type of breakthrough being attempted
+     * @param cultivation The player's cultivation attachment
+     * @param cultivationType The cultivation type (QI or BODY)
+     * @return The target realm for this breakthrough, or null if not applicable
+     */
+    private CultivationRealm determineTargetRealm(
+        CultivationRealm currentRealm,
+        BreakthroughType breakthroughType,
+        PlayerCultivationAttachment cultivation,
+        PlayerCultivationAttachment.CultivationType cultivationType) {
+
+        // Convert cultivation type for realm interface calls
+        ICultivationData.CultivationType dataType = cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
+            ICultivationData.CultivationType.QI : ICultivationData.CultivationType.BODY;
+
+        // Use the realm's breakthrough methods based on type
+        return switch (breakthroughType) {
+            case MINOR -> currentRealm.getMinorBreakthrough(player, cultivation, dataType);
+            case MAJOR -> currentRealm.getMajorBreakthrough(player, cultivation, dataType);
+            case SPECIAL -> currentRealm.getSpecialBreakthrough(player, cultivation, dataType);
+            case BOUNDARY -> currentRealm.getBoundaryBreakthrough(player, cultivation, dataType);
+        };
     }
 
     // === COOLDOWN MANAGEMENT ===

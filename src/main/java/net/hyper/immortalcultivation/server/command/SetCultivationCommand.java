@@ -4,7 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;

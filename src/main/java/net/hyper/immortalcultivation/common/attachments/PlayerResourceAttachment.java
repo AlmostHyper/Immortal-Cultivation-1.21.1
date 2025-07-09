@@ -1,9 +1,9 @@
-package net.hyper.immortalcultivation.common.capability.attachments;
+package net.hyper.immortalcultivation.common.attachments;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.interfaces.*;
+import net.hyper.immortalcultivation.common.interfaces.*;
 import net.hyper.immortalcultivation.common.util.DirtyTrackerUtil;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;

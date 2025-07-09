@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.core.network.packets.client;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerCombatStatsAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCombatStatsAttachment;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

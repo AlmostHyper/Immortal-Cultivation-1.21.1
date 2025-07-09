@@ -1,8 +1,8 @@
 package net.hyper.immortalcultivation.server.event.world;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerCombatStatsAttachment;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCombatStatsAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.core.network.packet.DamageFeedbackSyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;

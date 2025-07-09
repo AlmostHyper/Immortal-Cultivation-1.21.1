@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.common.capability.interfaces;
+package net.hyper.immortalcultivation.common.interfaces;
 
 /**
  * Universal dirty flag interface for all attachments.

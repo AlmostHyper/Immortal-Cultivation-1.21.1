@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.core.network.packets.server;
 
 import io.netty.buffer.ByteBuf;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerTalentAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;

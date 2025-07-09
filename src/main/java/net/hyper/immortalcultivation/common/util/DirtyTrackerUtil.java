@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.common.util;
 
-import net.hyper.immortalcultivation.common.capability.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.common.interfaces.IDirtyTrackable;
 
 /**
  * Concrete dirty flag tracker that can be composed into attachment classes.

@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.core.network.packets.server;
 
 import io.netty.buffer.ByteBuf;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerRaceAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerRaceAttachment;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.network.codec.ByteBufCodecs;

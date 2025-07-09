@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.server.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerResourceAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerResourceAttachment;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;

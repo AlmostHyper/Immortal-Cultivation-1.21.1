@@ -1,9 +1,9 @@
-package net.hyper.immortalcultivation.common.capability.attachments;
+package net.hyper.immortalcultivation.common.attachments;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.common.capability.interfaces.IDirtyTrackable;
-import net.hyper.immortalcultivation.common.capability.interfaces.ITickable;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.common.interfaces.ITickable;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealmData;
 import net.hyper.immortalcultivation.core.cultivation.realms.JsonCultivationRealm;

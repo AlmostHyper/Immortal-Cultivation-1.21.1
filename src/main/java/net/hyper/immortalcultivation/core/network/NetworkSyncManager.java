@@ -1,8 +1,8 @@
 package net.hyper.immortalcultivation.core.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.attachments.*;
-import net.hyper.immortalcultivation.common.capability.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.attachments.*;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.core.network.packets.server.UnifiedDeltaSyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.server.level.ServerPlayer;

@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.common.capability.attachments;
+package net.hyper.immortalcultivation.common.attachments;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.content.item.pills.PillConsumptionManager;

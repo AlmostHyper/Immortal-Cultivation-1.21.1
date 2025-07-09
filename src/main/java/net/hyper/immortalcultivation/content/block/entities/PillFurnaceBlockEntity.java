@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.content.block.entities;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipe;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipeInput;
 import net.hyper.immortalcultivation.common.registry.*;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.client.gui.menus.PillFurnaceMenu;
 import net.hyper.immortalcultivation.content.block.crafting.PillFurnaceBlock;
 import net.minecraft.core.BlockPos;

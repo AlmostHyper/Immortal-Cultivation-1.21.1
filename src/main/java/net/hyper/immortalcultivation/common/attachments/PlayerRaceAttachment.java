@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.common.capability.attachments;
+package net.hyper.immortalcultivation.common.attachments;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;

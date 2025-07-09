@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.common.registry;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.attachments.*;
+import net.hyper.immortalcultivation.common.attachments.*;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.registries.DeferredHolder;

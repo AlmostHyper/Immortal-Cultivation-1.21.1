@@ -2,9 +2,9 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 
 import io.netty.buffer.ByteBuf;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.attachments.*;
+import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
-import net.hyper.immortalcultivation.common.capability.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.minecraft.network.codec.ByteBufCodecs;

@@ -1,10 +1,10 @@
 package net.hyper.immortalcultivation.server.event.player;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.attachments.*;
+import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
-import net.hyper.immortalcultivation.common.capability.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.core.network.packets.server.OpenRaceSelectionSyncPacket;

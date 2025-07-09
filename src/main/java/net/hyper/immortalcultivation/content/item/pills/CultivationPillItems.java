@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.content.item.pills;
 
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerPillConsumptionAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerPillConsumptionAttachment;
 import net.hyper.immortalcultivation.content.block.entities.PillFurnaceBlockEntity;
 import net.hyper.immortalcultivation.content.item.BaseConsumableItem;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;

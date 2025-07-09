@@ -1,9 +1,9 @@
 package net.hyper.immortalcultivation.server.event.world;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.capability.attachments.*;
-import net.hyper.immortalcultivation.common.capability.interfaces.IDirtyTrackable;
-import net.hyper.immortalcultivation.common.capability.interfaces.ITickable;
+import net.hyper.immortalcultivation.common.attachments.*;
+import net.hyper.immortalcultivation.common.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.common.interfaces.ITickable;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.server.level.ServerPlayer;

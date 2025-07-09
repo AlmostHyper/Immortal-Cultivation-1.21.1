@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.client.gui.screens;
 
-import net.hyper.immortalcultivation.common.capability.attachments.*;
+import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;

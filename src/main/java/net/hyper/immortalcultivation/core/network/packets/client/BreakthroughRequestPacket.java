@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.core.network.packets.client;
 
 import io.netty.buffer.ByteBuf;
-import net.hyper.immortalcultivation.common.capability.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;

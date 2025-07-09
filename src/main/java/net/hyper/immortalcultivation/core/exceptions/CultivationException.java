@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.core.exceptions;
 
-import net.hyper.immortalcultivation.common.capability.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 
 /**
  * Thrown when cultivation-related operations fail.

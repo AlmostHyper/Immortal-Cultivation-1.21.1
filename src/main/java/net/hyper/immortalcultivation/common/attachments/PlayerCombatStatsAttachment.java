@@ -1,11 +1,11 @@
-package net.hyper.immortalcultivation.common.capability.attachments;
+package net.hyper.immortalcultivation.common.attachments;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.util.DirtyTrackerUtil;
-import net.hyper.immortalcultivation.common.capability.interfaces.IDirtyTrackable;
-import net.hyper.immortalcultivation.common.capability.interfaces.ITickable;
+import net.hyper.immortalcultivation.common.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.common.interfaces.ITickable;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.core.HolderLookup;

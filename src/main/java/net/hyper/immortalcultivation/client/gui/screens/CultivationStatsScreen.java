@@ -1,6 +1,7 @@
 package net.hyper.immortalcultivation.client.gui.screens;
 
-import net.hyper.immortalcultivation.common.capability.attachments.*;
+import net.hyper.immortalcultivation.common.attachments.*;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.CultivationFocusTogglePacket;
@@ -403,15 +404,15 @@ public class CultivationStatsScreen extends Screen {
         drawStringAligned(guiGraphics, focusText, windowX + margin, currentY, focusColor);
         currentY += lineHeight;
 
-        CultivationRealm qiRealm = cultivationAttachment.getCurrentQiRealm();
-        CultivationRealm bodyRealm = cultivationAttachment.getCurrentBodyRealm();
+        CultivationRealm qiRealm = cultivationAttachment.getCurrentRealm(ICultivationData.CultivationType.QI);
+        CultivationRealm bodyRealm = cultivationAttachment.getCurrentRealm(ICultivationData.CultivationType.BODY);
         String realmsText = String.format("Realms: Qi %s | Body %s", qiRealm.getDisplayName(), bodyRealm.getDisplayName());
         drawStringAligned(guiGraphics, realmsText, windowX + margin, currentY, 0xFFFFFFFF);
         currentY += lineHeight;
 
         // Cultivation rates
-        double qiRate = cultivationAttachment.getEffectiveQiCultivationRate();
-        double bodyRate = cultivationAttachment.getEffectiveBodyCultivationRate();
+        double qiRate = cultivationAttachment.getEffectiveCultivationRate(ICultivationData.CultivationType.QI);
+        double bodyRate = cultivationAttachment.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY);
         String ratesText = String.format("Rates: Qi %.2f/s | Body %.2f/s", qiRate, bodyRate);
         drawStringAligned(guiGraphics, ratesText, windowX + margin, currentY, 0xFFCCCCCC);
     }
@@ -590,10 +591,10 @@ public class CultivationStatsScreen extends Screen {
         currentY = renderSectionHeader(guiGraphics, "Cultivation Rate Breakdown", currentY);
         currentY += 5;
 
-        double qiBase = cultivationAttachment.getBaseQiCultivationRate();
-        double qiEffective = cultivationAttachment.getEffectiveQiCultivationRate();
-        double bodyBase = cultivationAttachment.getBaseBodyCultivationRate();
-        double bodyEffective = cultivationAttachment.getEffectiveBodyCultivationRate();
+        double qiBase = cultivationAttachment.getBaseCultivation(ICultivationData.CultivationType.QI);
+        double qiEffective = cultivationAttachment.getEffectiveCultivationRate(ICultivationData.CultivationType.QI);
+        double bodyBase = cultivationAttachment.getBaseCultivation(ICultivationData.CultivationType.BODY);
+        double bodyEffective = cultivationAttachment.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY);
 
         String qiBreakdown = String.format("Qi: %.3f base → %.3f effective (×%.2f total)", qiBase, qiEffective, qiEffective / qiBase);
         drawStringAligned(guiGraphics, qiBreakdown, windowX + margin, currentY, QI_COLOR);
@@ -667,7 +668,7 @@ public class CultivationStatsScreen extends Screen {
         currentY += lineHeight + 3;
 
         CultivationRealm currentRealm = type == PlayerCultivationAttachment.CultivationType.QI ?
-            cultivationAttachment.getCurrentQiRealm() : cultivationAttachment.getCurrentBodyRealm();
+            cultivationAttachment.getCurrentRealm(ICultivationData.CultivationType.QI) : cultivationAttachment.getCurrentRealm(ICultivationData.CultivationType.BODY);
         drawStringAligned(guiGraphics, "Realm: " + currentRealm.getDisplayName(), x, currentY, 0xFFFFFFFF);
         currentY += lineHeight;
 
@@ -676,17 +677,17 @@ public class CultivationStatsScreen extends Screen {
         double percentage;
 
         if (type == PlayerCultivationAttachment.CultivationType.QI) {
-            current = cultivationAttachment.getCurrentQiCultivation();
-            max = cultivationAttachment.getMaxQiCultivation();
-            baseRate = cultivationAttachment.getBaseQiCultivationRate();
-            effectiveRate = cultivationAttachment.getEffectiveQiCultivationRate();
-            percentage = cultivationAttachment.getQiProgress();
+            current = cultivationAttachment.getCurrentCultivation(ICultivationData.CultivationType.QI);
+            max = cultivationAttachment.getMaxCultivation(ICultivationData.CultivationType.QI);
+            baseRate = cultivationAttachment.getBaseCultivationRate(ICultivationData.CultivationType.QI);
+            effectiveRate = cultivationAttachment.getEffectiveCultivationRate(ICultivationData.CultivationType.QI);
+            percentage = cultivationAttachment.getRealmProgressionPercentage(ICultivationData.CultivationType.QI);
         } else {
-            current = cultivationAttachment.getCurrentBodyCultivation();
-            max = cultivationAttachment.getMaxBodyCultivation();
-            baseRate = cultivationAttachment.getBaseBodyCultivationRate();
-            effectiveRate = cultivationAttachment.getEffectiveBodyCultivationRate();
-            percentage = cultivationAttachment.getBodyProgress();
+            current = cultivationAttachment.getCurrentCultivation(ICultivationData.CultivationType.BODY);
+            max = cultivationAttachment.getMaxCultivation(ICultivationData.CultivationType.BODY);
+            baseRate = cultivationAttachment.getBaseCultivationRate(ICultivationData.CultivationType.BODY);
+            effectiveRate = cultivationAttachment.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY);
+            percentage = cultivationAttachment.getRealmProgressionPercentage(ICultivationData.CultivationType.BODY);
         }
 
         String progressText = String.format("%.1f%% (%d/%d)", percentage * 100, current, max);

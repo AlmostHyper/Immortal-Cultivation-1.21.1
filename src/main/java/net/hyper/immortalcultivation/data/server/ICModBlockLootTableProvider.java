@@ -25,7 +25,7 @@ import net.minecraft.world.level.storage.loot.providers.number.UniformGenerator;
 import java.util.Set;
 
 public class ICModBlockLootTableProvider extends BlockLootSubProvider {
-    protected ICModBlockLootTableProvider(HolderLookup.Provider registries) {
+    public ICModBlockLootTableProvider(HolderLookup.Provider registries) {
         super(Set.of(), FeatureFlags.REGISTRY.allFlags(), registries);
 
     }
