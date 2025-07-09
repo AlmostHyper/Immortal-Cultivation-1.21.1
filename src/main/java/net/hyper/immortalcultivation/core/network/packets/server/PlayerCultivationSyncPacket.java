@@ -52,7 +52,7 @@ public record PlayerCultivationSyncPacket(
     }
 
     public static final CustomPacketPayload.Type<PlayerCultivationSyncPacket> TYPE = new CustomPacketPayload.Type<>(
-            new ResourceLocation(ImmortalCultivation.MOD_ID, "sync_cultivation")
+            ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "sync_cultivation")
     );
 
     public static final StreamCodec<ByteBuf, PlayerCultivationSyncPacket> STREAM_CODEC = StreamCodec.of(

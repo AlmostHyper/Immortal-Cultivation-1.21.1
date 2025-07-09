@@ -17,7 +17,7 @@ public record PlayerPillConsumptionSyncPacket(
 ) implements ISyncPacket {
 
     public static final CustomPacketPayload.Type<PlayerPillConsumptionSyncPacket> TYPE = new CustomPacketPayload.Type<>(
-            new ResourceLocation(ImmortalCultivation.MOD_ID, "sync_pill_consumption")
+            ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "sync_pill_consumption")
     );
 
     public static final StreamCodec<ByteBuf, PlayerPillConsumptionSyncPacket> STREAM_CODEC = StreamCodec.of(

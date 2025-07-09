@@ -1,131 +1,123 @@
 package net.hyper.immortalcultivation.core.network.packets.client;
 
 import io.netty.buffer.ByteBuf;
+import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
+import net.hyper.immortalcultivation.common.attachments.PlayerRaceAttachment;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
+import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.core.network.helpers.BreakthroughFeedbackHelper;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
-/**
- * Unified action request packet that handles all player-initiated cultivation actions.
- * This replaces individual action packets (BreakthroughRequestPacket, etc.) with a single,
- * extensible system that automatically triggers appropriate sync responses.
- */
 public record UnifiedActionRequestPacket(
     ActionType actionType,
     Optional<PlayerCultivationAttachment.CultivationType> cultivationType,
     Optional<PlayerBreakthroughAttachment.BreakthroughType> breakthroughType,
-    Optional<String> stringParam,
-    Optional<Long> longParam
+    Optional<String> stringParam
 ) implements CustomPacketPayload {
 
     public static final Type<UnifiedActionRequestPacket> TYPE = new Type<>(
         ResourceLocation.fromNamespaceAndPath("immortalcultivation", "unified_action_request")
     );
 
-    /**
-     * Enum defining all supported action types for cultivation system interactions.
-     * Each action type specifies what parameters are required and how the action should be processed.
-     */
     public enum ActionType {
+        // --- Core Cultivation ---
         BREAKTHROUGH_REQUEST,
         CULTIVATION_FOCUS_TOGGLE,
-        FORCE_SYNC_REQUEST,
-        EMERGENCY_HEALTH_SYNC
+        // --- Player Setup ---
+        SELECT_RACE,
+        // --- Data Syncing ---
+        REQUEST_FULL_SYNC,
+        REQUEST_CULTIVATION_DATA,
+        REQUEST_COMBAT_STATS,
+        REQUEST_RESOURCE_DATA,
+        REQUEST_TALENT_DATA
     }
 
-    // Convenience constructors for common actions
-    public static UnifiedActionRequestPacket createBreakthroughRequest(
-        PlayerCultivationAttachment.CultivationType cultivationType,
-        PlayerBreakthroughAttachment.BreakthroughType breakthroughType
-    ) {
-        return new UnifiedActionRequestPacket(
-            ActionType.BREAKTHROUGH_REQUEST,
-            Optional.of(cultivationType),
-            Optional.of(breakthroughType),
-            Optional.empty(),
-            Optional.empty()
-        );
+    private static final Map<ActionType, BiConsumer<ServerPlayer, UnifiedActionRequestPacket>> actionHandlers = new EnumMap<>(ActionType.class);
+
+    static {
+        // Core Cultivation
+        actionHandlers.put(ActionType.BREAKTHROUGH_REQUEST, UnifiedActionRequestPacket::processBreakthroughRequest);
+        actionHandlers.put(ActionType.CULTIVATION_FOCUS_TOGGLE, (p, pkt) -> processFocusToggle(p));
+        // Player Setup
+        actionHandlers.put(ActionType.SELECT_RACE, UnifiedActionRequestPacket::processRaceSelection);
+        // Data Syncing
+        actionHandlers.put(ActionType.REQUEST_FULL_SYNC, (p, pkt) -> NetworkSyncManager.scheduleSync(p, NetworkSyncManager.SyncPriority.CRITICAL, true));
+        actionHandlers.put(ActionType.REQUEST_CULTIVATION_DATA, (p, pkt) -> NetworkSyncManager.scheduleSyncFor(p, ICModAttachmentTypes.PLAYER_CULTIVATION.get()));
+        actionHandlers.put(ActionType.REQUEST_COMBAT_STATS, (p, pkt) -> NetworkSyncManager.scheduleSyncFor(p, ICModAttachmentTypes.PLAYER_COMBAT_STATS.get()));
+        actionHandlers.put(ActionType.REQUEST_RESOURCE_DATA, (p, pkt) -> NetworkSyncManager.scheduleSyncFor(p, ICModAttachmentTypes.PLAYER_RESOURCES.get()));
+        actionHandlers.put(ActionType.REQUEST_TALENT_DATA, (p, pkt) -> NetworkSyncManager.scheduleSyncFor(p, ICModAttachmentTypes.PLAYER_TALENTS.get()));
+    }
+
+    // --- Convenience Constructors ---
+
+    public static UnifiedActionRequestPacket createDataRequest(ActionType type) {
+        return new UnifiedActionRequestPacket(type, Optional.empty(), Optional.empty(), Optional.empty());
+    }
+    
+    public static UnifiedActionRequestPacket createBreakthroughRequest(PlayerCultivationAttachment.CultivationType cType, PlayerBreakthroughAttachment.BreakthroughType bType) {
+        return new UnifiedActionRequestPacket(ActionType.BREAKTHROUGH_REQUEST, Optional.of(cType), Optional.of(bType), Optional.empty());
     }
 
     public static UnifiedActionRequestPacket createFocusToggle() {
-        return new UnifiedActionRequestPacket(
-            ActionType.CULTIVATION_FOCUS_TOGGLE,
-            Optional.empty(),
-            Optional.empty(),
-            Optional.empty(),
-            Optional.empty()
-        );
+        return new UnifiedActionRequestPacket(ActionType.CULTIVATION_FOCUS_TOGGLE, Optional.empty(), Optional.empty(), Optional.empty());
     }
 
+    public static UnifiedActionRequestPacket createRaceSelection(String raceId) {
+        return new UnifiedActionRequestPacket(ActionType.SELECT_RACE, Optional.empty(), Optional.empty(), Optional.of(raceId));
+    }
+
+    // --- Serialization ---
+
     public static final StreamCodec<ByteBuf, UnifiedActionRequestPacket> STREAM_CODEC = StreamCodec.of(
-        UnifiedActionRequestPacket::encode,
-        UnifiedActionRequestPacket::decode
+        UnifiedActionRequestPacket::encode, UnifiedActionRequestPacket::decode
     );
 
     private static void encode(ByteBuf buf, UnifiedActionRequestPacket packet) {
         ByteBufCodecs.STRING_UTF8.encode(buf, packet.actionType.name());
-
-        // Encode optional cultivation type
-        ByteBufCodecs.BOOL.encode(buf, packet.cultivationType.isPresent());
-        if (packet.cultivationType.isPresent()) {
-            ByteBufCodecs.STRING_UTF8.encode(buf, packet.cultivationType.get().name());
-        }
-
-        // Encode optional breakthrough type
-        ByteBufCodecs.BOOL.encode(buf, packet.breakthroughType.isPresent());
-        if (packet.breakthroughType.isPresent()) {
-            ByteBufCodecs.STRING_UTF8.encode(buf, packet.breakthroughType.get().name());
-        }
-
-        // Encode optional string parameter
-        ByteBufCodecs.BOOL.encode(buf, packet.stringParam.isPresent());
-        if (packet.stringParam.isPresent()) {
-            ByteBufCodecs.STRING_UTF8.encode(buf, packet.stringParam.get());
-        }
-
-        // Encode optional long parameter
-        ByteBufCodecs.BOOL.encode(buf, packet.longParam.isPresent());
-        if (packet.longParam.isPresent()) {
-            ByteBufCodecs.VAR_LONG.encode(buf, packet.longParam.get());
-        }
+        packet.cultivationType.ifPresentOrElse(
+            val -> {
+                buf.writeBoolean(true);
+                ByteBufCodecs.STRING_UTF8.encode(buf, val.name());
+            }, () -> buf.writeBoolean(false)
+        );
+        packet.breakthroughType.ifPresentOrElse(
+            val -> {
+                buf.writeBoolean(true);
+                ByteBufCodecs.STRING_UTF8.encode(buf, val.name());
+            }, () -> buf.writeBoolean(false)
+        );
+        packet.stringParam.ifPresentOrElse(
+            val -> {
+                buf.writeBoolean(true);
+                ByteBufCodecs.STRING_UTF8.encode(buf, val);
+            }, () -> buf.writeBoolean(false)
+        );
     }
 
     private static UnifiedActionRequestPacket decode(ByteBuf buf) {
         ActionType actionType = ActionType.valueOf(ByteBufCodecs.STRING_UTF8.decode(buf));
-
-        Optional<PlayerCultivationAttachment.CultivationType> cultivationType = Optional.empty();
-        if (ByteBufCodecs.BOOL.decode(buf)) {
-            cultivationType = Optional.of(PlayerCultivationAttachment.CultivationType.valueOf(
-                ByteBufCodecs.STRING_UTF8.decode(buf)));
-        }
-
-        Optional<PlayerBreakthroughAttachment.BreakthroughType> breakthroughType = Optional.empty();
-        if (ByteBufCodecs.BOOL.decode(buf)) {
-            breakthroughType = Optional.of(PlayerBreakthroughAttachment.BreakthroughType.valueOf(
-                ByteBufCodecs.STRING_UTF8.decode(buf)));
-        }
-
-        Optional<String> stringParam = Optional.empty();
-        if (ByteBufCodecs.BOOL.decode(buf)) {
-            stringParam = Optional.of(ByteBufCodecs.STRING_UTF8.decode(buf));
-        }
-
-        Optional<Long> longParam = Optional.empty();
-        if (ByteBufCodecs.BOOL.decode(buf)) {
-            longParam = Optional.of(ByteBufCodecs.VAR_LONG.decode(buf));
-        }
-
-        return new UnifiedActionRequestPacket(actionType, cultivationType, breakthroughType, stringParam, longParam);
+        Optional<PlayerCultivationAttachment.CultivationType> cType = buf.readBoolean() ? Optional.of(PlayerCultivationAttachment.CultivationType.valueOf(ByteBufCodecs.STRING_UTF8.decode(buf))) : Optional.empty();
+        Optional<PlayerBreakthroughAttachment.BreakthroughType> bType = buf.readBoolean() ? Optional.of(PlayerBreakthroughAttachment.BreakthroughType.valueOf(ByteBufCodecs.STRING_UTF8.decode(buf))) : Optional.empty();
+        Optional<String> sParam = buf.readBoolean() ? Optional.of(ByteBufCodecs.STRING_UTF8.decode(buf)) : Optional.empty();
+        return new UnifiedActionRequestPacket(actionType, cType, bType, sParam);
     }
 
     @Override
@@ -133,91 +125,72 @@ public record UnifiedActionRequestPacket(
         return TYPE;
     }
 
-    /**
-     * Handles server-side processing of unified action requests.
-     * This method processes the action, performs the requested operation, and automatically
-     * triggers appropriate sync responses through the NetworkSyncManager.
-     */
+    // --- Server Handling ---
+
     public static void handleServer(UnifiedActionRequestPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer serverPlayer) {
-                processAction(serverPlayer, packet);
+                actionHandlers.getOrDefault(packet.actionType, (p, pkt) ->
+                    ImmortalCultivation.LOGGER.warn("No handler for action type: {}", pkt.actionType)
+                ).accept(serverPlayer, packet);
             }
         });
     }
 
-    /**
-     * Processes the specific action requested by the client.
-     * Each action type is handled appropriately and triggers sync updates through the unified system.
-     *
-     * @param player The server player requesting the action
-     * @param packet The action request packet containing action details
-     */
-    private static void processAction(ServerPlayer player, UnifiedActionRequestPacket packet) {
-        switch (packet.actionType) {
-            case BREAKTHROUGH_REQUEST -> processBreakthroughRequest(player, packet);
-            case CULTIVATION_FOCUS_TOGGLE -> processFocusToggle(player);
-            case FORCE_SYNC_REQUEST -> processForceSync(player);
-            case EMERGENCY_HEALTH_SYNC -> processEmergencyHealthSync(player);
-        }
-    }
+    // --- Action Implementations ---
 
-    /**
-     * Processes breakthrough requests using the existing breakthrough system.
-     * Automatically triggers high-priority sync after breakthrough attempt.
-     */
     private static void processBreakthroughRequest(ServerPlayer player, UnifiedActionRequestPacket packet) {
-        if (packet.cultivationType.isEmpty() || packet.breakthroughType.isEmpty()) {
-            return;
-        }
+        if (packet.cultivationType.isEmpty() || packet.breakthroughType.isEmpty()) return;
 
-        PlayerBreakthroughAttachment breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
-        if (breakthrough == null) {
-            return;
-        }
-
+        var breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
         breakthrough.setPlayer(player);
+        var result = breakthrough.attemptTypedBreakthrough(packet.cultivationType.get(), packet.breakthroughType.get());
 
-        // Perform the breakthrough attempt
-        PlayerBreakthroughAttachment.BreakthroughResult result =
-            breakthrough.attemptTypedBreakthrough(packet.cultivationType.get(), packet.breakthroughType.get());
-
-        // Send result feedback (this is immediate, not through unified sync)
         BreakthroughFeedbackHelper.sendBreakthroughFeedback(player, result, packet.breakthroughType.get());
-
-        // Trigger high-priority sync to update client with new cultivation state
         NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.CRITICAL);
     }
 
-    /**
-     * Processes cultivation focus toggle requests.
-     * Automatically triggers normal priority sync after focus change.
-     */
     private static void processFocusToggle(ServerPlayer player) {
-        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-        if (cultivation == null) {
+        var cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        cultivation.setPlayer(player);
+        
+        // This logic is preserved from the old CultivationFocusTogglePacket
+        boolean success = cultivation.toggleFocus();
+        if (success) {
+            var newFocus = cultivation.getCurrentFocus();
+            player.sendSystemMessage(Component.literal("✨ Cultivation focus shifted to ").append(Component.literal(newFocus.getDisplayName() + " Cultivation").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)).append("!").withStyle(ChatFormatting.GREEN));
+            player.sendSystemMessage(Component.literal("» ").append(Component.literal("2x").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)).append(" cultivation speed | ").append(Component.literal("1.5x").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)).append(" energy regeneration").withStyle(ChatFormatting.GRAY));
+            player.level().playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0f, 1.5f);
+            ImmortalCultivation.LOGGER.info("Player {} changed cultivation focus to {}", player.getName().getString(), newFocus.getDisplayName());
+        } else {
+            long remainingTicks = 24000 - (player.level().getGameTime() - cultivation.getLastFocusChangeTime());
+            long remainingMinutes = remainingTicks / 1200;
+            player.sendSystemMessage(Component.literal("⏳ Focus change on cooldown! ").append(Component.literal(remainingMinutes + " minutes").withStyle(ChatFormatting.YELLOW)).append(" remaining.").withStyle(ChatFormatting.RED));
+            player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0f, 1.0f);
+        }
+        
+        // This action only affects cultivation data, so a targeted sync is efficient.
+        NetworkSyncManager.scheduleSyncFor(player, ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+    }
+
+    private static void processRaceSelection(ServerPlayer player, UnifiedActionRequestPacket packet) {
+        if (packet.stringParam.isEmpty()) return;
+        
+        var raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        if (raceAttachment.hasRaceAssigned()) {
+            player.sendSystemMessage(Component.literal("You have already chosen a path.").withStyle(ChatFormatting.RED));
             return;
         }
 
-        cultivation.setPlayer(player);
-        cultivation.toggleFocus();
-
-        // Trigger normal priority sync for focus changes
-        NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.NORMAL);
-    }
-
-    /**
-     * Processes force sync requests for debugging or error recovery.
-     */
-    private static void processForceSync(ServerPlayer player) {
-        NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.CRITICAL);
-    }
-
-    /**
-     * Processes emergency health sync requests for critical health desync recovery.
-     */
-    private static void processEmergencyHealthSync(ServerPlayer player) {
-        // This could trigger specialized health recovery logic if needed
-        NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.CRITICAL);
+        try {
+            var raceType = RaceType.valueOf(packet.stringParam.get().toUpperCase());
+            raceAttachment.assignRace(player, raceType);
+            player.sendSystemMessage(Component.literal("You are now a " + raceType.getDisplayName() + "!").withStyle(ChatFormatting.GOLD));
+            // A full sync is appropriate after a major change like race selection.
+            NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.CRITICAL, true);
+        } catch (IllegalArgumentException e) {
+            player.sendSystemMessage(Component.literal("Invalid race selected.").withStyle(ChatFormatting.RED));
+            ImmortalCultivation.LOGGER.warn("Player {} tried to select invalid race: {}", player.getName().getString(), packet.stringParam.get());
+        }
     }
 }
