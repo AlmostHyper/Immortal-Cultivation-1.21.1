@@ -69,6 +69,11 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
 
     public void setPlayer(Player player) { this.player = player; }
 
+    @Nullable
+    public Player getPlayerSafe() {
+        return player;
+    }
+
     @Override
     public long getBaseCultivation(CultivationType type) { return currentRealms.get(type).getBaseMaxCultivation(); }
 
@@ -122,7 +127,11 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         }
     }
 
-    public void setRealm(CultivationType type, CultivationRealm realm) {
+    public CultivationRealm getCurrentRealm(CultivationType type) {
+        return currentRealms.get(type);
+    }
+
+    public void setCurrentRealm(CultivationType type, CultivationRealm realm) {
         if (realm != null && !realm.equals(this.currentRealms.get(type))) {
             this.currentRealms.put(type, realm);
             this.markDirty();
@@ -190,6 +199,10 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         }
         cultivationFraction.put(type, current);
         this.markDirty();
+    }
+
+    public boolean canBreakthrough(CultivationType type) {
+        return currentCultivation.get(type) >= maxCultivation.get(type);
     }
 
     public PlayerCultivationAttachment copy() {
