@@ -4,6 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.common.util.AttachmentRecoveryUtil;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
@@ -130,88 +131,6 @@ public class ICModRespawnEvent {
     }
 
     /**
-     * Validates that all attachments are present and properly initialized.
-     * This is critical because serialization failures can cause complete data loss.
-     */
-    private static boolean validateAndRecoverAttachments(ServerPlayer player) {
-        long operationStart = System.nanoTime();
-        boolean hasIssues = false;
-
-        try {
-            ImmortalCultivation.LOGGER.info("Validating attachment integrity for respawned player {}",
-                player.getName().getString());
-
-            // Check PlayerCultivationAttachment
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            if (cultivation == null) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: PlayerCultivationAttachment is NULL for player {}!",
-                    player.getName().getString());
-                hasIssues = true;
-            } else {
-                cultivation.setPlayer(player);
-                // Check if the attachment has default values (indicating data loss)
-                if (cultivation.getCurrentRealmIndex(ICultivationData.CultivationType.QI) == 0 &&
-                    cultivation.getCurrentRealmIndex(ICultivationData.CultivationType.BODY) == 0) {
-                    ImmortalCultivation.LOGGER.warn("WARNING: PlayerCultivationAttachment appears to have default values - possible data loss!");
-                    hasIssues = true;
-                }
-            }
-
-            // Check PlayerTalentAttachment
-            PlayerTalentAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            if (talents == null) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: PlayerTalentAttachment is NULL for player {}!",
-                    player.getName().getString());
-                hasIssues = true;
-            } else {
-                talents.setPlayer(player);
-            }
-
-            // Check PlayerRaceAttachment
-            PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
-            if (race == null) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: PlayerRaceAttachment is NULL for player {}!",
-                    player.getName().getString());
-                hasIssues = true;
-            } else {
-                race.setPlayer(player);
-            }
-
-            // Check other critical attachments...
-            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (resources == null) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: PlayerResourceAttachment is NULL for player {}!",
-                    player.getName().getString());
-                hasIssues = true;
-            } else {
-                resources.setPlayer(player);
-            }
-
-            if (hasIssues) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: Attachment validation failed for player {}! " +
-                        "Data loss has occurred. Consider implementing emergency restoration.",
-                    player.getName().getString());
-
-                // TODO: Implement emergency data restoration from backup or default values
-
-                return false;
-            }
-
-            ImmortalCultivation.LOGGER.info("Attachment validation passed for player {}",
-                player.getName().getString());
-            return true;
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error during attachment validation for player {}: {}",
-                player.getName().getString(), e);
-            return false;
-        } finally {
-            long duration = System.nanoTime() - operationStart;
-            ImmortalCultivation.LOGGER.debug("Attachment validation took {:.2f}ms", duration / 1_000_000.0);
-        }
-    }
-
-    /**
      * Unified respawn handler that processes all cultivation-related respawn logic
      * and integrates with the new network sync system.
      *
@@ -240,22 +159,62 @@ public class ICModRespawnEvent {
         try {
             totalRespawnEvents.incrementAndGet();
 
-            // CRITICAL: Ensure all player references are set FIRST
-            ensureAllPlayerReferences(player);
-
-            // CRITICAL: Validate attachments
-            if (!validateAndRecoverAttachments(player)) {
-                ImmortalCultivation.LOGGER.error("Attachment validation failed for player {} - skipping respawn processing",
+            // PHASE 1: CRITICAL ATTACHMENT RECOVERY
+            if (!AttachmentRecoveryUtil.ensureAttachmentIntegrity(player)) {
+                ImmortalCultivation.LOGGER.error("CRITICAL: Attachment integrity check failed for player {} - triggering emergency recovery",
                     player.getName().getString());
+
+                // Emergency sync as last resort
                 NetworkSyncManager.emergencySync(player);
-                return;
+
+                // Still continue with respawn processing but log the issue
+                ImmortalCultivation.LOGGER.warn("Continuing respawn processing for player {} despite attachment issues",
+                    player.getName().getString());
             }
 
-            // Rest of your respawn logic...
+            // PHASE 2: CULTIVATION DEATH PENALTIES
+            if (!applyCultivationDeathPenalties(player)) {
+                ImmortalCultivation.LOGGER.warn("Failed to apply cultivation death penalties for player {}",
+                    player.getName().getString());
+            }
+
+            // PHASE 3: RESOURCE RESTORATION
+            if (!restoreResourcesOnRespawn(player)) {
+                ImmortalCultivation.LOGGER.warn("Failed to restore resources for player {}",
+                    player.getName().getString());
+            }
+
+            // PHASE 4: NETWORK SYNCHRONIZATION
+            performRespawnSynchronization(player);
+
+            // PHASE 5: THEMATIC MESSAGING
+            sendRespawnMessages(player);
+
+            // PHASE 6: FOLLOW-UP OPERATIONS
+            scheduleFollowUpOperations(player);
+
+            ImmortalCultivation.LOGGER.info("Cultivator {} awakens from death's threshold - restoring spiritual connections",
+                player.getName().getString());
+
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Critical error during respawn processing for player {}",
                 player.getName().getString(), e);
+
+            // Emergency recovery attempt
+            try {
+                AttachmentRecoveryUtil.ensureAttachmentIntegrity(player);
+                NetworkSyncManager.emergencySync(player);
+            } catch (Exception recoveryError) {
+                ImmortalCultivation.LOGGER.error("Emergency recovery also failed for player {}: {}",
+                    player.getName().getString(), recoveryError);
+            }
         } finally {
+            long duration = (System.nanoTime() - respawnStartTime) / 1_000_000;
+            totalProcessingTime.addAndGet(duration);
+
+            ImmortalCultivation.LOGGER.debug("Respawn processing completed for player {} in {}ms",
+                player.getName().getString(), duration);
+
             scheduleCleanupOperation(playerId);
         }
     }
@@ -431,35 +390,34 @@ public class ICModRespawnEvent {
     // === PHASE 3: NETWORK SYNCHRONIZATION === //
 
     /**
-     * Performs all network synchronization operations using the new unified system.
-     *
-     * This integrates with NetworkSyncManager to ensure all respawn changes are
-     * immediately synchronized to the client with high priority.
+     * Performs comprehensive network synchronization after respawn using the recovery utility.
+     * This ensures that all attachment data is properly synchronized with the client.
      */
-    private static boolean performRespawnSyncOperations(ServerPlayer player) {
+    private static void performRespawnSynchronization(ServerPlayer player) {
         long operationStart = System.nanoTime();
 
         try {
-            // Use CRITICAL priority for immediate respawn sync
-            NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.CRITICAL);
-
-            // Force immediate sync for combat stats (which may affect UI)
-            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-            if (combatStats instanceof IDirtyTrackable dirtyTrackable) {
-                combatStats.setPlayer(player);
-                dirtyTrackable.markDirtyWithCounter();
-                NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.CRITICAL);
-            }
-
-            ImmortalCultivation.LOGGER.debug("Scheduled critical sync operations for respawn of player {}",
+            ImmortalCultivation.LOGGER.debug("Performing respawn synchronization for player {}",
                 player.getName().getString());
 
-            return true;
+            // Ensure all player references are set and validate integrity
+            NetworkSyncManager.ensurePlayerReferences(player);
+
+            // Force complete sync of all cultivation data
+            NetworkSyncManager.forceSyncAll(player);
+
+            // Create fresh backup after successful sync
+            AttachmentRecoveryUtil.createBackup(player);
+
+            ImmortalCultivation.LOGGER.debug("Respawn synchronization completed for player {}",
+                player.getName().getString());
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error performing respawn sync operations for player {}",
+            ImmortalCultivation.LOGGER.error("Error during respawn synchronization for player {}: {}",
                 player.getName().getString(), e);
-            return false;
+
+            // Attempt emergency sync
+            NetworkSyncManager.emergencySync(player);
         } finally {
             long duration = System.nanoTime() - operationStart;
             operationTimes.get(RespawnOperation.SYNC_OPERATIONS).addAndGet(duration);
