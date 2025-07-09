@@ -1,87 +1,131 @@
 package net.hyper.immortalcultivation.common.attachments;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.common.interfaces.IDirtyTrackable;
+import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
+import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealmData;
 import net.hyper.immortalcultivation.core.cultivation.realms.JsonCultivationRealm;
-import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.core.network.packets.server.PlayerCultivationSyncPacket;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import org.jetbrains.annotations.Nullable;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.EnumMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
-/**
- * Unified cultivation data attachment implementing ICultivationData.
- * Consolidates: PlayerRealmAttachment, PlayerQiCultivationAttachment,
- * PlayerBodyCultivationAttachment, PlayerCultivationFocusAttachment,
- * and PlayerCultivationBonusAttachment into a single, generic system.
- */
-public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrackable, ITickable {
+public class PlayerCultivationAttachment implements ICultivationData, ISyncable, ITickable {
 
-    // === Default Values ===
+    // === CONSTANTS === //
+
     private static final long DEFAULT_MAX_CULTIVATION = 100L;
     private static final String DEFAULT_MORTAL_REALM_ID = "mortal";
     private static final long MILESTONE_THRESHOLD = 1000L;
     private static final long FOCUS_CHANGE_COOLDOWN = 24000;
 
-    // === Player Reference ===
-    @Nullable
-    private Player player;
+    // === INSTANCES === //
 
-    // === Unified Cultivation Data ===
+    @Nullable
+    private transient Player player;
+
+    // --- Cultivation Data ---
     private final Map<CultivationType, CultivationRealm> currentRealms = new EnumMap<>(CultivationType.class);
     private final Map<CultivationType, CultivationRealm> previousRealms = new EnumMap<>(CultivationType.class);
     private final Map<CultivationType, Long> currentCultivation = new EnumMap<>(CultivationType.class);
     private final Map<CultivationType, Long> maxCultivation = new EnumMap<>(CultivationType.class);
     private final Map<CultivationType, Double> cultivationFraction = new EnumMap<>(CultivationType.class);
     private final Map<CultivationType, Double> accumulationRate = new EnumMap<>(CultivationType.class);
-
-    // === Milestone Tracking ===
     private final Map<CultivationType, Long> totalCultivationEarned = new EnumMap<>(CultivationType.class);
     private final Map<CultivationType, Long> lastMilestone = new EnumMap<>(CultivationType.class);
-
-    // === Bonus System ===
     private final Map<CultivationType, Double> additiveBonus = new EnumMap<>(CultivationType.class);
     private final Map<CultivationType, Double> multiplicativeBonus = new EnumMap<>(CultivationType.class);
-
-    // === Time Tracking ===
     private final Map<CultivationType, Long> timeInCurrentRealm = new EnumMap<>(CultivationType.class);
     private final Map<CultivationType, Long> totalCultivationTime = new EnumMap<>(CultivationType.class);
 
-    // === Focus System ===
+    // --- System Data ---
     private CultivationType currentFocus = CultivationType.QI;
     private long lastFocusChangeTime = -FOCUS_CHANGE_COOLDOWN;
+    private transient boolean isDirty = false;
+    private transient PlayerCultivationAttachment lastSyncedState = null;
 
-    // === Sync Management ===
-    private int tickCounter = 0;
-    private static final int SYNC_INTERVAL = 20;
-    private long changeCounter = 0;
-    private boolean isDirty = false;
-
-    // === CONSTRUCTORS ===
+    // === CONSTRUCTORS === //
 
     public PlayerCultivationAttachment() {
         initializeDefaults();
     }
 
+    // === GETTERS & SETTERS === //
+
+    public void setPlayer(Player player) { this.player = player; }
+
+    @Override
+    public long getBaseCultivation(CultivationType type) { return currentRealms.get(type).getBaseMaxCultivation(); }
+
+    @Override
+    public long getCurrentCultivation(CultivationType type) { return currentCultivation.get(type); }
+
+    @Override
+    public void setCurrentCultivation(CultivationType type, long value) {
+        long oldValue = currentCultivation.get(type);
+        long newValue = Math.max(0, Math.min(value, maxCultivation.get(type)));
+        currentCultivation.put(type, newValue);
+        if (oldValue != newValue) this.markDirty();
+    }
+
+    @Override
+    public long getMaxCultivation(CultivationType type) { return maxCultivation.get(type); }
+
+    @Override
+    public void setMaxCultivation(CultivationType type, long value) {
+        long newMax = Math.max(1, value);
+        if (newMax != maxCultivation.get(type)) {
+            maxCultivation.put(type, newMax);
+            if (currentCultivation.get(type) > newMax) {
+                currentCultivation.put(type, newMax);
+            }
+            this.markDirty();
+        }
+    }
+
+    @Override
+    public double getProgress(CultivationType type) {
+        long max = maxCultivation.get(type);
+        return max > 0 ? (double) currentCultivation.get(type) / max : 0.0;
+    }
+
+    @Override
+    public double getBaseCultivationRate(CultivationType type) { return currentRealms.get(type).getBaseCultivationRate(); }
+
+    @Override
+    public double getRegenFraction(CultivationType type) { return cultivationFraction.get(type); }
+
+    @Override
+    public void setRegenFraction(CultivationType type, double fraction) { cultivationFraction.put(type, fraction); }
+
+    public CultivationType getCurrentFocus() { return this.currentFocus; }
+
+    public void setCurrentFocus(CultivationType focus) {
+        if (this.currentFocus != focus) {
+            this.currentFocus = focus;
+            this.markDirty();
+        }
+    }
+
+    // === CORE LOGIC === //
+
     private void initializeDefaults() {
         CultivationRealm defaultRealm = getDefaultMortalRealm();
-
         for (CultivationType type : CultivationType.values()) {
             currentRealms.put(type, defaultRealm);
             currentCultivation.put(type, 0L);
@@ -97,17 +141,173 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
         }
     }
 
-    /**
-     * Safely gets the mortal realm, handling cases where JSON isn't loaded yet
-     */
-    private CultivationRealm getDefaultMortalRealm() {
-        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
-        if (mortalRealm != null) {
-            return mortalRealm;
+    @Override
+    public long addCultivation(CultivationType type, long amount) {
+        if (amount <= 0) return 0;
+        totalCultivationEarned.merge(type, amount, Long::sum);
+        long currentBefore = currentCultivation.get(type);
+        setCurrentCultivation(type, currentBefore + amount);
+        return currentCultivation.get(type) - currentBefore;
+    }
+
+    @Override
+    public long subtractCultivation(CultivationType type, long amount) {
+        if (amount <= 0) return 0;
+        long currentBefore = currentCultivation.get(type);
+        setCurrentCultivation(type, currentBefore - amount);
+        return currentBefore - currentCultivation.get(type);
+    }
+
+    @Override
+    public double getEffectiveCultivationRate(CultivationType type) {
+        double baseRate = getBaseCultivationRate(type);
+        Player p = (player != null && player.isAlive()) ? player : null;
+        if (p == null) return baseRate;
+        PlayerTalentAttachment talent = p.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        if (talent != null) baseRate *= (type == CultivationType.QI) ? talent.getSpiritualRootMultiplier() : talent.getPhysiqueMultiplier();
+        PlayerRaceAttachment race = p.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        if (race != null && race.hasRaceAssigned()) baseRate *= (type == CultivationType.QI) ? race.getQiMultiplier() : race.getBodyMultiplier();
+        baseRate = (baseRate + additiveBonus.get(type)) * (1.0 + multiplicativeBonus.get(type));
+        if (currentFocus == type) baseRate *= 2.0;
+        return baseRate;
+    }
+
+    @Override
+    public void addRegenFraction(CultivationType type, double amount) {
+        double current = cultivationFraction.get(type) + amount;
+        long pointsToAdd = (long) current;
+        if (pointsToAdd > 0) {
+            addCultivation(type, pointsToAdd);
+            current -= pointsToAdd;
+        }
+        cultivationFraction.put(type, current);
+        this.markDirty();
+    }
+
+    public PlayerCultivationAttachment copy() {
+        PlayerCultivationAttachment copy = new PlayerCultivationAttachment();
+        copy.currentRealms.putAll(this.currentRealms);
+        copy.currentCultivation.putAll(this.currentCultivation);
+        copy.maxCultivation.putAll(this.maxCultivation);
+        copy.currentFocus = this.currentFocus;
+        return copy;
+    }
+
+    // === IMPLEMENTATIONS === //
+
+    @Override
+    public Optional<CustomPacketPayload> createSyncPacket(boolean isFullSync) {
+        if (player == null || player.level().isClientSide()) {
+            return Optional.empty();
         }
 
-        ImmortalCultivation.LOGGER.warn("Mortal realm not found during initialization, using temporary default");
-        return createTemporaryMortalRealm();
+        if (!isFullSync && lastSyncedState == null) {
+            isFullSync = true;
+        }
+
+        byte qiPayloadMask = 0;
+        Optional<String> qiRealmId = Optional.empty();
+        Optional<Long> qiCurrent = Optional.empty();
+        Optional<Long> qiMax = Optional.empty();
+
+        if (isFullSync || !this.currentRealms.get(CultivationType.QI).getId().equals(lastSyncedState.currentRealms.get(CultivationType.QI).getId())) {
+            qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.REALM_ID_MASK;
+            qiRealmId = Optional.of(this.currentRealms.get(CultivationType.QI).getId());
+        }
+        if (isFullSync || !this.currentCultivation.get(CultivationType.QI).equals(lastSyncedState.currentCultivation.get(CultivationType.QI))) {
+            qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.CURRENT_MASK;
+            qiCurrent = Optional.of(this.currentCultivation.get(CultivationType.QI));
+        }
+        if (isFullSync || !this.maxCultivation.get(CultivationType.QI).equals(lastSyncedState.maxCultivation.get(CultivationType.QI))) {
+            qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.MAX_MASK;
+            qiMax = Optional.of(this.maxCultivation.get(CultivationType.QI));
+        }
+
+        Optional<PlayerCultivationSyncPacket.CultivationDataPayload> qiPayload = qiPayloadMask != 0
+            ? Optional.of(new PlayerCultivationSyncPacket.CultivationDataPayload(qiPayloadMask, qiRealmId, qiCurrent, qiMax))
+            : Optional.empty();
+
+        byte bodyPayloadMask = 0;
+        Optional<String> bodyRealmId = Optional.empty();
+        Optional<Long> bodyCurrent = Optional.empty();
+        Optional<Long> bodyMax = Optional.empty();
+
+        if (isFullSync || !this.currentRealms.get(CultivationType.BODY).getId().equals(lastSyncedState.currentRealms.get(CultivationType.BODY).getId())) {
+            bodyPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.REALM_ID_MASK;
+            bodyRealmId = Optional.of(this.currentRealms.get(CultivationType.BODY).getId());
+        }
+        if (isFullSync || !this.currentCultivation.get(CultivationType.BODY).equals(lastSyncedState.currentCultivation.get(CultivationType.BODY))) {
+            bodyPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.CURRENT_MASK;
+            bodyCurrent = Optional.of(this.currentCultivation.get(CultivationType.BODY));
+        }
+        if (isFullSync || !this.maxCultivation.get(CultivationType.BODY).equals(lastSyncedState.maxCultivation.get(CultivationType.BODY))) {
+            bodyPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.MAX_MASK;
+            bodyMax = Optional.of(this.maxCultivation.get(CultivationType.BODY));
+        }
+
+        Optional<PlayerCultivationSyncPacket.CultivationDataPayload> bodyPayload = bodyPayloadMask != 0
+            ? Optional.of(new PlayerCultivationSyncPacket.CultivationDataPayload(bodyPayloadMask, bodyRealmId, bodyCurrent, bodyMax))
+            : Optional.empty();
+
+        byte packetMask = 0;
+        Optional<CultivationType> focus = Optional.empty();
+
+        if (qiPayload.isPresent()) packetMask |= PlayerCultivationSyncPacket.QI_CULTIVATION_MASK;
+        if (bodyPayload.isPresent()) packetMask |= PlayerCultivationSyncPacket.BODY_CULTIVATION_MASK;
+
+        if (isFullSync || this.currentFocus != lastSyncedState.currentFocus) {
+            packetMask |= PlayerCultivationSyncPacket.FOCUS_MASK;
+            focus = Optional.of(this.currentFocus);
+        }
+
+        if (packetMask != 0) {
+            this.lastSyncedState = this.copy();
+            return Optional.of(new PlayerCultivationSyncPacket(packetMask, qiPayload, bodyPayload, focus));
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
+    public void handleSyncPacket(CustomPacketPayload payload) {
+        if (payload instanceof PlayerCultivationSyncPacket packet) {
+            packet.qiCultivationData().ifPresent(data -> {
+                data.realmId().ifPresent(id -> this.currentRealms.put(CultivationType.QI, ICModCultivationRealms.get(id)));
+                data.current().ifPresent(val -> this.currentCultivation.put(CultivationType.QI, val));
+                data.max().ifPresent(val -> this.maxCultivation.put(CultivationType.QI, val));
+            });
+            packet.bodyCultivationData().ifPresent(data -> {
+                data.realmId().ifPresent(id -> this.currentRealms.put(CultivationType.BODY, ICModCultivationRealms.get(id)));
+                data.current().ifPresent(val -> this.currentCultivation.put(CultivationType.BODY, val));
+                data.max().ifPresent(val -> this.maxCultivation.put(CultivationType.BODY, val));
+            });
+            packet.focus().ifPresent(f -> this.currentFocus = f);
+            ImmortalCultivation.LOGGER.debug("Applied cultivation sync packet on client.");
+        }
+    }
+
+    @Override
+    public void tick() {
+        if (player == null) return;
+        for (CultivationType type : CultivationType.values()) {
+            addRegenFraction(type, getEffectiveCultivationRate(type) / 20.0);
+        }
+    }
+
+    @Override
+    public boolean isDirty() { return this.isDirty; }
+
+    @Override
+    public void markDirty() { this.isDirty = true; }
+
+    @Override
+    public void clearDirty() { this.isDirty = false; }
+
+    // === HELPER METHODS === //
+
+    private CultivationRealm getDefaultMortalRealm() {
+        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
+        return mortalRealm != null ? mortalRealm : createTemporaryMortalRealm();
     }
 
     private long getSafeMaxCultivation(CultivationRealm realm) {
@@ -122,952 +322,61 @@ public class PlayerCultivationAttachment implements ICultivationData, IDirtyTrac
     }
 
     private CultivationRealm createTemporaryMortalRealm() {
-        var basicInfo = new CultivationRealmData.BasicInfo(
-            DEFAULT_MORTAL_REALM_ID, "Mortal", 0, "Mortal",
-            "Temporary mortal realm used during initialization"
-        );
-
-        var physicalStats = new CultivationRealmData.PhysicalStats(
-            20L, 0.0, 0.0, 0.0, 0.0
-        );
-
-        var cultivationStats = new CultivationRealmData.CultivationStats(
-            DEFAULT_MAX_CULTIVATION, 0.005
-        );
-
-        var qiStats = new CultivationRealmData.QiStats(
-            0L, 0.0, 0.0
-        );
-
-        var visualProperties = new CultivationRealmData.VisualProperties(
-            8421504, "minecraft:cloud", java.util.Optional.empty()
-        );
-
-        var progression = new CultivationRealmData.Progression(
-            java.util.List.of(), java.util.List.of()
-        );
-
-        var features = new CultivationRealmData.Features(
-            java.util.List.of(), java.util.List.of(), java.util.List.of()
-        );
-
-        var realmData = new CultivationRealmData(
-            basicInfo, physicalStats, cultivationStats, qiStats,
-            visualProperties, progression, features,
-            java.util.Optional.empty(), java.util.Optional.empty()
-        );
-
+        var basicInfo = new CultivationRealmData.BasicInfo(DEFAULT_MORTAL_REALM_ID, "Mortal", 0, "Mortal", "Temp");
+        var physicalStats = new CultivationRealmData.PhysicalStats(20L, 0.0, 0.0, 0.0, 0.0);
+        var cultivationStats = new CultivationRealmData.CultivationStats(DEFAULT_MAX_CULTIVATION, 0.005);
+        var qiStats = new CultivationRealmData.QiStats(0L, 0.0, 0.0);
+        var visualProperties = new CultivationRealmData.VisualProperties(8421504, "minecraft:cloud", java.util.Optional.empty());
+        var progression = new CultivationRealmData.Progression(java.util.List.of(), java.util.List.of());
+        var features = new CultivationRealmData.Features(java.util.List.of(), java.util.List.of(), java.util.List.of());
+        var realmData = new CultivationRealmData(basicInfo, physicalStats, cultivationStats, qiStats, visualProperties, progression, features, java.util.Optional.empty(), java.util.Optional.empty());
         return new JsonCultivationRealm(realmData);
     }
 
-    // === PLAYER REFERENCE MANAGEMENT ===
-
-    public void setPlayer(Player player) {
-        this.player = player;
-        ImmortalCultivation.LOGGER.debug("Set player reference for PlayerCultivationAttachment: {}",
-            player != null ? player.getName().getString() : "null");
-    }
-
-    @Nullable
-    public Player getPlayerSafe() {
-        return (player != null && player.isAlive()) ? player : null;
-    }
-
-    public void updateRealmsAfterJsonLoad() {
-        CultivationRealm newMortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
-        if (newMortalRealm == null) return;
-
-        for (CultivationType type : CultivationType.values()) {
-            CultivationRealm currentRealm = currentRealms.get(type);
-            if (currentRealm == null || DEFAULT_MORTAL_REALM_ID.equals(currentRealm.getId())) {
-                ImmortalCultivation.LOGGER.info("Updating {} realm from temporary to loaded JSON realm", type.getDisplayName());
-                currentRealms.put(type, newMortalRealm);
-                maxCultivation.put(type, newMortalRealm.getBaseMaxCultivation());
-            }
-        }
-    }
-
-    // === ICultivationData IMPLEMENTATION ===
-
-    @Override
-    public long getBaseCultivation(CultivationType type) {
-        return currentRealms.get(type).getBaseMaxCultivation();
-    }
-
-    @Override
-    public long getCurrentCultivation(CultivationType type) {
-        return currentCultivation.get(type);
-    }
-
-    @Override
-    public void setCurrentCultivation(CultivationType type, long value) {
-        long oldValue = currentCultivation.get(type);
-        long newValue = Math.max(0, Math.min(value, maxCultivation.get(type)));
-        currentCultivation.put(type, newValue);
-
-        if (oldValue != newValue) {
-            markDirty();
-        }
-    }
-
-    @Override
-    public long getMaxCultivation(CultivationType type) {
-        return maxCultivation.get(type);
-    }
-
-    /**
-     * Set maximum cultivation for specified type
-     */
-    @Override
-    public void setMaxCultivation(CultivationType type, long value) {
-        long newMax = Math.max(1, value); // Same validation as updateCultivationLimit
-        if (newMax != maxCultivation.get(type)) {
-            maxCultivation.put(type, newMax);
-
-            // Ensure current cultivation doesn't exceed new max (same as updateCultivationLimit)
-            if (currentCultivation.get(type) > newMax) {
-                currentCultivation.put(type, newMax);
-            }
-
-            markDirty();
-        }
-    }
-
-    @Override
-    public long addCultivation(CultivationType type, long amount) {
-        if (amount <= 0) return 0;
-
-        totalCultivationEarned.merge(type, amount, Long::sum);
-
-        if (player != null) {
-            ImmortalCultivation.LOGGER.info("DEBUG: Player {} gained {} {} cultivation points (direct). Total earned: {}",
-                player.getName().getString(), amount, type.getDisplayName(), totalCultivationEarned.get(type));
-        }
-
-        long currentBefore = currentCultivation.get(type);
-        setCurrentCultivation(type, currentBefore + amount);
-        long actualAdded = currentCultivation.get(type) - currentBefore;
-
-        checkMilestones(type);
-        return actualAdded;
-    }
-
-    @Override
-    public long subtractCultivation(CultivationType type, long amount) {
-        if (amount <= 0) return 0;
-
-        totalCultivationEarned.merge(type, amount, Long::sum);
-
-        if (player != null) {
-            ImmortalCultivation.LOGGER.info("DEBUG: Player {} lost {} {} cultivation points (direct). Total lost: {}",
-                player.getName().getString(), amount, type.getDisplayName(), totalCultivationEarned.get(type));
-        }
-
-        long currentBefore = currentCultivation.get(type);
-        setCurrentCultivation(type, currentBefore - amount);
-        long actualSubtracted = currentCultivation.get(type) + currentBefore;
-
-        checkMilestones(type);
-        return actualSubtracted;
-    }
-
-
-
-    @Override
-    public double getProgress(CultivationType type) {
-        long max = maxCultivation.get(type);
-        return max > 0 ? (double) currentCultivation.get(type) / max : 0.0;
-    }
-
-    @Override
-    public double getBaseCultivationRate(CultivationType type) {
-        return currentRealms.get(type).getBaseCultivationRate();
-    }
-
-    @Override
-    public double getEffectiveCultivationRate(CultivationType type) {
-        double baseRate = getBaseCultivationRate(type);
-        Player player = getPlayerSafe();
-        if (player == null) return baseRate;
-
-        // Apply talent multipliers
-        try {
-            PlayerTalentAttachment talent = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            if (talent != null) {
-                baseRate *= (type == CultivationType.QI) ?
-                    talent.getSpiritualRootMultiplier() : talent.getPhysiqueMultiplier();
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying talent multiplier", e);
-        }
-
-        // Apply race multipliers
-        try {
-            PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
-            if (race != null && race.hasRaceAssigned()) {
-                baseRate *= (type == CultivationType.QI) ?
-                    race.getQiMultiplier() : race.getBodyMultiplier();
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying race multiplier", e);
-        }
-
-        // Apply bonuses
-        baseRate = applyCultivationBonuses(type, baseRate);
-
-        // Apply focus multiplier
-        if (currentFocus == type) {
-            baseRate *= 2.0;
-        }
-
-        return baseRate;
-    }
-
-    @Override
-    public double getRegenFraction(CultivationType type) {
-        return cultivationFraction.get(type);
-    }
-
-    @Override
-    public void setRegenFraction(CultivationType type, double fraction) {
-        cultivationFraction.put(type, fraction);
-    }
-
-    @Override
-    public void addRegenFraction(CultivationType type, double amount) {
-        double current = cultivationFraction.get(type);
-        cultivationFraction.put(type, current + amount);
-
-        double wholePoints = cultivationFraction.get(type);
-        if (wholePoints > 0) {
-            cultivationFraction.put(type, cultivationFraction.get(type) - wholePoints);
-
-            totalCultivationEarned.merge(type, (long) wholePoints, Long::sum);
-            checkMilestones(type);
-            markDirty();
-        }
-    }
-
-    // === HELPER METHODS ===
-
-    private double applyCultivationBonuses(CultivationType type, double baseRate) {
-        return (baseRate + additiveBonus.get(type)) * (1.0 + multiplicativeBonus.get(type));
-    }
-
-    private void checkMilestones(CultivationType type) {
-        long currentMilestone = totalCultivationEarned.get(type) / MILESTONE_THRESHOLD;
-        long lastMilestoneValue = lastMilestone.get(type);
-
-        if (currentMilestone > lastMilestoneValue) {
-            long milestonesEarned = currentMilestone - lastMilestoneValue;
-            lastMilestone.put(type, currentMilestone);
-
-            if (player != null) {
-                PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-                if (resources != null) {
-                    if (type == CultivationType.QI) {
-                        // Qi milestones: +2 Qi, +1 HP per milestone
-                        resources.addPermanentMaxQiBonus(milestonesEarned * 2);
-                        resources.addPermanentHealthBonus(milestonesEarned);
-
-                        ImmortalCultivation.LOGGER.info("Player {} reached {} cultivation milestone {} - gained +{} Qi, +{} HP",
-                            player.getName().getString(), type.getDisplayName(), currentMilestone,
-                            milestonesEarned, milestonesEarned * 2);
-                    } else if (type == CultivationType.BODY) {
-                        // Body milestones: +1 Qi, +2 HP per milestone
-                        resources.addPermanentMaxQiBonus(milestonesEarned);
-                        resources.addPermanentHealthBonus(milestonesEarned * 2);
-
-                        ImmortalCultivation.LOGGER.info("Player {} reached {} cultivation milestone {} - gained +{} Qi, +{} HP",
-                            player.getName().getString(), type.getDisplayName(), currentMilestone,
-                            milestonesEarned, milestonesEarned * 2);
-                    }
-                }
-            }
-        }
-    }
-
-    // === REALM MANAGEMENT ===
-
-    public CultivationRealm getCurrentRealm(CultivationType type) {
-        return currentRealms.get(type);
-    }
-
-    public void setCurrentRealm(CultivationType type, CultivationRealm realm) {
-        CultivationRealm previousRealm = currentRealms.get(type);
-        previousRealms.put(type, previousRealm);
-        currentRealms.put(type, realm);
-
-        applyPermanentBonusesIfAdvancement(previousRealm, realm, type);
-        updateCultivationLimit(type);
-
-        markDirty();
-        forceSync();
-
-        // Call realm advancement events using unified interface
-        if (player != null && realm != null) {
-            realm.onRealmAdvancement(player, this, previousRealm, type);
-        }
-    }
-
-    private void updateCultivationLimit(CultivationType type) {
-        long newMax = currentRealms.get(type).getBaseMaxCultivation();
-        if (newMax != maxCultivation.get(type)) {
-            maxCultivation.put(type, Math.max(1, newMax));
-            if (currentCultivation.get(type) > newMax) {
-                currentCultivation.put(type, newMax);
-            }
-        }
-    }
-
-    /**
-     * Gets the current realm index for the specified cultivation type based on the realm level from JSON configuration.
-     * The index is 0-based, so the first cultivation realm (level 1) has index 0.
-     *
-     * This method provides a consistent way to determine relative realm progression
-     * for calculations like death penalties, which should scale with advancement.
-     *
-     * @param type The cultivation type (QI or BODY)
-     * @return The 0-based index of the current realm, or 0 if realm is null
-     */
-    public int getCurrentRealmIndex(CultivationType type) {
-        CultivationRealm currentRealm = getCurrentRealm(type);
-        if (currentRealm == null) {
-            ImmortalCultivation.LOGGER.warn("Current {} realm is null for player {}, returning index 0",
-                type.getDisplayName().toLowerCase(),
-                player != null ? player.getName().getString() : "unknown");
-            return 0;
-        }
-
-        // Realm levels in JSON start at 1, but we want 0-based indexing
-        // Mortal realm should be level 0, first cultivation realm is level 1
-        int realmLevel = currentRealm.getRealmLevel();
-        return Math.max(0, realmLevel - 1);
-    }
-
-    /**
-     * Gets the maximum realm index available in the system for the specified cultivation type.
-     * This can be useful for calculating progression percentages or caps.
-     *
-     * @param type The cultivation type (QI or BODY)
-     * @return The highest available realm index, or 0 if no realms are available
-     */
-    public int getMaxRealmIndex(CultivationType type) {
-        try {
-            List<CultivationRealm> allRealms = ICModCultivationRealms.getRealmsByLevel();
-            if (allRealms.isEmpty()) {
-                return 0;
-            }
-
-            // Find the highest level realm
-            int maxLevel = allRealms.stream()
-                .mapToInt(CultivationRealm::getRealmLevel)
-                .max()
-                .orElse(1);
-
-            return Math.max(0, maxLevel - 1);
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error getting max {} realm index",
-                type.getDisplayName().toLowerCase(), e);
-            return 0;
-        }
-    }
-
-    /**
-     * Gets the realm progression percentage for the specified cultivation type (0.0 to 1.0).
-     * This combines both realm advancement and within-realm progress.
-     *
-     * @param type The cultivation type (QI or BODY)
-     * @return A value between 0.0 (mortal) and 1.0 (max realm + max cultivation)
-     */
-    public double getRealmProgressionPercentage(CultivationType type) {
-        try {
-            int currentIndex = getCurrentRealmIndex(type);
-            int maxIndex = getMaxRealmIndex(type);
-
-            if (maxIndex == 0) {
-                return 0.0;
-            }
-
-            // Base progress from realm advancement
-            double realmProgress = (double) currentIndex / maxIndex;
-
-            // Within-realm progress
-            double cultivationProgress = type == CultivationType.QI ? getProgress(CultivationType.QI) : getProgress(CultivationType.BODY);
-
-            // Combine: each realm contributes equally, plus within-realm progress
-            double progressPerRealm = 1.0 / (maxIndex + 1);
-            return realmProgress + (cultivationProgress * progressPerRealm);
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error calculating {} realm progression percentage",
-                type.getDisplayName().toLowerCase(), e);
-            return 0.0;
-        }
-    }
-
-    /**
-     * Gets a debug summary of realm indices for troubleshooting.
-     *
-     * @return A formatted string with current realm index information for both cultivation types
-     */
-    public String getRealmIndexDebugInfo() {
-        return String.format("Realm Indices - Qi: %d/%d (%.1f%%), Body: %d/%d (%.1f%%), QiLevel: %d, BodyLevel: %d",
-            getCurrentRealmIndex(CultivationType.QI), getMaxRealmIndex(CultivationType.QI),
-            getRealmProgressionPercentage(CultivationType.QI) * 100,
-            getCurrentRealmIndex(CultivationType.BODY), getMaxRealmIndex(CultivationType.BODY),
-            getRealmProgressionPercentage(CultivationType.BODY) * 100,
-            getCurrentRealm(CultivationType.QI) != null ? getCurrentRealm(CultivationType.QI).getRealmLevel() : -1,
-            getCurrentRealm(CultivationType.BODY) != null ? getCurrentRealm(CultivationType.BODY).getRealmLevel() : -1);
-    }
-
-    private void applyPermanentBonusesIfAdvancement(@Nullable CultivationRealm previousRealm,
-                                                    CultivationRealm newRealm,
-                                                    CultivationType cultivationType) {
-        if (player == null || newRealm == null) return;
-
-        try {
-            boolean isAdvancement = previousRealm == null || newRealm.getRealmLevel() > previousRealm.getRealmLevel();
-            if (!isAdvancement) return;
-
-            // Get JSON-defined bonuses
-            long healthBonus = newRealm.getBaseHealth();
-            double healthRegenBonus = newRealm.getBaseHealthRegeneration();
-            double attackBonus = newRealm.getBaseAttackDamage();
-            double speedBonus = newRealm.getBaseMovementSpeed();
-            double jumpBonus = newRealm.getBaseJumpHeight();
-            long qiBonus = newRealm.getBaseMaxQi();
-            double qiRegenBonus = newRealm.getBaseQiRegenerationRate();
-
-            // Apply resource bonuses
-            PlayerResourceAttachment resourceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (resourceAttachment != null) {
-                if (healthBonus > 0) {
-                    resourceAttachment.addPermanentHealthBonus(healthBonus);
-                    resourceAttachment.addPermanentMaxBodyBonus(healthBonus); // Body bonus derived from health
-                }
-                if (healthRegenBonus > 0) {
-                    resourceAttachment.addPermanentHealthRegenBonus(healthRegenBonus);
-                    resourceAttachment.addPermanentBodyRegenBonus(healthRegenBonus);
-                }
-                if (qiBonus > 0) {
-                    resourceAttachment.addPermanentMaxQiBonus(qiBonus);
-                }
-                if (qiRegenBonus > 0) {
-                    resourceAttachment.addPermanentQiRegenBonus(qiRegenBonus);
-                }
-            }
-
-            // Apply combat bonuses
-            PlayerCombatStatsAttachment combatAttachment = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-            if (combatAttachment != null) {
-                if (attackBonus > 0) combatAttachment.addPermanentAttackDamageBonus(attackBonus);
-                if (speedBonus > 0) combatAttachment.addPermanentMovementSpeedBonus(speedBonus);
-                if (jumpBonus > 0) combatAttachment.addPermanentJumpHeightBonus(jumpBonus);
-            }
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error applying permanent bonuses for {} realm advancement to {}",
-                cultivationType.getDisplayName(), newRealm.getDisplayName(), e);
-        }
-    }
-
-    // === FOCUS MANAGEMENT ===
-
-    public CultivationType getCurrentFocus() {
-        return currentFocus;
-    }
-
-    /**
-     * Set current cultivation focus
-     */
-    public void setCurrentFocus(PlayerCultivationAttachment.CultivationType focus) {
-        if (this.currentFocus != focus) {
-            PlayerCultivationAttachment.CultivationType oldFocus = this.currentFocus;
-            this.currentFocus = focus;
-
-            // Update last change time (same as toggleFocus)
-            if (player != null) {
-                this.lastFocusChangeTime = player.level().getGameTime();
-
-                ImmortalCultivation.LOGGER.debug("Focus set from {} to {} for player {} (network sync)",
-                    oldFocus.getDisplayName(), focus.getDisplayName(),
-                    player.getName().getString());
-            }
-
-            markDirty();
-        }
-    }
-
-    public boolean toggleFocus() {
-        if (player == null) return false;
-
-        long currentTime = player.level().getGameTime();
-        long timeSinceLastChange = currentTime - lastFocusChangeTime;
-
-        if (timeSinceLastChange < FOCUS_CHANGE_COOLDOWN) {
-            return false;
-        }
-
-        CultivationType oldFocus = currentFocus;
-        currentFocus = (currentFocus == CultivationType.QI) ? CultivationType.BODY : CultivationType.QI;
-        lastFocusChangeTime = currentTime;
-
-        ImmortalCultivation.LOGGER.info("Focus changed from {} to {} for player {}",
-            oldFocus.getDisplayName(), currentFocus.getDisplayName(),
-            player.getName().getString());
-
-        markDirty();
-        forceSync();
-        return true;
-    }
-
-    public long getLastFocusChangeTime() {
-        return lastFocusChangeTime;
-    }
-
-    // === BONUS MANAGEMENT ===
-
-    public void addBonus(CultivationType type, double additive, double multiplicative) {
-        additiveBonus.merge(type, additive, Double::sum);
-        multiplicativeBonus.merge(type, multiplicative, Double::sum);
-        markDirty();
-    }
-
-    public void addBonusWithDiminishing(CultivationType type, double additive, double multiplicative, double effectivenessMultiplier) {
-        additiveBonus.merge(type, additive * effectivenessMultiplier, Double::sum);
-        multiplicativeBonus.merge(type, multiplicative * effectivenessMultiplier, Double::sum);
-        markDirty();
-    }
-
-    public double getRawAdditiveBonus(CultivationType type) {
-        return additiveBonus.get(type);
-    }
-
-    /**
-     * Set raw additive bonus for specified cultivation type
-     */
-    public void setRawAdditiveBonus(ICultivationData.CultivationType type, double bonus) {
-        Double currentValue = additiveBonus.get(type);
-        if (currentValue == null || Math.abs(currentValue - bonus) > 0.001) {
-            additiveBonus.put(type, bonus); // Direct assignment like in addBonus
-            markDirty();
-        }
-    }
-
-    public double getRawMultiplicativeBonus(CultivationType type) {
-        return multiplicativeBonus.get(type);
-    }
-
-
-    /**
-     * Set raw multiplicative bonus for specified cultivation type
-     */
-    public void setRawMultiplicativeBonus(ICultivationData.CultivationType type, double bonus) {
-        Double currentValue = multiplicativeBonus.get(type);
-        if (currentValue == null || Math.abs(currentValue - bonus) > 0.001) {
-            multiplicativeBonus.put(type, bonus); // Direct assignment like in addBonus
-            markDirty();
-        }
-    }
-
-    // === BREAKTHROUGH DELEGATION === //
-
-    private PlayerBreakthroughAttachment getBreakthroughAttachment() {
-        if (player == null) return null;
-
-        PlayerBreakthroughAttachment breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
-        if (breakthrough != null && breakthrough.getPlayer() == null) {
-            breakthrough.setPlayer(player);
-        }
-        return breakthrough;
-    }
-
-    /**
-     * Check if a breakthrough can be attempted for the specified cultivation type.
-     * A breakthrough is possible when current cultivation reaches maximum cultivation.
-     */
-    public boolean canBreakthrough(CultivationType type) {
-        if (player == null) return false;
-
-        switch (type) {
-            case QI:
-                return currentCultivation.get(CultivationType.QI) >= maxCultivation.get(CultivationType.QI);
-            case BODY:
-                return currentCultivation.get(CultivationType.BODY) >= maxCultivation.get(CultivationType.BODY);
-            default:
-                return false;
-        }
-    }
-
-    public PlayerBreakthroughAttachment.BreakthroughResult attemptBreakthrough(CultivationType type) {
-        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
-        if (breakthrough == null) {
-            return new PlayerBreakthroughAttachment.BreakthroughResult(false, "Breakthrough system unavailable", null,
-                PlayerBreakthroughAttachment.BreakthroughType.MINOR, 0.0, 0L);
-        }
-
-        return breakthrough.attemptTypedBreakthrough(type, PlayerBreakthroughAttachment.BreakthroughType.MINOR);
-    }
-
-    // Add these convenience methods for backward compatibility
-    public PlayerBreakthroughAttachment.BreakthroughResult attemptQiBreakthrough() {
-        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
-        if (breakthrough == null) {
-            return new PlayerBreakthroughAttachment.BreakthroughResult(false, "Breakthrough system unavailable", null,
-                PlayerBreakthroughAttachment.BreakthroughType.MINOR, 0.0, 0L);
-        }
-        return breakthrough.attemptQiBreakthrough();
-    }
-
-    public PlayerBreakthroughAttachment.BreakthroughResult attemptBodyBreakthrough() {
-        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
-        if (breakthrough == null) {
-            return new PlayerBreakthroughAttachment.BreakthroughResult(false, "Breakthrough system unavailable", null,
-                PlayerBreakthroughAttachment.BreakthroughType.MINOR, 0.0, 0L);
-        }
-        return breakthrough.attemptBodyBreakthrough();
-    }
-
-    // Delegate success rate calculations
-    public double calculateBreakthroughSuccessRate(CultivationType type) {
-        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
-        return breakthrough != null ? breakthrough.calculateBreakthroughSuccessRate(type) : 0.0;
-    }
-
-    // Delegate cooldown checks
-    public boolean isBreakthroughOnCooldown(CultivationType type) {
-        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
-        return breakthrough != null && breakthrough.isBreakthroughOnCooldown(type);
-    }
-
-    // Delegate attempt count access
-    public long getBreakthroughAttempts(CultivationType type) {
-        PlayerBreakthroughAttachment breakthrough = getBreakthroughAttachment();
-        if (breakthrough == null) return 0L;
-
-        return (type == CultivationType.QI) ?
-            breakthrough.getBreakthroughAttempts(CultivationType.QI) :
-            breakthrough.getBreakthroughAttempts(CultivationType.BODY);
-    }
-
-    // === TICK PROCESSING ===
-
-    @Override
-    public void tick() {
-        if (player == null) return;
-
-        // Update time tracking
-        for (CultivationType type : CultivationType.values()) {
-            timeInCurrentRealm.merge(type, 1L, Long::sum);
-            totalCultivationTime.merge(type, 1L, Long::sum);
-        }
-
-        // Update accumulation rates
-        for (CultivationType type : CultivationType.values()) {
-            accumulationRate.put(type, getEffectiveCultivationRate(type) / 20.0);
-        }
-
-        // Accumulate cultivation
-        for (CultivationType type : CultivationType.values()) {
-            double rate = accumulationRate.get(type);
-            if (rate > 0 && getCurrentCultivation(type) < getMaxCultivation(type)) {
-                addRegenFraction(type, rate);
-            }
-        }
-
-        // Handle sync
-        tickCounter++;
-        if (tickCounter >= SYNC_INTERVAL) {
-            tickCounter = 0;
-            if (shouldSyncNow()) {
-                forceSync();
-            }
-        }
-    }
-
-    // === SYNC MANAGEMENT ===
-
-    @Override
-    public boolean shouldSyncNow() {
-        return isDirty;
-    }
-
-    @Override
-    public void forceSync() {
-        if (getPlayerSafe() instanceof ServerPlayer serverPlayer) {
-            try {
-                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.CRITICAL);
-                clearDirty();
-                ImmortalCultivation.LOGGER.debug("Force synced cultivation data for player: {}",
-                    serverPlayer.getName().getString());
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Failed to force sync cultivation data for player: {}",
-                    serverPlayer.getName().getString(), e);
-            }
-        }
-    }
-
-    @Override
-    public void markDirty() {
-        this.isDirty = true;
-        incrementChangeCounter();
-    }
-
-    @Override
-    public boolean isDirty() {
-        return isDirty;
-    }
-
-    @Override
-    public void clearDirty() {
-        this.isDirty = false;
-        resetChangeCounter();
-    }
-
-    @Override
-    public long getChangeCounter() {
-        return changeCounter;
-    }
-
-    @Override
-    public void incrementChangeCounter() {
-        this.changeCounter++;
-    }
-
-    @Override
-    public void resetChangeCounter() {
-        this.changeCounter = 0;
-    }
-
-    // === SERIALIZATION ===
-
-    // Codec sub-records for organization
-    private record RealmData(String currentQiRealmId, String previousQiRealmId,
-                             String currentBodyRealmId, String previousBodyRealmId) {}
-
-    private record CultivationProgress(
-        long currentQi, long maxQi, double qiFraction,
-        long currentBody, long maxBody, double bodyFraction,
-        long totalQiEarned, long totalBodyEarned,
-        long lastQiMilestone, long lastBodyMilestone
-    ) {}
-
-    private record BonusData(double qiAdditive, double qiMultiplicative,
-                             double bodyAdditive, double bodyMultiplicative) {}
-
-    private static final Codec<RealmData> REALM_DATA_CODEC = RecordCodecBuilder.create(instance ->
-        instance.group(
-            Codec.STRING.fieldOf("current_qi_realm").forGetter(RealmData::currentQiRealmId),
-            Codec.STRING.optionalFieldOf("previous_qi_realm", "").forGetter(RealmData::previousQiRealmId),
-            Codec.STRING.fieldOf("current_body_realm").forGetter(RealmData::currentBodyRealmId),
-            Codec.STRING.optionalFieldOf("previous_body_realm", "").forGetter(RealmData::previousBodyRealmId)
-        ).apply(instance, RealmData::new)
-    );
-
-    private static final Codec<CultivationProgress> CULTIVATION_PROGRESS_CODEC = RecordCodecBuilder.create(instance ->
-        instance.group(
-            Codec.LONG.optionalFieldOf("current_qi", 0L).forGetter(CultivationProgress::currentQi),
-            Codec.LONG.optionalFieldOf("max_qi", 1000L).forGetter(CultivationProgress::maxQi),
-            Codec.DOUBLE.optionalFieldOf("qi_fraction", 0.0).forGetter(CultivationProgress::qiFraction),
-            Codec.LONG.optionalFieldOf("current_body", 0L).forGetter(CultivationProgress::currentBody),
-            Codec.LONG.optionalFieldOf("max_body", 1000L).forGetter(CultivationProgress::maxBody),
-            Codec.DOUBLE.optionalFieldOf("body_fraction", 0.0).forGetter(CultivationProgress::bodyFraction),
-            Codec.LONG.optionalFieldOf("total_qi_earned", 0L).forGetter(CultivationProgress::totalQiEarned),
-            Codec.LONG.optionalFieldOf("total_body_earned", 0L).forGetter(CultivationProgress::totalBodyEarned),
-            Codec.LONG.optionalFieldOf("last_qi_milestone", 0L).forGetter(CultivationProgress::lastQiMilestone),
-            Codec.LONG.optionalFieldOf("last_body_milestone", 0L).forGetter(CultivationProgress::lastBodyMilestone)
-        ).apply(instance, CultivationProgress::new)
-    );
-
-    private static final Codec<BonusData> BONUS_DATA_CODEC = RecordCodecBuilder.create(instance ->
-        instance.group(
-            Codec.DOUBLE.optionalFieldOf("qi_additive", 0.0).forGetter(BonusData::qiAdditive),
-            Codec.DOUBLE.optionalFieldOf("qi_multiplicative", 0.0).forGetter(BonusData::qiMultiplicative),
-            Codec.DOUBLE.optionalFieldOf("body_additive", 0.0).forGetter(BonusData::bodyAdditive),
-            Codec.DOUBLE.optionalFieldOf("body_multiplicative", 0.0).forGetter(BonusData::bodyMultiplicative)
-        ).apply(instance, BonusData::new)
-    );
-
-    public static final Codec<PlayerCultivationAttachment> CODEC = RecordCodecBuilder.create(instance ->
-        instance.group(
-            REALM_DATA_CODEC.fieldOf("realms").forGetter(PlayerCultivationAttachment::getRealmData),
-            CULTIVATION_PROGRESS_CODEC.fieldOf("cultivation").forGetter(PlayerCultivationAttachment::getCultivationProgress),
-            Codec.STRING.optionalFieldOf("focus", "QI").forGetter(attachment -> attachment.currentFocus.name()),
-            Codec.LONG.optionalFieldOf("focus_change_time", -24000L).forGetter(attachment -> attachment.lastFocusChangeTime),
-            Codec.LONG.optionalFieldOf("time_qi_realm", 0L).forGetter(attachment -> attachment.timeInCurrentRealm.get(CultivationType.QI)),
-            Codec.LONG.optionalFieldOf("time_body_realm", 0L).forGetter(attachment -> attachment.timeInCurrentRealm.get(CultivationType.BODY)),
-            Codec.LONG.optionalFieldOf("total_qi_time", 0L).forGetter(attachment -> attachment.totalCultivationTime.get(CultivationType.QI)),
-            Codec.LONG.optionalFieldOf("total_body_time", 0L).forGetter(attachment -> attachment.totalCultivationTime.get(CultivationType.BODY)),
-            BONUS_DATA_CODEC.fieldOf("bonuses").forGetter(PlayerCultivationAttachment::getBonusData)
-        ).apply(instance, PlayerCultivationAttachment::decode)
-    );
-
-    // Helper methods for codec
-    private RealmData getRealmData() {
-        return new RealmData(
-            currentRealms.get(CultivationType.QI).getId(),
-            previousRealms.get(CultivationType.QI) != null ? previousRealms.get(CultivationType.QI).getId() : "",
-            currentRealms.get(CultivationType.BODY).getId(),
-            previousRealms.get(CultivationType.BODY) != null ? previousRealms.get(CultivationType.BODY).getId() : ""
-        );
-    }
-
-    private CultivationProgress getCultivationProgress() {
-        return new CultivationProgress(
-            currentCultivation.get(CultivationType.QI), maxCultivation.get(CultivationType.QI), cultivationFraction.get(CultivationType.QI),
-            currentCultivation.get(CultivationType.BODY), maxCultivation.get(CultivationType.BODY), cultivationFraction.get(CultivationType.BODY),
-            totalCultivationEarned.get(CultivationType.QI), totalCultivationEarned.get(CultivationType.BODY),
-            lastMilestone.get(CultivationType.QI), lastMilestone.get(CultivationType.BODY)
-        );
-    }
-
-    private BonusData getBonusData() {
-        return new BonusData(
-            additiveBonus.get(CultivationType.QI), multiplicativeBonus.get(CultivationType.QI),
-            additiveBonus.get(CultivationType.BODY), multiplicativeBonus.get(CultivationType.BODY)
-        );
-    }
-
-    private static PlayerCultivationAttachment decode(
-        RealmData realms, CultivationProgress progress, String focus, long focusTime,
-        long timeQi, long timeBody, long totalQi, long totalBody, BonusData bonuses) {
-
-        PlayerCultivationAttachment data = new PlayerCultivationAttachment();
-
-        // Restore realms
-        data.currentRealms.put(CultivationType.QI, ICModCultivationRealms.get(realms.currentQiRealmId));
-        data.currentRealms.put(CultivationType.BODY, ICModCultivationRealms.get(realms.currentBodyRealmId));
-
-        if (!realms.previousQiRealmId.isEmpty()) {
-            data.previousRealms.put(CultivationType.QI, ICModCultivationRealms.get(realms.previousQiRealmId));
-        }
-        if (!realms.previousBodyRealmId.isEmpty()) {
-            data.previousRealms.put(CultivationType.BODY, ICModCultivationRealms.get(realms.previousBodyRealmId));
-        }
-
-        // Restore cultivation progress
-        data.currentCultivation.put(CultivationType.QI, progress.currentQi);
-        data.maxCultivation.put(CultivationType.QI, progress.maxQi);
-        data.cultivationFraction.put(CultivationType.QI, progress.qiFraction);
-        data.currentCultivation.put(CultivationType.BODY, progress.currentBody);
-        data.maxCultivation.put(CultivationType.BODY, progress.maxBody);
-        data.cultivationFraction.put(CultivationType.BODY, progress.bodyFraction);
-        data.totalCultivationEarned.put(CultivationType.QI, progress.totalQiEarned);
-        data.totalCultivationEarned.put(CultivationType.BODY, progress.totalBodyEarned);
-        data.lastMilestone.put(CultivationType.QI, progress.lastQiMilestone);
-        data.lastMilestone.put(CultivationType.BODY, progress.lastBodyMilestone);
-
-        // Restore focus
-        try {
-            data.currentFocus = CultivationType.valueOf(focus);
-        } catch (IllegalArgumentException e) {
-            data.currentFocus = CultivationType.QI;
-        }
-        data.lastFocusChangeTime = focusTime;
-
-        // Restore time tracking
-        data.timeInCurrentRealm.put(CultivationType.QI, timeQi);
-        data.timeInCurrentRealm.put(CultivationType.BODY, timeBody);
-        data.totalCultivationTime.put(CultivationType.QI, totalQi);
-        data.totalCultivationTime.put(CultivationType.BODY, totalBody);
-
-        // Restore bonuses
-        data.additiveBonus.put(CultivationType.QI, bonuses.qiAdditive);
-        data.multiplicativeBonus.put(CultivationType.QI, bonuses.qiMultiplicative);
-        data.additiveBonus.put(CultivationType.BODY, bonuses.bodyAdditive);
-        data.multiplicativeBonus.put(CultivationType.BODY, bonuses.bodyMultiplicative);
-
-        return data;
-    }
-
-    // === SERIALIZER ===
+    // === SERIALIZATION === //
 
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerCultivationAttachment> {
         @Override
         public PlayerCultivationAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
-            // CRITICAL: Check if tag is empty - this indicates complete data loss
-            if (tag.isEmpty()) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: Empty NBT tag detected for PlayerCultivationAttachment! " +
-                        "This indicates complete data loss. Player: {}",
-                    holder instanceof Player player ? player.getName().getString() : "unknown");
+            PlayerCultivationAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+                .result()
+                .map(com.mojang.datafixers.util.Pair::getFirst)
+                .orElseGet(PlayerCultivationAttachment::new);
 
-                // Create new attachment but mark it as requiring emergency restoration
-                PlayerCultivationAttachment newAttachment = new PlayerCultivationAttachment();
-                if (holder instanceof Player player) {
-                    newAttachment.setPlayer(player);
-                    // TODO: Add emergency data restoration logic here
-                }
-                return newAttachment;
+            if (holder instanceof Player player) {
+                attachment.setPlayer(player);
             }
-
-            try {
-                PlayerCultivationAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
-                    .resultOrPartial(error -> {
-                        ImmortalCultivation.LOGGER.error("CRITICAL: Failed to decode PlayerCultivationAttachment for player {}: {}. " +
-                                "This will cause complete cultivation data loss!",
-                            holder instanceof Player player ? player.getName().getString() : "unknown", error);
-                        // Log the NBT structure for debugging
-                        ImmortalCultivation.LOGGER.error("NBT data that failed to decode: {}", tag);
-                    })
-                    .map(pair -> pair.getFirst())
-                    .orElse(null); // Don't create new instance on failure
-
-                if (attachment == null) {
-                    ImmortalCultivation.LOGGER.error("CRITICAL: Attachment deserialization returned null! Creating emergency fallback.");
-                    attachment = new PlayerCultivationAttachment();
-                    // TODO: Add emergency data restoration from backup
-                }
-
-                // CRITICAL: Set player reference during deserialization
-                if (holder instanceof Player player) {
-                    attachment.setPlayer(player);
-                    ImmortalCultivation.LOGGER.debug("Set player reference during cultivation attachment deserialization: {}",
-                        player.getName().getString());
-                }
-
-                return attachment;
-
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: Exception during PlayerCultivationAttachment deserialization for player {}: {}",
-                    holder instanceof Player player ? player.getName().getString() : "unknown", e);
-
-                PlayerCultivationAttachment fallback = new PlayerCultivationAttachment();
-                if (holder instanceof Player player) {
-                    fallback.setPlayer(player);
-                }
-                return fallback;
-            }
+            return attachment;
         }
 
         @Override
-        public @Nullable CompoundTag write(PlayerCultivationAttachment attachment, HolderLookup.Provider provider) {
-            try {
-                CompoundTag result = (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
-                    .resultOrPartial(error -> {
-                        ImmortalCultivation.LOGGER.error("CRITICAL: Failed to encode PlayerCultivationAttachment for player {}: {}. " +
-                                "This will cause data loss on next load!",
-                            attachment.getPlayerSafe() != null ? attachment.getPlayerSafe().getName().getString() : "unknown", error);
-                    })
-                    .orElse(null);
-
-                if (result == null || result.isEmpty()) {
-                    ImmortalCultivation.LOGGER.error("CRITICAL: PlayerCultivationAttachment serialization produced empty result for player {}!",
-                        attachment.getPlayerSafe() != null ? attachment.getPlayerSafe().getName().getString() : "unknown");
-                    return new CompoundTag(); // Return empty tag rather than null
-                }
-
-                ImmortalCultivation.LOGGER.debug("Successfully serialized PlayerCultivationAttachment for player {} - {} keys",
-                    attachment.getPlayerSafe() != null ? attachment.getPlayerSafe().getName().getString() : "unknown",
-                    result.size());
-
-                return result;
-
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: Exception during PlayerCultivationAttachment serialization for player {}: {}",
-                    attachment.getPlayerSafe() != null ? attachment.getPlayerSafe().getName().getString() : "unknown", e);
-                return new CompoundTag();
-            }
+        public CompoundTag write(PlayerCultivationAttachment attachment, HolderLookup.Provider provider) {
+            return (CompoundTag) CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), attachment).getOrThrow();
         }
+    }
+
+    // === CODEC === //
+
+    public static final Codec<PlayerCultivationAttachment> CODEC = RecordCodecBuilder.create(instance ->
+        instance.group(
+            Codec.STRING.fieldOf("qi_realm").forGetter(att -> att.currentRealms.get(CultivationType.QI).getId()),
+            Codec.LONG.fieldOf("qi_current").forGetter(att -> att.currentCultivation.get(CultivationType.QI)),
+            Codec.LONG.fieldOf("qi_max").forGetter(att -> att.maxCultivation.get(CultivationType.QI)),
+            Codec.STRING.fieldOf("body_realm").forGetter(att -> att.currentRealms.get(CultivationType.BODY).getId()),
+            Codec.LONG.fieldOf("body_current").forGetter(att -> att.currentCultivation.get(CultivationType.BODY)),
+            Codec.LONG.fieldOf("body_max").forGetter(att -> att.maxCultivation.get(CultivationType.BODY)),
+            Codec.STRING.fieldOf("focus").forGetter(att -> att.currentFocus.name())
+        ).apply(instance, PlayerCultivationAttachment::decode)
+    );
+    private static PlayerCultivationAttachment decode(String qiRealm, long qiCurrent, long qiMax, String bodyRealm, long bodyCurrent, long bodyMax, String focus) {
+        PlayerCultivationAttachment att = new PlayerCultivationAttachment();
+        att.currentRealms.put(CultivationType.QI, ICModCultivationRealms.get(qiRealm));
+        att.currentCultivation.put(CultivationType.QI, qiCurrent);
+        att.maxCultivation.put(CultivationType.QI, qiMax);
+        att.currentRealms.put(CultivationType.BODY, ICModCultivationRealms.get(bodyRealm));
+        att.currentCultivation.put(CultivationType.BODY, bodyCurrent);
+        att.maxCultivation.put(CultivationType.BODY, bodyMax);
+        att.currentFocus = CultivationType.valueOf(focus);
+        return att;
     }
 }

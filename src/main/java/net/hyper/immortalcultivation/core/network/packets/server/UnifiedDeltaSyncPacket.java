@@ -696,7 +696,7 @@ public record UnifiedDeltaSyncPacket(
                 ImmortalCultivation.LOGGER.warn("Invalid race type received in sync: {}", raceType.orElse("none"));
             }
         }
-    }w
+    }
 
     /**
      * Apply talent delta changes using proper client-side update methods
