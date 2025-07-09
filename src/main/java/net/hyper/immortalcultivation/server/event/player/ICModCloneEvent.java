@@ -100,6 +100,7 @@ public class ICModCloneEvent {
         PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
         if (race != null) {
             race.setPlayer(player);
+            race.logRaceState("AFTER_CLONE");
         }
 
         // Set reference for PlayerPillConsumptionAttachment

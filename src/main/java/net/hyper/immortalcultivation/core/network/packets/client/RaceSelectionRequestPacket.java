@@ -34,7 +34,7 @@ public record RaceSelectionRequestPacket(String raceType) implements CustomPacke
     public static void handleServer(RaceSelectionRequestPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (context.player() instanceof ServerPlayer serverPlayer) {
-                PlayerRaceAttachment raceAttachment = serverPlayer.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+                PlayerRaceAttachment raceAttachment = PlayerRaceAttachment.getOrCreate(serverPlayer);
 
                 if (raceAttachment != null && !raceAttachment.hasRaceAssigned()) {
                     try {

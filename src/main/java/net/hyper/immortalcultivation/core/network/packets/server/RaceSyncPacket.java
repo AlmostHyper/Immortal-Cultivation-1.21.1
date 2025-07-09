@@ -37,13 +37,13 @@ public record RaceSyncPacket(
     public static void handleClient(RaceSyncPacket packet, IPayloadContext context) {
         context.enqueueWork(() -> {
             Player player = context.player();
-            PlayerRaceAttachment race = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+            PlayerRaceAttachment race = PlayerRaceAttachment.getOrCreate(player);
 
             if (race != null) {
                 try {
                     RaceType type = RaceType.valueOf(packet.raceType);
                     if (packet.raceAssigned) {
-                        race.forceReassignRace(type);
+                        race.updateFromServer(type, true);
                     }
                 } catch (IllegalArgumentException e) {
                     // Invalid race type, keep current

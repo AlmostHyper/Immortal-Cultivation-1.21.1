@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.common.attachments;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.network.packets.server.RaceSyncPacket;
 import net.minecraft.core.HolderLookup;
@@ -225,6 +226,8 @@ public class PlayerRaceAttachment {
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerRaceAttachment> {
         @Override
         public PlayerRaceAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
+            ImmortalCultivation.LOGGER.debug("Reading PlayerRaceAttachment from NBT: {}", tag.toString());
+
             PlayerRaceAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
                 .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerRaceAttachment: {}", error))
                 .map(pair -> pair.getFirst())
@@ -233,8 +236,15 @@ public class PlayerRaceAttachment {
             // CRITICAL: Set player reference during deserialization
             if (holder instanceof Player player) {
                 attachment.setPlayer(player);
-                ImmortalCultivation.LOGGER.debug("Set player reference during race attachment deserialization: {}",
-                    player.getName().getString());
+                ImmortalCultivation.LOGGER.debug("Set player reference during race attachment deserialization: {} - Race: {}, Assigned: {}",
+                    player.getName().getString(), attachment.raceType.getDisplayName(), attachment.raceAssigned);
+
+                // CRITICAL: Force sync after successful deserialization during respawn
+                if (player instanceof ServerPlayer && attachment.raceAssigned) {
+                    attachment.needsSync = true;
+                    ImmortalCultivation.LOGGER.debug("Scheduling race sync after deserialization for player: {}",
+                        player.getName().getString());
+                }
             }
 
             return attachment;
@@ -242,9 +252,14 @@ public class PlayerRaceAttachment {
 
         @Override
         public @Nullable CompoundTag write(PlayerRaceAttachment attachment, HolderLookup.Provider provider) {
-            return (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
+            CompoundTag result = (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
                 .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerRaceAttachment: {}", error))
                 .orElse(new CompoundTag());
+
+            ImmortalCultivation.LOGGER.debug("Writing PlayerRaceAttachment to NBT: {} - Race: {}, Assigned: {}",
+                result.toString(), attachment.raceType.getDisplayName(), attachment.raceAssigned);
+
+            return result;
         }
     }
 
@@ -266,6 +281,18 @@ public class PlayerRaceAttachment {
     }
 
     /**
+     * Logs the current race assignment state for debugging purposes.
+     * This method helps track race data persistence across death/respawn cycles.
+     */
+    public void logRaceState(String context) {
+        ImmortalCultivation.LOGGER.info("Race state for player {} [{}]: Type={}, Assigned={}",
+            player != null ? player.getName().getString() : "Unknown",
+            context,
+            raceType.getDisplayName(),
+            raceAssigned);
+    }
+
+    /**
      * Get a concise summary for command output
      */
     public String getSummary() {
@@ -275,4 +302,39 @@ public class PlayerRaceAttachment {
             raceType.getBodyMultiplier(),
             raceType.getDescription());
     }
+
+    /**
+     * Safely retrieves the race attachment and ensures player reference is set.
+     * This method guarantees that the returned attachment has a valid player reference
+     * for proper sync operations and logging.
+     *
+     * @param player The player to get the race attachment for
+     * @return The race attachment with player reference properly set
+     */
+    public static PlayerRaceAttachment getOrCreate(Player player) {
+        PlayerRaceAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        if (attachment.player == null) {
+            attachment.setPlayer(player);
+        }
+        return attachment;
+    }
+    /**
+     * Updates race data from server sync packet without triggering additional syncing.
+     * This method is specifically for client-side updates from network packets
+     * and prevents sync loops by not calling forceSync().
+     *
+     * @param type The race type received from server
+     * @param assigned Whether the race is assigned
+     */
+    public void updateFromServer(RaceType type, boolean assigned) {
+        this.raceType = type;
+        this.raceAssigned = assigned;
+        this.needsSync = false; // Important: Don't trigger another sync
+
+        ImmortalCultivation.LOGGER.debug("Updated race from server for player {}: {} (assigned: {})",
+            player != null ? player.getName().getString() : "null",
+            type.getDisplayName(),
+            assigned);
+    }
+
 }
