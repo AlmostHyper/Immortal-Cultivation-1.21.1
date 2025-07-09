@@ -1,12 +1,16 @@
 package net.hyper.immortalcultivation.server.event.world;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
+import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+
+import java.util.Optional;
 
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class ICModTickEvent {
@@ -25,7 +29,6 @@ public class ICModTickEvent {
         int playerOffset = player.getUUID().hashCode();
 
         // --- Process Tickable Attachments ---
-        // Use a simple modulo check with the player offset to spread the load
         if ((player.tickCount + playerOffset) % TICKABLE_INTERVAL == 0) {
             player.getAttachments().getValues().stream()
                   .filter(attachment -> attachment instanceof ITickable)
@@ -33,16 +36,18 @@ public class ICModTickEvent {
         }
 
         // --- Process Syncable Attachments ---
-        // Check for dirty attachments at a different interval to reduce overhead
         if ((player.tickCount + playerOffset) % SYNC_CHECK_INTERVAL == 0) {
             player.getAttachments().getValues().stream()
                   .filter(attachment -> attachment instanceof ISyncable)
                   .map(attachment -> (ISyncable) attachment)
                   .filter(ISyncable::isDirty)
                   .forEach(syncable -> {
-                      // Schedule the sync with the manager. The manager will handle batching and sending.
-                      // We pass 'false' for fullSync, as this is a routine delta-sync check.
-                      ImmortalCultivation.SYNC_MANAGER.scheduleSync(player, syncable, false);
+                      // Create a sync packet for the dirty attachment. 'false' indicates this is not a full-sync request.
+                      Optional<ISyncPacket> packetOptional = syncable.createPacket(false);
+                      packetOptional.ifPresent(packet -> {
+                          // Send the specific packet for this attachment directly to the player
+                          ICModPacketRegistry.sendToPlayer(packet, player);
+                      });
                   });
         }
     }

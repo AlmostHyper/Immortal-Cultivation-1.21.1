@@ -3,13 +3,19 @@ package net.hyper.immortalcultivation.common.attachments;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.interfaces.IPlayerInitializable;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
+import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.packets.server.OpenRaceSelectionSyncPacket;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerRaceSyncPacket;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
@@ -17,7 +23,7 @@ import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class PlayerRaceAttachment implements ISyncable {
+public class PlayerRaceAttachment implements ISyncable, IPlayerInitializable {
 
     // === INSTANCES === //
 
@@ -30,7 +36,6 @@ public class PlayerRaceAttachment implements ISyncable {
 
     // --- System Data ---
     private transient boolean isDirty = false;
-    private transient PlayerRaceAttachment lastSyncedState = null;
 
     // === CONSTRUCTORS === //
 
@@ -66,37 +71,31 @@ public class PlayerRaceAttachment implements ISyncable {
         return raceType.getBodyMultiplier();
     }
 
-    public void updateFromServer(RaceType raceType, boolean raceAssigned) {
-        this.raceType = raceType;
-        this.raceAssigned = raceAssigned;
-    }
-
     // === IMPLEMENTATIONS === //
 
     @Override
+    public void onPlayerLogin(ServerPlayer player) {
+        if (!hasRaceAssigned()) {
+            ICModPacketRegistry.sendToPlayer(new OpenRaceSelectionSyncPacket(), player);
+            player.sendSystemMessage(Component.literal("Welcome, young cultivator! Choose your race to begin your journey.").withStyle(ChatFormatting.GOLD));
+            ImmortalCultivation.LOGGER.info("Sent race selection screen to new player {}", player.getName().getString());
+        } else {
+            ImmortalCultivation.LOGGER.debug("Player {} logged in with race: {}", player.getName().getString(), getRaceType().getDisplayName());
+        }
+    }
+
+    @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null || player.level().isClientSide() || !isDirty()) {
             return Optional.empty();
         }
 
-        if (lastSyncedState == null) {
-            isFullSync = true;
-        }
-
-        byte changedFields = 0;
-        if (isFullSync || this.raceType != lastSyncedState.raceType) {
-            changedFields |= PlayerRaceSyncPacket.RACE_TYPE_MASK;
-        }
-        if (isFullSync || this.raceAssigned != lastSyncedState.raceAssigned) {
-            changedFields |= PlayerRaceSyncPacket.RACE_ASSIGNED_MASK;
-        }
-
-        if (changedFields > 0) {
-            this.lastSyncedState = this.copy();
-            return Optional.of(new PlayerRaceSyncPacket(changedFields, raceType, raceAssigned));
-        }
-
-        return Optional.empty();
+        CompoundTag data = (CompoundTag) CODEC.encodeStart(NbtOps.INSTANCE, this)
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerRaceAttachment: {}", error))
+                .orElse(new CompoundTag());
+        
+        clearDirty();
+        return Optional.of(new PlayerRaceSyncPacket(data));
     }
 
     @Override
@@ -116,11 +115,14 @@ public class PlayerRaceAttachment implements ISyncable {
 
     // === HELPER METHODS === //
 
-    public PlayerRaceAttachment copy() {
-        PlayerRaceAttachment copy = new PlayerRaceAttachment();
-        copy.raceType = this.raceType;
-        copy.raceAssigned = this.raceAssigned;
-        return copy;
+    public void applySync(CompoundTag data) {
+        CODEC.decode(NbtOps.INSTANCE, data)
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerRaceAttachment from sync: {}", error))
+                .ifPresent(pair -> {
+                    PlayerRaceAttachment decoded = pair.getFirst();
+                    this.raceType = decoded.raceType;
+                    this.raceAssigned = decoded.raceAssigned;
+                });
     }
 
     // === SERIALIZATION === //

@@ -1,35 +1,28 @@
 package net.hyper.immortalcultivation.common.attachments;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.common.util.DirtyTrackerUtil;
+import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
+import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
-import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.core.network.packets.server.PlayerBreakthroughSyncPacket;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import org.jetbrains.annotations.Nullable;
 
-import com.mojang.serialization.Codec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
-
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
-/**
- * Handles all breakthrough-related logic and state management for players.
- * Extracted from PlayerCultivationAttachment for better separation of concerns.
- *
- * Integrates with the Dirty Flag system for efficient synchronization.
- * Works with ICModTickEvent for consolidated processing.
- */
-public class PlayerBreakthroughAttachment extends DirtyTrackerUtil implements ITickable {
+public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
 
     // === CONSTANTS === //
     private static final long BREAKTHROUGH_COOLDOWN_TICKS = 600L; // 30 seconds at 20 TPS
@@ -37,164 +30,225 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerUtil implements IT
     private static final double MIN_SUCCESS_RATE = 0.05; // 5% min
     private static final double FAILURE_BONUS_PER_ATTEMPT = 0.05; // 5% per failed attempt
 
-    // === PLAYER REFERENCE === //
-    private Player player;
+    // === INSTANCES === //
+    @Nullable
+    private transient Player player;
+    private transient boolean dirty = false;
 
-    // === BREAKTHROUGH ATTEMPT TRACKING === //
+    // --- Breakthrough Data ---
     private long qiBreakthroughAttempts = 0L;
     private long bodyBreakthroughAttempts = 0L;
-
-    // === COOLDOWN MANAGEMENT === //
     private boolean qiBreakthroughCooldown = false;
     private boolean bodyBreakthroughCooldown = false;
     private long lastQiBreakthroughAttempt = 0L;
     private long lastBodyBreakthroughAttempt = 0L;
 
-    // === BREAKTHROUGH TYPE SYSTEM === //
+    // === CONSTRUCTORS === //
+    public PlayerBreakthroughAttachment() {}
 
-    /**
-     * Different types of breakthroughs with varying difficulty and success rates
-     */
-    public enum BreakthroughType {
-        MINOR(0.50, "Minor Breakthrough"),      // 50% base chance - small realm advancement
-        MAJOR(0.30, "Major Breakthrough"),      // 30% base chance - significant realm advancement
-        SPECIAL(0.20, "Special Breakthrough"),  // 20% base chance - unique cultivation paths
-        BOUNDARY(0.10, "Boundary Breakthrough"); // 10% base chance - major stage transitions
-
-        private final double baseSuccessChance;
-        private final String displayName;
-
-        BreakthroughType(double baseSuccessChance, String displayName) {
-            this.baseSuccessChance = baseSuccessChance;
-            this.displayName = displayName;
-        }
-
-        public double getBaseSuccessChance() {
-            return baseSuccessChance;
-        }
-
-        public String getDisplayName() {
-            return displayName;
-        }
-    }
-
-    /**
-     * Breakthrough result with detailed information
-     */
-    public record BreakthroughResult(
-        boolean success,
-        String message,
-        @Nullable CultivationRealm newRealm,
-        BreakthroughType type,
-        double successChance,
-        long attemptNumber
-    ) {}
-
-    /**
-     * Breakthrough option for UI display
-     */
-    public record BreakthroughOption(
-        BreakthroughType type,
-        CultivationRealm targetRealm,
-        double successChance,
-        PlayerCultivationAttachment.CultivationType cultivationType,
-        boolean available,
-        String unavailabilityReason
-    ) {}
-
-    /**
-     * Container for all available breakthrough options
-     */
-    public record BreakthroughOptions(
-        List<BreakthroughOption> qiOptions,
-        List<BreakthroughOption> bodyOptions
-    ) {}
-
-    /**
-     * Detailed breakdown of breakthrough success chance calculation
-     */
-    public record BreakthroughChanceBreakdown(
-        double baseChance,
-        double failureBonus,
-        double talentBonus,
-        double focusBonus,
-        double totalChance,
-        long attempts
-    ) {}
-
-    // === CONSTRUCTORS ===
-
-    public PlayerBreakthroughAttachment() {
-        // Default constructor for attachment system
-    }
-
-    public PlayerBreakthroughAttachment(Player player) {
+    public PlayerBreakthroughAttachment(@Nullable Player player) {
         this.player = player;
     }
 
-    // === PLAYER REFERENCE MANAGEMENT ===
+    private PlayerBreakthroughAttachment(long qiAttempts, long bodyAttempts, boolean qiCooldown, boolean bodyCooldown, long lastQiAttempt, long lastBodyAttempt) {
+        this.qiBreakthroughAttempts = qiAttempts;
+        this.bodyBreakthroughAttempts = bodyAttempts;
+        this.qiBreakthroughCooldown = qiCooldown;
+        this.bodyBreakthroughCooldown = bodyCooldown;
+        this.lastQiBreakthroughAttempt = lastQiAttempt;
+        this.lastBodyBreakthroughAttempt = lastBodyAttempt;
+    }
 
+    // === GETTERS & SETTERS === //
     public void setPlayer(Player player) {
         this.player = player;
-        ImmortalCultivation.LOGGER.debug("Set player reference for PlayerBreakthroughAttachment: {}",
-            player != null ? player.getName().getString() : "null");
-    }
-
-    public Player getPlayer() {
-        return player;
     }
 
     public Player getPlayerSafe() {
         return player;
     }
 
-    // === GETTERS ===
-
-    /**
-     * Generic method to get breakthrough attempts for any cultivation type
-     */
-    public long getBreakthroughAttempts(PlayerCultivationAttachment.CultivationType type) {
-        return (type == PlayerCultivationAttachment.CultivationType.QI) ?
-            qiBreakthroughAttempts : bodyBreakthroughAttempts;
+    public long getQiBreakthroughAttempts() {
+        return qiBreakthroughAttempts;
     }
 
-    public boolean isQiBreakthroughOnCooldown() {
+    public void setQiBreakthroughAttempts(long qiBreakthroughAttempts) {
+        if (this.qiBreakthroughAttempts != qiBreakthroughAttempts) {
+            this.qiBreakthroughAttempts = qiBreakthroughAttempts;
+            markDirty();
+        }
+    }
+
+    public long getBodyBreakthroughAttempts() {
+        return bodyBreakthroughAttempts;
+    }
+
+    public void setBodyBreakthroughAttempts(long bodyBreakthroughAttempts) {
+        if (this.bodyBreakthroughAttempts != bodyBreakthroughAttempts) {
+            this.bodyBreakthroughAttempts = bodyBreakthroughAttempts;
+            markDirty();
+        }
+    }
+
+    public boolean isQiBreakthroughCooldown() {
         return qiBreakthroughCooldown;
     }
 
-    public boolean isBodyBreakthroughOnCooldown() {
+    public void setQiBreakthroughCooldown(boolean qiBreakthroughCooldown) {
+        if (this.qiBreakthroughCooldown != qiBreakthroughCooldown) {
+            this.qiBreakthroughCooldown = qiBreakthroughCooldown;
+            markDirty();
+        }
+    }
+
+    public boolean isBodyBreakthroughCooldown() {
         return bodyBreakthroughCooldown;
     }
 
-    /**
-     * Generic method to check if breakthrough is on cooldown for any cultivation type
-     */
-    public boolean isBreakthroughOnCooldown(PlayerCultivationAttachment.CultivationType type) {
-        return (type == PlayerCultivationAttachment.CultivationType.QI) ?
-            qiBreakthroughCooldown : bodyBreakthroughCooldown;
+    public void setBodyBreakthroughCooldown(boolean bodyBreakthroughCooldown) {
+        if (this.bodyBreakthroughCooldown != bodyBreakthroughCooldown) {
+            this.bodyBreakthroughCooldown = bodyBreakthroughCooldown;
+            markDirty();
+        }
     }
 
-    public long getTimeSinceLastBreakthroughAttempt(PlayerCultivationAttachment.CultivationType type) {
-        if (player == null) return Long.MAX_VALUE;
-
-        long lastAttempt = (type == PlayerCultivationAttachment.CultivationType.QI) ?
-            lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
-        return player.level().getGameTime() - lastAttempt;
+    public long getLastQiBreakthroughAttempt() {
+        return lastQiBreakthroughAttempt;
     }
 
-    /**
-     * Generic method to get last breakthrough attempt time for any cultivation type
-     */
-    public long getLastBreakthroughAttemptTime(PlayerCultivationAttachment.CultivationType type) {
-        return (type == PlayerCultivationAttachment.CultivationType.QI) ?
-            lastQiBreakthroughAttempt : lastBodyBreakthroughAttempt;
+    public void setLastQiBreakthroughAttempt(long lastQiBreakthroughAttempt) {
+        if (this.lastQiBreakthroughAttempt != lastQiBreakthroughAttempt) {
+            this.lastQiBreakthroughAttempt = lastQiBreakthroughAttempt;
+            markDirty();
+        }
     }
 
-    // === CULTIVATION ATTACHMENT INTEGRATION ===
+    public long getLastBodyBreakthroughAttempt() {
+        return lastBodyBreakthroughAttempt;
+    }
+
+    public void setLastBodyBreakthroughAttempt(long lastBodyBreakthroughAttempt) {
+        if (this.lastBodyBreakthroughAttempt != lastBodyBreakthroughAttempt) {
+            this.lastBodyBreakthroughAttempt = lastBodyBreakthroughAttempt;
+            markDirty();
+        }
+    }
+
+    // === CORE LOGIC === //
+    public BreakthroughResult attemptTypedBreakthrough(PlayerCultivationAttachment.CultivationType cultivationType, BreakthroughType breakthroughType) {
+        if (player == null) return new BreakthroughResult(false, "No player reference", null, breakthroughType, 0.0, 0L);
+        PlayerCultivationAttachment cultivation = getCultivationAttachment();
+        if (cultivation == null) return new BreakthroughResult(false, "Cultivation system unavailable", null, breakthroughType, 0.0, 0L);
+
+        if (!canAttemptTypedBreakthrough(cultivationType, breakthroughType)) {
+            String reason = getUnavailabilityReason(cultivationType, breakthroughType);
+            return new BreakthroughResult(false, reason, null, breakthroughType, 0.0, getBreakthroughAttempts(cultivationType));
+        }
+
+        CultivationRealm currentRealm = cultivation.getCurrentRealm(cultivationType);
+        List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
+        if (nextRealms.isEmpty()) return new BreakthroughResult(false, "No higher realm available", null, breakthroughType, 0.0, getBreakthroughAttempts(cultivationType));
+
+        CultivationRealm targetRealm = nextRealms.get(0);
+        double successChance = calculateBreakthroughSuccessChance(cultivationType, breakthroughType);
+        long currentAttempts;
+
+        if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
+            setLastQiBreakthroughAttempt(player.level().getGameTime());
+            currentAttempts = this.qiBreakthroughAttempts;
+        } else {
+            setLastBodyBreakthroughAttempt(player.level().getGameTime());
+            currentAttempts = this.bodyBreakthroughAttempts;
+        }
+
+        boolean success = player.getRandom().nextDouble() < successChance;
+        if (success) {
+            cultivation.setCurrentRealm(cultivationType, targetRealm);
+            if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) setQiBreakthroughAttempts(0L);
+            else setBodyBreakthroughAttempts(0L);
+            String message = String.format("%s %s breakthrough successful! (%d attempts, %.0f%% chance)", cultivationType.getDisplayName(), breakthroughType.getDisplayName(), currentAttempts, successChance * 100);
+            ImmortalCultivation.LOGGER.info("{} {} breakthrough SUCCESS for {} after {} attempts ({}% chance)", cultivationType.getDisplayName(), breakthroughType.getDisplayName(), player.getName().getString(), currentAttempts, (int) (successChance * 100));
+            return new BreakthroughResult(true, message, targetRealm, breakthroughType, successChance, currentAttempts);
+        } else {
+            if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
+                setQiBreakthroughAttempts(this.qiBreakthroughAttempts + 1);
+                setQiBreakthroughCooldown(true);
+            } else {
+                setBodyBreakthroughAttempts(this.bodyBreakthroughAttempts + 1);
+                setBodyBreakthroughCooldown(true);
+            }
+            double nextChance = calculateBreakthroughSuccessChance(cultivationType, breakthroughType);
+            String message = String.format("%s %s breakthrough failed (attempt %d, %.0f%% chance). Next: %.0f%%", cultivationType.getDisplayName(), breakthroughType.getDisplayName(), currentAttempts + 1, successChance * 100, nextChance * 100);
+            ImmortalCultivation.LOGGER.info("{} {} breakthrough FAILED for {} (attempt {}, {}% chance)", cultivationType.getDisplayName(), breakthroughType.getDisplayName(), player.getName().getString(), currentAttempts + 1, (int) (successChance * 100));
+            return new BreakthroughResult(false, message, null, breakthroughType, successChance, currentAttempts + 1);
+        }
+    }
+
+    public double calculateBreakthroughSuccessChance(PlayerCultivationAttachment.CultivationType cultivationType, BreakthroughType breakthroughType) {
+        double baseChance = breakthroughType.getBaseSuccessChance();
+        long attempts = getBreakthroughAttempts(cultivationType);
+        double failureBonus = attempts * FAILURE_BONUS_PER_ATTEMPT;
+        double talentBonus = calculateTalentBonus(cultivationType);
+        double focusBonus = calculateFocusBonus(cultivationType);
+        return Math.min(MAX_SUCCESS_RATE, Math.max(MIN_SUCCESS_RATE, baseChance + failureBonus + talentBonus + focusBonus));
+    }
+
+    public boolean canAttemptTypedBreakthrough(PlayerCultivationAttachment.CultivationType cultivationType, BreakthroughType breakthroughType) {
+        if (player == null) return false;
+        PlayerCultivationAttachment cultivation = getCultivationAttachment();
+        if (cultivation == null || !cultivation.canBreakthrough(cultivationType) || isBreakthroughOnCooldown(cultivationType)) return false;
+        return !cultivation.getCurrentRealm(cultivationType).getNextCultivationRealms().isEmpty();
+    }
+
+    // === IMPLEMENTATIONS === //
+    @Override
+    public Optional<ISyncPacket> createPacket(boolean isFullSync) {
+        if (player == null || player.level().isClientSide() || !isDirty()) {
+            return Optional.empty();
+        }
+        CompoundTag data = new CompoundTag();
+        data.putLong("qi_attempts", this.qiBreakthroughAttempts);
+        data.putLong("body_attempts", this.bodyBreakthroughAttempts);
+        data.putBoolean("qi_cooldown", this.qiBreakthroughCooldown);
+        data.putBoolean("body_cooldown", this.bodyBreakthroughCooldown);
+        data.putLong("last_qi_attempt", this.lastQiBreakthroughAttempt);
+        data.putLong("last_body_attempt", this.lastBodyBreakthroughAttempt);
+        clearDirty();
+        return Optional.of(new PlayerBreakthroughSyncPacket(data));
+    }
+
+    @Override
+    public void tick() {
+        updateCooldowns();
+    }
+
+    @Override
+    public boolean isDirty() {
+        return this.dirty;
+    }
+
+    @Override
+    public void markDirty() {
+        this.dirty = true;
+    }
+
+    @Override
+    public void clearDirty() {
+        this.dirty = false;
+    }
+
+    // === HELPER METHODS === //
+    public void applySync(CompoundTag data) {
+        this.qiBreakthroughAttempts = data.getLong("qi_attempts");
+        this.bodyBreakthroughAttempts = data.getLong("body_attempts");
+        this.qiBreakthroughCooldown = data.getBoolean("qi_cooldown");
+        this.bodyBreakthroughCooldown = data.getBoolean("body_cooldown");
+        this.lastQiBreakthroughAttempt = data.getLong("last_qi_attempt");
+        this.lastBodyBreakthroughAttempt = data.getLong("last_body_attempt");
+    }
 
     private PlayerCultivationAttachment getCultivationAttachment() {
         if (player == null) return null;
-
         PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
         if (cultivation != null && cultivation.getPlayerSafe() == null) {
             cultivation.setPlayer(player);
@@ -207,310 +261,26 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerUtil implements IT
         return player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
     }
 
-    // === BREAKTHROUGH SYSTEM IMPLEMENTATION ===
-
-    /**
-     * COMPATIBILITY: Simple breakthrough methods using MINOR type
-     */
-    public BreakthroughResult attemptQiBreakthrough() {
-        return attemptTypedBreakthrough(PlayerCultivationAttachment.CultivationType.QI, BreakthroughType.MINOR);
-    }
-
-    public BreakthroughResult attemptBodyBreakthrough() {
-        return attemptTypedBreakthrough(PlayerCultivationAttachment.CultivationType.BODY, BreakthroughType.MINOR);
-    }
-
-    /**
-     * Generic method to set breakthrough attempts for any cultivation type (for network sync)
-     */
-    public void setBreakthroughAttempts(PlayerCultivationAttachment.CultivationType type, long attempts) {
-        if (type == PlayerCultivationAttachment.CultivationType.QI) {
-            if (this.qiBreakthroughAttempts != attempts) {
-                this.qiBreakthroughAttempts = attempts;
-                markDirty();
-            }
-        } else {
-            if (this.bodyBreakthroughAttempts != attempts) {
-                this.bodyBreakthroughAttempts = attempts;
-                markDirty();
-            }
-        }
-    }
-
-    public void setBreakthroughCooldown(PlayerCultivationAttachment.CultivationType type, boolean cooldown) {
-        if (type == PlayerCultivationAttachment.CultivationType.QI) {
-            if (this.qiBreakthroughCooldown != cooldown) {
-                this.qiBreakthroughCooldown = cooldown;
-                markDirty();
-            }
-        } else {
-            if (this.bodyBreakthroughCooldown != cooldown) {
-                this.bodyBreakthroughCooldown = cooldown;
-                markDirty();
-            }
-        }
-    }
-
-    /**
-     * Generic method to set last breakthrough attempt time for any cultivation type (for network sync)
-     */
-    public void setLastBreakthroughAttempt(PlayerCultivationAttachment.CultivationType type, long attemptTime) {
-        if (type == PlayerCultivationAttachment.CultivationType.QI) {
-            if (this.lastQiBreakthroughAttempt != attemptTime) {
-                this.lastQiBreakthroughAttempt = attemptTime;
-                markDirty();
-            }
-        } else {
-            if (this.lastBodyBreakthroughAttempt != attemptTime) {
-                this.lastBodyBreakthroughAttempt = attemptTime;
-                markDirty();
-            }
-        }
-    }
-
-    /**
-     * Main breakthrough logic with type support
-     */
-    public BreakthroughResult attemptTypedBreakthrough(PlayerCultivationAttachment.CultivationType cultivationType, BreakthroughType breakthroughType) {
-        if (player == null) {
-            return new BreakthroughResult(false, "No player reference", null, breakthroughType, 0.0, 0L);
-        }
-
-        PlayerCultivationAttachment cultivation = getCultivationAttachment();
-        if (cultivation == null) {
-            return new BreakthroughResult(false, "Cultivation system unavailable", null, breakthroughType, 0.0, 0L);
-        }
-
-        // Check basic requirements
-        if (!canAttemptTypedBreakthrough(cultivationType, breakthroughType)) {
-            String reason = getUnavailabilityReason(cultivationType, breakthroughType);
-            return new BreakthroughResult(false, reason, null, breakthroughType, 0.0,
-                cultivationType == PlayerCultivationAttachment.CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts);
-        }
-
-        // Get current realm and next realms
-        CultivationRealm currentRealm = cultivation.getCurrentRealm(cultivationType);
-        List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
-
-        if (nextRealms.isEmpty()) {
-            return new BreakthroughResult(false, "No higher realm available", null, breakthroughType, 0.0,
-                cultivationType == PlayerCultivationAttachment.CultivationType.QI ? qiBreakthroughAttempts : bodyBreakthroughAttempts);
-        }
-
-        // Get target realm (for now, just use the first available)
-        CultivationRealm targetRealm = nextRealms.get(0);
-
-        // Calculate success chance
-        double successChance = calculateBreakthroughSuccessChance(cultivationType, breakthroughType);
-
-        // Record attempt
-        long currentAttempts;
-        if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
-            lastQiBreakthroughAttempt = player.level().getGameTime();
-            currentAttempts = qiBreakthroughAttempts;
-        } else {
-            lastBodyBreakthroughAttempt = player.level().getGameTime();
-            currentAttempts = bodyBreakthroughAttempts;
-        }
-
-        // Roll for success
-        boolean success = player.getRandom().nextDouble() < successChance;
-
-        if (success) {
-            // SUCCESS: Advance to new realm and reset attempts
-            cultivation.setCurrentRealm(cultivationType, targetRealm);
-
-            if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
-                qiBreakthroughAttempts = 0L;
-            } else {
-                bodyBreakthroughAttempts = 0L;
-            }
-
-            markDirty();
-            forceSync();
-
-            String message = String.format("%s %s breakthrough successful! (%d attempts, %.0f%% chance)",
-                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
-                currentAttempts, successChance * 100);
-
-            ImmortalCultivation.LOGGER.info("{} {} breakthrough SUCCESS for {} after {} attempts ({}% chance)",
-                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
-                player.getName().getString(), currentAttempts, (int)(successChance * 100));
-
-            return new BreakthroughResult(true, message, targetRealm, breakthroughType, successChance, currentAttempts);
-
-        } else {
-            // FAILURE: Increment attempts and set cooldown
-            if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
-                qiBreakthroughAttempts++;
-                qiBreakthroughCooldown = true;
-            } else {
-                bodyBreakthroughAttempts++;
-                bodyBreakthroughCooldown = true;
-            }
-
-            markDirty();
-            forceSync();
-
-            // Calculate next attempt chance for the message
-            double nextChance = calculateBreakthroughSuccessChance(cultivationType, breakthroughType);
-
-            String message = String.format("%s %s breakthrough failed (attempt %d, %.0f%% chance). Next: %.0f%%",
-                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
-                currentAttempts + 1, successChance * 100, nextChance * 100);
-
-            ImmortalCultivation.LOGGER.info("{} {} breakthrough FAILED for {} (attempt {}, {}% chance)",
-                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
-                player.getName().getString(), currentAttempts + 1, (int)(successChance * 100));
-
-            return new BreakthroughResult(false, message, null, breakthroughType, successChance, currentAttempts + 1);
-        }
-    }
-
-    /**
-     * Calculate breakthrough success chance with all bonuses
-     */
-    public double calculateBreakthroughSuccessChance(PlayerCultivationAttachment.CultivationType cultivationType, BreakthroughType breakthroughType) {
-        double baseChance = breakthroughType.getBaseSuccessChance();
-        long attempts = (cultivationType == PlayerCultivationAttachment.CultivationType.QI) ?
-            qiBreakthroughAttempts : bodyBreakthroughAttempts;
-
-        double failureBonus = attempts * FAILURE_BONUS_PER_ATTEMPT;
-        double talentBonus = calculateTalentBonus(cultivationType);
-        double focusBonus = calculateFocusBonus(cultivationType);
-
-        double totalChance = Math.min(MAX_SUCCESS_RATE, Math.max(MIN_SUCCESS_RATE,
-            baseChance + failureBonus + talentBonus + focusBonus));
-
-        return totalChance;
-    }
-
-    /**
-     * Calculate talent-based bonus for breakthrough success
-     */
     private double calculateTalentBonus(PlayerCultivationAttachment.CultivationType cultivationType) {
-        PlayerTalentAttachment talents = getTalentAttachment();
-        if (talents == null) return 0.0;
-
-        // Apply talent bonuses - this would be implemented based on your talent system
-        // For now, return 0.0 as placeholder
         return 0.0;
     }
 
-    /**
-     * Calculate focus-based bonus for breakthrough success
-     */
     private double calculateFocusBonus(PlayerCultivationAttachment.CultivationType cultivationType) {
         PlayerCultivationAttachment cultivation = getCultivationAttachment();
         if (cultivation == null) return 0.0;
-
-        PlayerCultivationAttachment.CultivationType currentFocus = cultivation.getCurrentFocus();
-        return (currentFocus == cultivationType) ? 0.05 : 0.0; // 5% bonus for focused cultivation
+        return (cultivation.getCurrentFocus() == cultivationType) ? 0.05 : 0.0;
     }
 
-    /**
-     * Check if a specific type of breakthrough can be attempted
-     */
-    public boolean canAttemptTypedBreakthrough(PlayerCultivationAttachment.CultivationType cultivationType, BreakthroughType breakthroughType) {
-        if (player == null) return false;
-
-        PlayerCultivationAttachment cultivation = getCultivationAttachment();
-        if (cultivation == null) return false;
-
-        // Check basic requirements
-        if (!cultivation.canBreakthrough(cultivationType)) return false;
-
-        // Check cooldown
-        if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
-            if (qiBreakthroughCooldown) return false;
-        } else {
-            if (bodyBreakthroughCooldown) return false;
-        }
-
-        // Check if there are available advancement paths
-        CultivationRealm currentRealm = cultivation.getCurrentRealm(cultivationType);
-        List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
-
-        if (nextRealms.isEmpty()) return false;
-
-        // Additional type-specific requirements could be added here
-        return true;
-    }
-
-    /**
-     * Get the reason why a breakthrough type is not available
-     */
     private String getUnavailabilityReason(PlayerCultivationAttachment.CultivationType cultivationType, BreakthroughType breakthroughType) {
         if (player == null) return "No player reference";
-
         PlayerCultivationAttachment cultivation = getCultivationAttachment();
         if (cultivation == null) return "Cultivation system unavailable";
-
-        if (!cultivation.canBreakthrough(cultivationType)) {
-            return cultivationType.getDisplayName() + " cultivation not at maximum";
-        }
-
-        if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) {
-            if (qiBreakthroughCooldown) {
-                return "Qi breakthrough on cooldown";
-            }
-        } else {
-            if (bodyBreakthroughCooldown) {
-                return "Body breakthrough on cooldown";
-            }
-        }
-
-        CultivationRealm currentRealm = cultivation.getCurrentRealm(cultivationType);
-        List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
-
-        if (nextRealms.isEmpty()) {
-            return "No higher realm available";
-        }
-
+        if (!cultivation.canBreakthrough(cultivationType)) return cultivationType.getDisplayName() + " cultivation not at maximum";
+        if (isBreakthroughOnCooldown(cultivationType)) return cultivationType.getDisplayName() + " breakthrough on cooldown";
+        if (cultivation.getCurrentRealm(cultivationType).getNextCultivationRealms().isEmpty()) return "No higher realm available";
         return "Requirements not met";
     }
 
-    /**
-     * Get detailed breakdown of success rate calculation for UI display
-     */
-    public BreakthroughChanceBreakdown getBreakthroughChanceBreakdown(PlayerCultivationAttachment.CultivationType cultivationType, BreakthroughType breakthroughType) {
-        double baseChance = breakthroughType.getBaseSuccessChance();
-        long attempts = (cultivationType == PlayerCultivationAttachment.CultivationType.QI) ?
-            qiBreakthroughAttempts : bodyBreakthroughAttempts;
-
-        double failureBonus = attempts * FAILURE_BONUS_PER_ATTEMPT;
-        double talentBonus = calculateTalentBonus(cultivationType);
-        double focusBonus = calculateFocusBonus(cultivationType);
-
-        double totalChance = Math.min(MAX_SUCCESS_RATE, Math.max(MIN_SUCCESS_RATE,
-            baseChance + failureBonus + talentBonus + focusBonus));
-
-        return new BreakthroughChanceBreakdown(
-            baseChance, failureBonus, talentBonus, focusBonus, totalChance, attempts
-        );
-    }
-
-    /**
-     * Calculate actual breakthrough success rate as used by the server.
-     * This matches the exact calculation used in attemptQiBreakthrough() and attemptBodyBreakthrough().
-     */
-    public double calculateBreakthroughSuccessRate(PlayerCultivationAttachment.CultivationType type) {
-        return calculateBreakthroughSuccessChance(type, BreakthroughType.MINOR);
-    }
-
-    public double calculateBreakthroughSuccessRate(PlayerCultivationAttachment.CultivationType type, BreakthroughType breakthroughType) {
-        return calculateBreakthroughSuccessChance(type, breakthroughType);
-    }
-
-    /**
-     * Gets all available breakthrough options for both Qi and Body cultivation types.
-     *
-     * This method analyzes the player's current cultivation state and determines which
-     * breakthrough types are available, calculating success rates and availability status
-     * for each option. It provides comprehensive information for the breakthrough UI.
-     *
-     * @return BreakthroughOptions containing all available Qi and Body breakthrough options
-     */
     public BreakthroughOptions getAllAvailableBreakthroughOptions() {
         List<BreakthroughOption> qiOptions = new ArrayList<>();
         List<BreakthroughOption> bodyOptions = new ArrayList<>();
@@ -521,64 +291,32 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerUtil implements IT
             return new BreakthroughOptions(qiOptions, bodyOptions);
         }
 
-        // Generate options for Qi cultivation
         qiOptions.addAll(generateBreakthroughOptionsForType(PlayerCultivationAttachment.CultivationType.QI, cultivation));
-
-        // Generate options for Body cultivation
         bodyOptions.addAll(generateBreakthroughOptionsForType(PlayerCultivationAttachment.CultivationType.BODY, cultivation));
 
         return new BreakthroughOptions(qiOptions, bodyOptions);
     }
 
-    /**
-     * Generates breakthrough options for a specific cultivation type.
-     *
-     * This method evaluates each breakthrough type (MINOR, MAJOR, SPECIAL, BOUNDARY)
-     * for the specified cultivation type and creates appropriate BreakthroughOption
-     * objects with calculated success rates and availability status.
-     *
-     * @param cultivationType The cultivation type (QI or BODY) to generate options for
-     * @param cultivation The player's cultivation attachment for calculations
-     * @return List of breakthrough options for the specified cultivation type
-     */
     private List<BreakthroughOption> generateBreakthroughOptionsForType(
-        PlayerCultivationAttachment.CultivationType cultivationType,
-        PlayerCultivationAttachment cultivation) {
-
+            PlayerCultivationAttachment.CultivationType cultivationType,
+            PlayerCultivationAttachment cultivation) {
         List<BreakthroughOption> options = new ArrayList<>();
-
-        // Generate options for each breakthrough type
         for (BreakthroughType breakthroughType : BreakthroughType.values()) {
             BreakthroughOption option = createBreakthroughOption(cultivationType, breakthroughType, cultivation);
             if (option != null) {
                 options.add(option);
             }
         }
-
         return options;
     }
 
-    /**
-     * Creates a single breakthrough option for the specified cultivation type and breakthrough type.
-     *
-     * This method determines the target realm, calculates success rates, and evaluates
-     * availability requirements for a specific breakthrough attempt. It handles all
-     * the complex logic for determining what breakthroughs are possible.
-     *
-     * @param cultivationType The cultivation type (QI or BODY)
-     * @param breakthroughType The type of breakthrough (MINOR, MAJOR, SPECIAL, BOUNDARY)
-     * @param cultivation The player's cultivation attachment
-     * @return A BreakthroughOption, or null if this breakthrough type is not applicable
-     */
     private BreakthroughOption createBreakthroughOption(
-        PlayerCultivationAttachment.CultivationType cultivationType,
-        BreakthroughType breakthroughType,
-        PlayerCultivationAttachment cultivation) {
-
-        // Get current realm for this cultivation type
+            PlayerCultivationAttachment.CultivationType cultivationType,
+            BreakthroughType breakthroughType,
+            PlayerCultivationAttachment cultivation) {
         CultivationRealm currentRealm = cultivation.getCurrentRealm(
-            cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
-                ICultivationData.CultivationType.QI : ICultivationData.CultivationType.BODY
+                cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
+                        ICultivationData.CultivationType.QI : ICultivationData.CultivationType.BODY
         );
 
         if (currentRealm == null) {
@@ -586,54 +324,32 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerUtil implements IT
             return null;
         }
 
-        // Determine target realm based on breakthrough type
         CultivationRealm targetRealm = determineTargetRealm(currentRealm, breakthroughType, cultivation, cultivationType);
         if (targetRealm == null) {
-            // This breakthrough type doesn't apply to the current realm
             return null;
         }
 
-        // Calculate success chance for this breakthrough
         double successChance = calculateBreakthroughSuccessChance(cultivationType, breakthroughType);
-
-        // Determine availability and reason
         boolean available = canAttemptTypedBreakthrough(cultivationType, breakthroughType);
         String unavailabilityReason = available ? "" : getUnavailabilityReason(cultivationType, breakthroughType);
 
         return new BreakthroughOption(
-            breakthroughType,
-            targetRealm,
-            successChance,
-            cultivationType,
-            available,
-            unavailabilityReason
+                breakthroughType,
+                targetRealm,
+                successChance,
+                cultivationType,
+                available,
+                unavailabilityReason
         );
     }
 
-    /**
-     * Determines the target realm for a specific breakthrough type.
-     *
-     * This method maps breakthrough types to their corresponding target realms
-     * based on the current realm and breakthrough mechanics. Different breakthrough
-     * types may target different advancement paths.
-     *
-     * @param currentRealm The player's current cultivation realm
-     * @param breakthroughType The type of breakthrough being attempted
-     * @param cultivation The player's cultivation attachment
-     * @param cultivationType The cultivation type (QI or BODY)
-     * @return The target realm for this breakthrough, or null if not applicable
-     */
     private CultivationRealm determineTargetRealm(
-        CultivationRealm currentRealm,
-        BreakthroughType breakthroughType,
-        PlayerCultivationAttachment cultivation,
-        PlayerCultivationAttachment.CultivationType cultivationType) {
-
-        // Convert cultivation type for realm interface calls
+            CultivationRealm currentRealm,
+            BreakthroughType breakthroughType,
+            PlayerCultivationAttachment cultivation,
+            PlayerCultivationAttachment.CultivationType cultivationType) {
         ICultivationData.CultivationType dataType = cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
-            ICultivationData.CultivationType.QI : ICultivationData.CultivationType.BODY;
-
-        // Use the realm's breakthrough methods based on type
+                ICultivationData.CultivationType.QI : ICultivationData.CultivationType.BODY;
         return switch (breakthroughType) {
             case MINOR -> currentRealm.getMinorBreakthrough(player, cultivation, dataType);
             case MAJOR -> currentRealm.getMajorBreakthrough(player, cultivation, dataType);
@@ -642,155 +358,81 @@ public class PlayerBreakthroughAttachment extends DirtyTrackerUtil implements IT
         };
     }
 
-    // === COOLDOWN MANAGEMENT ===
-
     private void updateCooldowns() {
-        if (player == null) return;
-
+        if (player == null || player.level().isClientSide()) return;
         long currentTime = player.level().getGameTime();
-
-        if (qiBreakthroughCooldown && (currentTime - lastQiBreakthroughAttempt) >= BREAKTHROUGH_COOLDOWN_TICKS) {
-            qiBreakthroughCooldown = false;
-            markDirty();
+        if (isQiBreakthroughCooldown() && (currentTime - getLastQiBreakthroughAttempt()) >= BREAKTHROUGH_COOLDOWN_TICKS) {
+            setQiBreakthroughCooldown(false);
         }
-
-        if (bodyBreakthroughCooldown && (currentTime - lastBodyBreakthroughAttempt) >= BREAKTHROUGH_COOLDOWN_TICKS) {
-            bodyBreakthroughCooldown = false;
-            markDirty();
+        if (isBodyBreakthroughCooldown() && (currentTime - getLastBodyBreakthroughAttempt()) >= BREAKTHROUGH_COOLDOWN_TICKS) {
+            setBodyBreakthroughCooldown(false);
         }
     }
 
-    // === ITICKABLE IMPLEMENTATION ===
-
-    @Override
-    public void tick() {
-        if (player == null || !player.level().isClientSide()) {
-            updateCooldowns();
-        }
+    public long getBreakthroughAttempts(PlayerCultivationAttachment.CultivationType type) {
+        return (type == PlayerCultivationAttachment.CultivationType.QI) ? qiBreakthroughAttempts : bodyBreakthroughAttempts;
     }
 
-    // === DIRTY FLAG IMPLEMENTATION === //
-
-    @Override
-    public boolean shouldSyncNow() {
-        // Sync immediately after breakthrough attempts or when cooldown changes
-        return isDirty() && (shouldSyncByTime(1000L) || shouldSyncByCount(1L));
-    }
-
-    @Override
-    public void forceSync() {
-        if (getPlayerSafe() instanceof ServerPlayer serverPlayer) {
-            try {
-                NetworkSyncManager.scheduleSync(serverPlayer, NetworkSyncManager.SyncPriority.CRITICAL);
-                clearDirty();
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Failed to force sync attachment data for player: {}",
-                    serverPlayer.getName().getString(), e);
-            }
-        }
+    public boolean isBreakthroughOnCooldown(PlayerCultivationAttachment.CultivationType type) {
+        return (type == PlayerCultivationAttachment.CultivationType.QI) ? qiBreakthroughCooldown : bodyBreakthroughCooldown;
     }
 
     // === SERIALIZATION === //
-
-    private static PlayerBreakthroughAttachment decode(
-        long qiAttempts, long bodyAttempts,
-        boolean qiCooldown, boolean bodyCooldown,
-        long lastQiAttempt, long lastBodyAttempt
-    ) {
-        PlayerBreakthroughAttachment attachment = new PlayerBreakthroughAttachment();
-        attachment.qiBreakthroughAttempts = qiAttempts;
-        attachment.bodyBreakthroughAttempts = bodyAttempts;
-        attachment.qiBreakthroughCooldown = qiCooldown;
-        attachment.bodyBreakthroughCooldown = bodyCooldown;
-        attachment.lastQiBreakthroughAttempt = lastQiAttempt;
-        attachment.lastBodyBreakthroughAttempt = lastBodyAttempt;
-        attachment.markDirty(); // Always dirty after loading
-        return attachment;
-    }
-
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerBreakthroughAttachment> {
         @Override
         public PlayerBreakthroughAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
-            // Check for empty tag first
-            if (tag.isEmpty()) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: Empty NBT tag detected for PlayerBreakthroughAttachment! Player: {}",
-                    holder instanceof Player player ? player.getName().getString() : "unknown");
+            PlayerBreakthroughAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+                    .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerBreakthroughAttachment: {}", error))
+                    .map(com.mojang.datafixers.util.Pair::getFirst)
+                    .orElseGet(PlayerBreakthroughAttachment::new);
 
-                PlayerBreakthroughAttachment newAttachment = new PlayerBreakthroughAttachment();
-                if (holder instanceof Player player) {
-                    newAttachment.setPlayer(player);
-                }
-                return newAttachment;
+            if (holder instanceof Player player) {
+                attachment.setPlayer(player);
             }
-
-            try {
-                PlayerBreakthroughAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
-                    .resultOrPartial(error -> {
-                        ImmortalCultivation.LOGGER.error("CRITICAL: Failed to decode PlayerBreakthroughAttachment for player {}: {}",
-                            holder instanceof Player player ? player.getName().getString() : "unknown", error);
-                    })
-                    .map(pair -> pair.getFirst())
-                    .orElse(null);
-
-                if (attachment == null) {
-                    ImmortalCultivation.LOGGER.error("CRITICAL: PlayerBreakthroughAttachment deserialization returned null! Creating fallback.");
-                    attachment = new PlayerBreakthroughAttachment();
-                }
-
-                // CRITICAL: Set player reference during deserialization
-                if (holder instanceof Player player) {
-                    attachment.setPlayer(player);
-                    ImmortalCultivation.LOGGER.debug("Set player reference during breakthrough attachment deserialization: {}",
-                        player.getName().getString());
-                }
-
-                return attachment;
-
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: Exception during PlayerBreakthroughAttachment deserialization: {}", e);
-
-                PlayerBreakthroughAttachment fallback = new PlayerBreakthroughAttachment();
-                if (holder instanceof Player player) {
-                    fallback.setPlayer(player);
-                }
-                return fallback;
-            }
+            return attachment;
         }
 
         @Override
-        public CompoundTag write(PlayerBreakthroughAttachment attachment, HolderLookup.Provider provider) {
-            try {
-                CompoundTag result = (CompoundTag) CODEC.encode(attachment, provider.createSerializationContext(NbtOps.INSTANCE), new CompoundTag())
-                    .resultOrPartial(error -> {
-                        ImmortalCultivation.LOGGER.error("CRITICAL: Failed to encode PlayerBreakthroughAttachment: {}", error);
-                    })
-                    .orElse(null);
-
-                if (result == null || result.isEmpty()) {
-                    ImmortalCultivation.LOGGER.error("CRITICAL: PlayerBreakthroughAttachment serialization produced empty result!");
-                    return new CompoundTag();
-                }
-
-                ImmortalCultivation.LOGGER.debug("Successfully serialized PlayerBreakthroughAttachment - {} keys", result.size());
-                return result;
-
-            } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("CRITICAL: Exception during PlayerBreakthroughAttachment serialization: {}", e);
-                return new CompoundTag();
-            }
+        public @Nullable CompoundTag write(PlayerBreakthroughAttachment attachment, HolderLookup.Provider provider) {
+            return (CompoundTag) CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), attachment)
+                    .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerBreakthroughAttachment: {}", error))
+                    .orElse(new CompoundTag());
         }
     }
 
     // === CODEC === //
-
     public static final Codec<PlayerBreakthroughAttachment> CODEC = RecordCodecBuilder.create(instance ->
-        instance.group(
-            Codec.LONG.optionalFieldOf("qi_attempts", 0L).forGetter(a -> a.qiBreakthroughAttempts),
-            Codec.LONG.optionalFieldOf("body_attempts", 0L).forGetter(a -> a.bodyBreakthroughAttempts),
-            Codec.BOOL.optionalFieldOf("qi_cooldown", false).forGetter(a -> a.qiBreakthroughCooldown),
-            Codec.BOOL.optionalFieldOf("body_cooldown", false).forGetter(a -> a.bodyBreakthroughCooldown),
-            Codec.LONG.optionalFieldOf("last_qi_attempt", 0L).forGetter(a -> a.lastQiBreakthroughAttempt),
-            Codec.LONG.optionalFieldOf("last_body_attempt", 0L).forGetter(a -> a.lastBodyBreakthroughAttempt)
-        ).apply(instance, PlayerBreakthroughAttachment::decode)
+            instance.group(
+                    Codec.LONG.optionalFieldOf("qi_attempts", 0L).forGetter(PlayerBreakthroughAttachment::getQiBreakthroughAttempts),
+                    Codec.LONG.optionalFieldOf("body_attempts", 0L).forGetter(PlayerBreakthroughAttachment::getBodyBreakthroughAttempts),
+                    Codec.BOOL.optionalFieldOf("qi_cooldown", false).forGetter(PlayerBreakthroughAttachment::isQiBreakthroughCooldown),
+                    Codec.BOOL.optionalFieldOf("body_cooldown", false).forGetter(PlayerBreakthroughAttachment::isBodyBreakthroughCooldown),
+                    Codec.LONG.optionalFieldOf("last_qi_attempt", 0L).forGetter(PlayerBreakthroughAttachment::getLastQiBreakthroughAttempt),
+                    Codec.LONG.optionalFieldOf("last_body_attempt", 0L).forGetter(PlayerBreakthroughAttachment::getLastBodyBreakthroughAttempt)
+            ).apply(instance, PlayerBreakthroughAttachment::new)
     );
+
+    // Enum and Record definitions for Breakthrough
+    public enum BreakthroughType {
+        MINOR(0.50, "Minor Breakthrough"),
+        MAJOR(0.30, "Major Breakthrough"),
+        SPECIAL(0.20, "Special Breakthrough"),
+        BOUNDARY(0.10, "Boundary Breakthrough");
+
+        private final double baseSuccessChance;
+        private final String displayName;
+
+        BreakthroughType(double baseSuccessChance, String displayName) {
+            this.baseSuccessChance = baseSuccessChance;
+            this.displayName = displayName;
+        }
+
+        public double getBaseSuccessChance() { return baseSuccessChance; }
+        public String getDisplayName() { return displayName; }
+    }
+
+    public record BreakthroughResult(boolean success, String message, @Nullable CultivationRealm newRealm, BreakthroughType type, double successChance, long attemptNumber) {}
+    public record BreakthroughOption(BreakthroughType type, CultivationRealm targetRealm, double successChance, PlayerCultivationAttachment.CultivationType cultivationType, boolean available, String unavailabilityReason) {}
+    public record BreakthroughOptions(List<BreakthroughOption> qiOptions, List<BreakthroughOption> bodyOptions) {}
+    public record BreakthroughChanceBreakdown(double baseChance, double failureBonus, double talentBonus, double focusBonus, double totalChance, long attempts) {}
 }

@@ -3,14 +3,19 @@ package net.hyper.immortalcultivation.common.attachments;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.interfaces.IPlayerInitializable;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerTalentSyncPacket;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
@@ -18,7 +23,7 @@ import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class PlayerTalentAttachment implements ISyncable {
+public class PlayerTalentAttachment implements ISyncable, IPlayerInitializable {
 
     // === INSTANCES === //
 
@@ -33,7 +38,6 @@ public class PlayerTalentAttachment implements ISyncable {
 
     // --- System Data ---
     private transient boolean isDirty = false;
-    private transient PlayerTalentAttachment lastSyncedState = null;
 
     // === CONSTRUCTORS === //
 
@@ -84,47 +88,44 @@ public class PlayerTalentAttachment implements ISyncable {
     public float getPhysiqueMultiplier() {
         return physiqueType.getCultivationMultiplier();
     }
-    
-    public void updateFromServer(SpiritualRootType spiritualRootType, boolean spiritualRootAssigned,
-                                 PhysiqueType physiqueType, boolean physiqueAssigned) {
-        this.spiritualRootType = spiritualRootType;
-        this.spiritualRootAssigned = spiritualRootAssigned;
-        this.physiqueType = physiqueType;
-        this.physiqueAssigned = physiqueAssigned;
-    }
 
     // === IMPLEMENTATIONS === //
 
     @Override
+    public void onPlayerLogin(ServerPlayer player) {
+        if (!hasSpiritualRootAssigned() || !hasPhysiqueAssigned()) {
+            RandomSource random = player.getRandom();
+
+            if (!hasSpiritualRootAssigned()) {
+                SpiritualRootType newRoot = SpiritualRootType.generateRandom(random);
+                assignSpiritualRoot(newRoot);
+                player.sendSystemMessage(Component.literal("You have awakened the: " + newRoot.getDisplayName()).withStyle(ChatFormatting.AQUA));
+                ImmortalCultivation.LOGGER.info("Assigned new spiritual root {} to player {}", newRoot.getDisplayName(), player.getName().getString());
+            }
+
+            if (!hasPhysiqueAssigned()) {
+                PhysiqueType newPhysique = PhysiqueType.generateRandom(random);
+                assignPhysique(newPhysique);
+                player.sendSystemMessage(Component.literal("You possess the: " + newPhysique.getDisplayName()).withStyle(ChatFormatting.RED));
+                ImmortalCultivation.LOGGER.info("Assigned new physique {} to player {}", newPhysique.getDisplayName(), player.getName().getString());
+            }
+        } else {
+            ImmortalCultivation.LOGGER.debug("Player {} logged in with Spiritual Root: {} and Physique: {}", player.getName().getString(), getSpiritualRootType().getDisplayName(), getPhysiqueType().getDisplayName());
+        }
+    }
+
+    @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null || player.level().isClientSide() || !isDirty()) {
             return Optional.empty();
         }
 
-        if (lastSyncedState == null) {
-            isFullSync = true;
-        }
+        CompoundTag data = (CompoundTag) CODEC.encodeStart(NbtOps.INSTANCE, this)
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerTalentAttachment: {}", error))
+                .orElse(new CompoundTag());
 
-        byte changedFields = 0;
-        if (isFullSync || this.spiritualRootType != lastSyncedState.spiritualRootType) {
-            changedFields |= PlayerTalentSyncPacket.SPIRITUAL_ROOT_TYPE_MASK;
-        }
-        if (isFullSync || this.spiritualRootAssigned != lastSyncedState.spiritualRootAssigned) {
-            changedFields |= PlayerTalentSyncPacket.SPIRITUAL_ROOT_ASSIGNED_MASK;
-        }
-        if (isFullSync || this.physiqueType != lastSyncedState.physiqueType) {
-            changedFields |= PlayerTalentSyncPacket.PHYSIQUE_TYPE_MASK;
-        }
-        if (isFullSync || this.physiqueAssigned != lastSyncedState.physiqueAssigned) {
-            changedFields |= PlayerTalentSyncPacket.PHYSIQUE_ASSIGNED_MASK;
-        }
-
-        if (changedFields > 0) {
-            this.lastSyncedState = this.copy();
-            return Optional.of(new PlayerTalentSyncPacket(changedFields, spiritualRootType, spiritualRootAssigned, physiqueType, physiqueAssigned));
-        }
-
-        return Optional.empty();
+        clearDirty();
+        return Optional.of(new PlayerTalentSyncPacket(data));
     }
 
     @Override
@@ -144,13 +145,16 @@ public class PlayerTalentAttachment implements ISyncable {
 
     // === HELPER METHODS === //
 
-    public PlayerTalentAttachment copy() {
-        PlayerTalentAttachment copy = new PlayerTalentAttachment();
-        copy.spiritualRootType = this.spiritualRootType;
-        copy.spiritualRootAssigned = this.spiritualRootAssigned;
-        copy.physiqueType = this.physiqueType;
-        copy.physiqueAssigned = this.physiqueAssigned;
-        return copy;
+    public void applySync(CompoundTag data) {
+        CODEC.decode(NbtOps.INSTANCE, data)
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerTalentAttachment from sync: {}", error))
+                .ifPresent(pair -> {
+                    PlayerTalentAttachment decoded = pair.getFirst();
+                    this.spiritualRootType = decoded.spiritualRootType;
+                    this.spiritualRootAssigned = decoded.spiritualRootAssigned;
+                    this.physiqueType = decoded.physiqueType;
+                    this.physiqueAssigned = decoded.physiqueAssigned;
+                });
     }
 
     // === SERIALIZATION === //

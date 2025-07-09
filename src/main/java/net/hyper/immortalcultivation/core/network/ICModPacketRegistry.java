@@ -34,6 +34,8 @@ public class ICModPacketRegistry {
         registerClientPacket(PlayerRaceSyncPacket.TYPE, PlayerRaceSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerResourceSyncPacket.TYPE, PlayerResourceSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerPillConsumptionSyncPacket.TYPE, PlayerPillConsumptionSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerBreakthroughSyncPacket.TYPE, PlayerBreakthroughSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerCombatStatsSyncPacket.TYPE, PlayerCombatStatsSyncPacket.STREAM_CODEC);
 
         REGISTRY.playToClient(
                 UnifiedDeltaSyncPacket.TYPE,
@@ -96,7 +98,7 @@ public class ICModPacketRegistry {
 
     private static <T extends ISyncPacket> void registerClientPacket(CustomPacketPayload.Type<T> type, StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
         REGISTRY.playToClient(type, codec, (packet, context) -> {
-            context.enqueueWork(() -> packet.handleOnClient(Minecraft.getInstance().player));
+            context.enqueueWork(packet::handleOnClient);
         });
     }
 

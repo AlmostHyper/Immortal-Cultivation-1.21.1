@@ -63,21 +63,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         this.player = player;
     }
 
-    public void updateFromServer(long curHealth, long permHealthBonus, double permHealthRegen,
-                                 long curQi, long permMaxQi, double permQiRegen,
-                                 long curBody, long permMaxBody, double permBodyRegen) {
-        this.currentHealth = curHealth;
-        this.permanentHealthBonus = permHealthBonus;
-        this.permanentHealthRegenBonus = permHealthRegen;
-        this.currentQi = curQi;
-        this.permanentMaxQiBonus = permMaxQi;
-        this.permanentQiRegenBonus = permQiRegen;
-        this.currentBody = curBody;
-        this.permanentMaxBodyBonus = permMaxBody;
-        this.permanentBodyRegenBonus = permBodyRegen;
-        recalculateAll();
-    }
-
     // --- Health Methods ---
     @Override
     public long getCurrentHealth() { return currentHealth; }
@@ -209,26 +194,26 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide()) return Optional.empty();
+        if (player == null || player.level().isClientSide() || !isDirty()) return Optional.empty();
         if (lastSyncedState == null) isFullSync = true;
 
-        short changedFields = 0;
-        if (isFullSync || this.currentHealth != lastSyncedState.currentHealth) changedFields |= PlayerResourceSyncPacket.CURRENT_HEALTH_MASK;
-        if (isFullSync || this.permanentHealthBonus != lastSyncedState.permanentHealthBonus) changedFields |= PlayerResourceSyncPacket.PERMANENT_HEALTH_BONUS_MASK;
-        if (isFullSync || this.permanentHealthRegenBonus != lastSyncedState.permanentHealthRegenBonus) changedFields |= PlayerResourceSyncPacket.PERMANENT_HEALTH_REGEN_BONUS_MASK;
-        if (isFullSync || this.currentQi != lastSyncedState.currentQi) changedFields |= PlayerResourceSyncPacket.CURRENT_QI_MASK;
-        if (isFullSync || this.permanentMaxQiBonus != lastSyncedState.permanentMaxQiBonus) changedFields |= PlayerResourceSyncPacket.PERMANENT_MAX_QI_BONUS_MASK;
-        if (isFullSync || this.permanentQiRegenBonus != lastSyncedState.permanentQiRegenBonus) changedFields |= PlayerResourceSyncPacket.PERMANENT_QI_REGEN_BONUS_MASK;
-        if (isFullSync || this.currentBody != lastSyncedState.currentBody) changedFields |= PlayerResourceSyncPacket.CURRENT_BODY_MASK;
-        if (isFullSync || this.permanentMaxBodyBonus != lastSyncedState.permanentMaxBodyBonus) changedFields |= PlayerResourceSyncPacket.PERMANENT_MAX_BODY_BONUS_MASK;
-        if (isFullSync || this.permanentBodyRegenBonus != lastSyncedState.permanentBodyRegenBonus) changedFields |= PlayerResourceSyncPacket.PERMANENT_BODY_REGEN_BONUS_MASK;
+        CompoundTag data = new CompoundTag();
+        if (isFullSync || this.currentHealth != lastSyncedState.currentHealth) data.putLong(PlayerResourceSyncPacket.KEY_CURRENT_HEALTH, this.currentHealth);
+        if (isFullSync || this.permanentHealthBonus != lastSyncedState.permanentHealthBonus) data.putLong(PlayerResourceSyncPacket.KEY_PERM_HEALTH_BONUS, this.permanentHealthBonus);
+        if (isFullSync || this.permanentHealthRegenBonus != lastSyncedState.permanentHealthRegenBonus) data.putDouble(PlayerResourceSyncPacket.KEY_PERM_HEALTH_REGEN, this.permanentHealthRegenBonus);
+        if (isFullSync || this.currentQi != lastSyncedState.currentQi) data.putLong(PlayerResourceSyncPacket.KEY_CURRENT_QI, this.currentQi);
+        if (isFullSync || this.permanentMaxQiBonus != lastSyncedState.permanentMaxQiBonus) data.putLong(PlayerResourceSyncPacket.KEY_PERM_QI_BONUS, this.permanentMaxQiBonus);
+        if (isFullSync || this.permanentQiRegenBonus != lastSyncedState.permanentQiRegenBonus) data.putDouble(PlayerResourceSyncPacket.KEY_PERM_QI_REGEN, this.permanentQiRegenBonus);
+        if (isFullSync || this.currentBody != lastSyncedState.currentBody) data.putLong(PlayerResourceSyncPacket.KEY_CURRENT_BODY, this.currentBody);
+        if (isFullSync || this.permanentMaxBodyBonus != lastSyncedState.permanentMaxBodyBonus) data.putLong(PlayerResourceSyncPacket.KEY_PERM_BODY_BONUS, this.permanentMaxBodyBonus);
+        if (isFullSync || this.permanentBodyRegenBonus != lastSyncedState.permanentBodyRegenBonus) data.putDouble(PlayerResourceSyncPacket.KEY_PERM_BODY_REGEN, this.permanentBodyRegenBonus);
 
-        if (changedFields > 0) {
+        if (!data.isEmpty()) {
             this.lastSyncedState = this.copy();
-            return Optional.of(new PlayerResourceSyncPacket(changedFields, currentHealth, permanentHealthBonus, permanentHealthRegenBonus,
-                    currentQi, permanentMaxQiBonus, permanentQiRegenBonus,
-                    currentBody, permanentMaxBodyBonus, permanentBodyRegenBonus));
+            clearDirty();
+            return Optional.of(new PlayerResourceSyncPacket(data));
         }
+
         return Optional.empty();
     }
 
@@ -242,6 +227,19 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     public void clearDirty() { this.isDirty = false; }
 
     // === HELPER METHODS === //
+
+    public void applySync(CompoundTag data) {
+        if (data.contains(PlayerResourceSyncPacket.KEY_CURRENT_HEALTH)) this.currentHealth = data.getLong(PlayerResourceSyncPacket.KEY_CURRENT_HEALTH);
+        if (data.contains(PlayerResourceSyncPacket.KEY_PERM_HEALTH_BONUS)) this.permanentHealthBonus = data.getLong(PlayerResourceSyncPacket.KEY_PERM_HEALTH_BONUS);
+        if (data.contains(PlayerResourceSyncPacket.KEY_PERM_HEALTH_REGEN)) this.permanentHealthRegenBonus = data.getDouble(PlayerResourceSyncPacket.KEY_PERM_HEALTH_REGEN);
+        if (data.contains(PlayerResourceSyncPacket.KEY_CURRENT_QI)) this.currentQi = data.getLong(PlayerResourceSyncPacket.KEY_CURRENT_QI);
+        if (data.contains(PlayerResourceSyncPacket.KEY_PERM_QI_BONUS)) this.permanentMaxQiBonus = data.getLong(PlayerResourceSyncPacket.KEY_PERM_QI_BONUS);
+        if (data.contains(PlayerResourceSyncPacket.KEY_PERM_QI_REGEN)) this.permanentQiRegenBonus = data.getDouble(PlayerResourceSyncPacket.KEY_PERM_QI_REGEN);
+        if (data.contains(PlayerResourceSyncPacket.KEY_CURRENT_BODY)) this.currentBody = data.getLong(PlayerResourceSyncPacket.KEY_CURRENT_BODY);
+        if (data.contains(PlayerResourceSyncPacket.KEY_PERM_BODY_BONUS)) this.permanentMaxBodyBonus = data.getLong(PlayerResourceSyncPacket.KEY_PERM_BODY_BONUS);
+        if (data.contains(PlayerResourceSyncPacket.KEY_PERM_BODY_REGEN)) this.permanentBodyRegenBonus = data.getDouble(PlayerResourceSyncPacket.KEY_PERM_BODY_REGEN);
+        recalculateAll();
+    }
 
     private void regenerate() {
         regenerateHealth(getEffectiveHealthRegenerationRate() / 20.0);
