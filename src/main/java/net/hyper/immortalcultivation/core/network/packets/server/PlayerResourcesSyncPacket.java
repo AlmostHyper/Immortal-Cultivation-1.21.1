@@ -3,19 +3,21 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 import net.hyper.immortalcultivation.common.attachments.PlayerResourceAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.server.event.world.ICModAttachmentUpdateEvent;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.common.NeoForge;
 
-public record PlayerResourceSyncPacket(CompoundTag resourceData) implements ISyncPacket {
+public record PlayerResourcesSyncPacket(CompoundTag resourceData) implements ISyncPacket {
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("immortalcultivation", "player_resource_sync");
-    public static final CustomPacketPayload.Type<PlayerResourceSyncPacket> TYPE = new CustomPacketPayload.Type<>(ID);
-    public static final StreamCodec<FriendlyByteBuf, PlayerResourceSyncPacket> STREAM_CODEC = StreamCodec.of(
+    public static final CustomPacketPayload.Type<PlayerResourcesSyncPacket> TYPE = new CustomPacketPayload.Type<>(ID);
+    public static final StreamCodec<FriendlyByteBuf, PlayerResourcesSyncPacket> STREAM_CODEC = StreamCodec.of(
             (buf, packet) -> buf.writeNbt(packet.resourceData()),
-            (buf) -> new PlayerResourceSyncPacket(buf.readNbt())
+            (buf) -> new PlayerResourcesSyncPacket(buf.readNbt())
     );
 
     // --- FIELD CONSTANTS ---
@@ -30,7 +32,7 @@ public record PlayerResourceSyncPacket(CompoundTag resourceData) implements ISyn
     public static final String KEY_PERM_BODY_REGEN = "p_b_r";
 
     @Override
-    public CustomPacketPayload.Type<PlayerResourceSyncPacket> type() {
+    public CustomPacketPayload.Type<PlayerResourcesSyncPacket> type() {
         return TYPE;
     }
 
@@ -40,6 +42,8 @@ public record PlayerResourceSyncPacket(CompoundTag resourceData) implements ISyn
             PlayerResourceAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
             if (attachment != null) {
                 attachment.applySync(this.resourceData);
+
+                NeoForge.EVENT_BUS.post(new ICModAttachmentUpdateEvent(player, ICModAttachmentTypes.PLAYER_RESOURCES.get()));
             }
         }
     }

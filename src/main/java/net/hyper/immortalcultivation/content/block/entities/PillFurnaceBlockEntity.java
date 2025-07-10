@@ -561,8 +561,8 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         if (cultivation == null) return 1.0;
 
         // Higher realms give better modifiers
-        int qiRealmLevel = cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getRealmLevel();
-        int bodyRealmLevel = cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getRealmLevel();
+        int qiRealmLevel = cultivation.getRealm(ICultivationData.CultivationType.QI).getRealmLevel();
+        int bodyRealmLevel = cultivation.getRealm(ICultivationData.CultivationType.BODY).getRealmLevel();
         return 1.0 + ((qiRealmLevel + bodyRealmLevel) * 0.1); // +10% per realm level
     }
 

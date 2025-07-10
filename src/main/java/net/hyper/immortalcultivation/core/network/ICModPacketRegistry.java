@@ -1,8 +1,6 @@
 package net.hyper.immortalcultivation.core.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
@@ -40,9 +38,9 @@ public class ICModPacketRegistry {
 
         // === SERVER -> CLIENT === //
         registerClientPacket(PlayerCultivationSyncPacket.TYPE, PlayerCultivationSyncPacket.STREAM_CODEC);
-        registerClientPacket(PlayerTalentSyncPacket.TYPE, PlayerTalentSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerTalentsSyncPacket.TYPE, PlayerTalentsSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerRaceSyncPacket.TYPE, PlayerRaceSyncPacket.STREAM_CODEC);
-        registerClientPacket(PlayerResourceSyncPacket.TYPE, PlayerResourceSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerResourcesSyncPacket.TYPE, PlayerResourcesSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerPillConsumptionSyncPacket.TYPE, PlayerPillConsumptionSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerBreakthroughSyncPacket.TYPE, PlayerBreakthroughSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerCombatStatsSyncPacket.TYPE, PlayerCombatStatsSyncPacket.STREAM_CODEC);

@@ -3,12 +3,14 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.server.event.world.ICModAttachmentUpdateEvent;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.common.NeoForge;
 
 public record PlayerBreakthroughSyncPacket(CompoundTag breakthroughData) implements ISyncPacket {
     public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("immortalcultivation", "player_breakthrough_sync");
@@ -29,6 +31,8 @@ public record PlayerBreakthroughSyncPacket(CompoundTag breakthroughData) impleme
             PlayerBreakthroughAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
             if (attachment != null) {
                 attachment.applySync(this.breakthroughData);
+
+                NeoForge.EVENT_BUS.post(new ICModAttachmentUpdateEvent(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()));
             }
         }
     }

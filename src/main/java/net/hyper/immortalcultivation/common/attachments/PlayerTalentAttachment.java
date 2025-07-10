@@ -8,7 +8,7 @@ import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
-import net.hyper.immortalcultivation.core.network.packets.server.PlayerTalentSyncPacket;
+import net.hyper.immortalcultivation.core.network.packets.server.PlayerTalentsSyncPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -125,7 +125,7 @@ public class PlayerTalentAttachment implements ISyncable, IPlayerInitializable {
                 .orElse(new CompoundTag());
 
         clearDirty();
-        return Optional.of(new PlayerTalentSyncPacket(data));
+        return Optional.of(new PlayerTalentsSyncPacket(data));
     }
 
     @Override

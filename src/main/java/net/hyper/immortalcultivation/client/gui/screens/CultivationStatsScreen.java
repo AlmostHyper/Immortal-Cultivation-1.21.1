@@ -13,6 +13,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.opengl.GL11;
 
 /**
@@ -127,12 +128,12 @@ public class CultivationStatsScreen extends Screen {
     }
 
     @Override
-    public void init() {
+    protected void init() {
         super.init();
-        calculateResponsiveDimensions();
-        calculateLayoutConstants();
-        loadCultivationData();
-        setupInterface();
+        if (!isSubscribed) {
+            NeoForge.EVENT_BUS.register(this);
+            isSubscribed = true;
+        }
     }
 
     @Override

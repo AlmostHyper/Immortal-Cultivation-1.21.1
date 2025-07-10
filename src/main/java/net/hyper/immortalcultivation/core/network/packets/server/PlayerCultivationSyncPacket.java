@@ -6,11 +6,13 @@ import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachm
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.server.event.world.ICModAttachmentUpdateEvent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
+import net.neoforged.neoforge.common.NeoForge;
 
 import java.util.Optional;
 
@@ -99,6 +101,8 @@ public record PlayerCultivationSyncPacket(
         });
 
         this.focus.ifPresent(attachment::setCurrentFocus);
+
+        NeoForge.EVENT_BUS.post(new ICModAttachmentUpdateEvent(player, ICModAttachmentTypes.PLAYER_CULTIVATION.get()));
 
         ImmortalCultivation.LOGGER.debug("Applied cultivation sync packet on client.");
     }
