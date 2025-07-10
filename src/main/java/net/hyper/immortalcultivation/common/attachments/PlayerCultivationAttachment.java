@@ -343,7 +343,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
     // === HELPER METHODS === //
 
     private CultivationRealm getDefaultMortalRealm() {
-        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_Mortal_REALM_ID);
+        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
         return mortalRealm != null ? mortalRealm : createTemporaryMortalRealm();
     }
 
