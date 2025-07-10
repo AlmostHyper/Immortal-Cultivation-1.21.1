@@ -4,13 +4,17 @@ import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Mod.EventBusSubscriber
 public class NetworkSyncManager {
+
+    public static final NetworkSyncManager INSTANCE = new NetworkSyncManager();
 
     private final ConcurrentHashMap<UUID, SyncRequest> pendingSyncs = new ConcurrentHashMap<>();
 
@@ -42,7 +46,11 @@ public class NetworkSyncManager {
     }
 
     @SubscribeEvent
-    public void onServerTick(ServerTickEvent.Post event) {
+    public static void onServerTick(ServerTickEvent.Post event) {
+        INSTANCE.processSyncs();
+    }
+
+    private void processSyncs() {
         if (pendingSyncs.isEmpty()) {
             return;
         }

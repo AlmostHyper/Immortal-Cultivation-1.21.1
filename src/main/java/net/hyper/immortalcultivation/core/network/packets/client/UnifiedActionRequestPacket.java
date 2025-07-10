@@ -42,12 +42,6 @@ public record UnifiedActionRequestPacket(
         CULTIVATION_FOCUS_TOGGLE,
         // --- Player Setup ---
         SELECT_RACE,
-        // --- Data Syncing ---
-        REQUEST_FULL_SYNC,
-        REQUEST_CULTIVATION_DATA,
-        REQUEST_COMBAT_STATS,
-        REQUEST_RESOURCE_DATA,
-        REQUEST_TALENT_DATA
     }
 
     private static final Map<ActionType, BiConsumer<ServerPlayer, UnifiedActionRequestPacket>> actionHandlers = new EnumMap<>(ActionType.class);
@@ -58,12 +52,6 @@ public record UnifiedActionRequestPacket(
         actionHandlers.put(ActionType.CULTIVATION_FOCUS_TOGGLE, (p, pkt) -> processFocusToggle(p));
         // Player Setup
         actionHandlers.put(ActionType.SELECT_RACE, UnifiedActionRequestPacket::processRaceSelection);
-        // Data Syncing
-        actionHandlers.put(ActionType.REQUEST_FULL_SYNC, (p, pkt) -> NetworkSyncManager.scheduleSync(p, NetworkSyncManager.SyncPriority.CRITICAL, true));
-        actionHandlers.put(ActionType.REQUEST_CULTIVATION_DATA, (p, pkt) -> NetworkSyncManager.scheduleSyncFor(p, ICModAttachmentTypes.PLAYER_CULTIVATION.get()));
-        actionHandlers.put(ActionType.REQUEST_COMBAT_STATS, (p, pkt) -> NetworkSyncManager.scheduleSyncFor(p, ICModAttachmentTypes.PLAYER_COMBAT_STATS.get()));
-        actionHandlers.put(ActionType.REQUEST_RESOURCE_DATA, (p, pkt) -> NetworkSyncManager.scheduleSyncFor(p, ICModAttachmentTypes.PLAYER_RESOURCES.get()));
-        actionHandlers.put(ActionType.REQUEST_TALENT_DATA, (p, pkt) -> NetworkSyncManager.scheduleSyncFor(p, ICModAttachmentTypes.PLAYER_TALENTS.get()));
     }
 
     // --- Convenience Constructors ---
@@ -147,7 +135,7 @@ public record UnifiedActionRequestPacket(
         var result = breakthrough.attemptTypedBreakthrough(packet.cultivationType.get(), packet.breakthroughType.get());
 
         BreakthroughFeedbackHelper.sendBreakthroughFeedback(player, result, packet.breakthroughType.get());
-        NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.CRITICAL);
+        NetworkSyncManager.INSTANCE.scheduleSync(player, player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()), true);
     }
 
     private static void processFocusToggle(ServerPlayer player) {
@@ -170,7 +158,7 @@ public record UnifiedActionRequestPacket(
         }
         
         // This action only affects cultivation data, so a targeted sync is efficient.
-        NetworkSyncManager.scheduleSyncFor(player, ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        NetworkSyncManager.INSTANCE.scheduleSync(player, player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get()), false);
     }
 
     private static void processRaceSelection(ServerPlayer player, UnifiedActionRequestPacket packet) {
@@ -187,7 +175,7 @@ public record UnifiedActionRequestPacket(
             raceAttachment.assignRace(player, raceType);
             player.sendSystemMessage(Component.literal("You are now a " + raceType.getDisplayName() + "!").withStyle(ChatFormatting.GOLD));
             // A full sync is appropriate after a major change like race selection.
-            NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.CRITICAL, true);
+            NetworkSyncManager.INSTANCE.scheduleSync(player, player.getData(ICModAttachmentTypes.PLAYER_RACE.get()), true);
         } catch (IllegalArgumentException e) {
             player.sendSystemMessage(Component.literal("Invalid race selected.").withStyle(ChatFormatting.RED));
             ImmortalCultivation.LOGGER.warn("Player {} tried to select invalid race: {}", player.getName().getString(), packet.stringParam.get());
