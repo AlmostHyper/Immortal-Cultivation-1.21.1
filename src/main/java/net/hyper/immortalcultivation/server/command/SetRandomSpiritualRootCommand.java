@@ -3,11 +3,9 @@ package net.hyper.immortalcultivation.server.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
@@ -41,212 +39,25 @@ public class SetRandomSpiritualRootCommand {
                 return 0;
             }
 
-            // Set the random spiritual root type using the unified system
-            if (talentAttachment.hasSpiritualRootAssigned()) {
-                // Force reassignment (admin override)
-                talentAttachment.forceReassignSpiritualRoot(randomRoot);
-            } else {
-                // Normal assignment
-                talentAttachment.assignSpiritualRoot(randomRoot);
-            }
+            // Set the random spiritual root type
+            talentAttachment.setSpiritualRootType(randomRoot);
 
-            // Check if we need to broadcast to server
-            float multiplier = randomRoot.getCultivationMultiplier();
-            if (multiplier == 1.4f) {
-                // Legendary - broadcast to server
-                broadcastLegendaryAchievement(player, "spiritual root", randomRoot.getDisplayName(), "1.4x");
-            } else if (multiplier == 1.5f) {
-                // Heavenly - broadcast to server
-                broadcastHeavenlyAchievement(player, "spiritual root", randomRoot.getDisplayName(), "1.5x");
-            }
-
-            // Check for ultimate destiny (both heavenly talents)
-            checkForUltimateDestiny(player, talentAttachment);
-
-            // Send success message with rarity information
-            String rarityInfo = getRarityInfo(randomRoot);
+            // Send success message
             context.getSource().sendSuccess(() ->
-                Component.literal("✨ The dao has revealed " + player.getName().getString() +
-                    "'s destiny: " + randomRoot.getDisplayName() + " " + rarityInfo +
-                    " (Multiplier: " + String.format("%.1fx", randomRoot.getCultivationMultiplier()) + ")"), true);
+                Component.literal("Set random spiritual root for " + player.getName().getString() + " to " +
+                    randomRoot.name()), true);
 
             // Send message to the target player if different from command source
-            if (!context.getSource().getEntity().equals(player)) {
-                String rarityMessage = getRarityMessage(randomRoot);
-                player.sendSystemMessage(Component.literal("✨ " + rarityMessage + " " +
-                    randomRoot.getDisplayName() + "! " +
-                    "(Cultivation multiplier: " + String.format("%.1fx", randomRoot.getCultivationMultiplier()) + ")"));
-            } else {
-                // Message to self
-                String rarityMessage = getRarityMessage(randomRoot);
-                player.sendSystemMessage(Component.literal("✨ " + rarityMessage + " " +
-                    randomRoot.getDisplayName() + "!"));
-            }
-
-            // Show combined talent status if both talents are assigned
-            if (talentAttachment.hasSpiritualRootAssigned() && talentAttachment.hasPhysiqueAssigned()) {
-                String combinedDesc = talentAttachment.getCombinedTalentDescription();
-                float overallMultiplier = talentAttachment.getOverallCultivationMultiplier();
-
-                context.getSource().sendSuccess(() ->
-                    Component.literal("Combined Talent Status: " + combinedDesc +
-                        " (Overall: " + String.format("%.2fx", overallMultiplier) + " multiplier)"), false);
+            if (context.getSource().getEntity() != player) {
+                player.sendSystemMessage(Component.literal("Your spiritual root has been randomly set to " +
+                    randomRoot.name()));
             }
 
             return 1;
 
         } catch (Exception e) {
             context.getSource().sendFailure(Component.literal("Error setting random spiritual root: " + e.getMessage()));
-            e.printStackTrace(); // For debugging
             return 0;
-        }
-    }
-
-    /**
-     * Get rarity information for command feedback
-     */
-    private static String getRarityInfo(SpiritualRootType root) {
-        float multiplier = root.getCultivationMultiplier();
-        if (multiplier == 1.0f) return "[Common]";
-        else if (multiplier == 1.1f) return "[Common]";
-        else if (multiplier == 1.2f) return "[Uncommon]";
-        else if (multiplier == 1.3f) return "[Rare]";
-        else if (multiplier == 1.4f) return "[Legendary]";
-        else if (multiplier == 1.5f) return "[Mythical]";
-        else return "[Unknown]";
-    }
-
-    /**
-     * Get rarity-appropriate message for players
-     */
-    private static String getRarityMessage(SpiritualRootType root) {
-        float multiplier = root.getCultivationMultiplier();
-        if (multiplier == 1.0f) return "You possess a mortal spiritual root:";
-        else if (multiplier == 1.1f) return "The dao has chosen your path with the";
-        else if (multiplier == 1.2f) return "Blessed by fate! Your spiritual root has been revealed as the";
-        else if (multiplier == 1.3f) return "Extraordinary fortune! The heavens have granted you the";
-        else if (multiplier == 1.4f) return "DIVINE PROVIDENCE! Your destiny is bound to the";
-        else if (multiplier == 1.5f) return "HEAVEN-SHAKING MIRACLE! You have defied fate itself with the";
-        else return "Your spiritual root has been revealed as the";
-    }
-
-    /**
-     * Broadcast legendary achievement to all players on the server
-     */
-    private static void broadcastLegendaryAchievement(ServerPlayer player, String type, String talentName, String multiplier) {
-        try {
-            Component playerName = Component.literal(player.getName().getString())
-                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
-            Component talent = Component.literal(talentName)
-                .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD);
-
-            Component broadcast = Component.literal("🌟 ═══ LEGENDARY AWAKENING ═══ 🌟\n")
-                .append(Component.literal("The dao trembles as "))
-                .append(playerName)
-                .append(Component.literal(" awakens the legendary "))
-                .append(talent)
-                .append(Component.literal("!\n"))
-                .append(Component.literal("A prodigy emerges! ("))
-                .append(Component.literal(multiplier + " cultivation multiplier"))
-                .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)
-                .append(Component.literal(")"))
-                .withStyle(ChatFormatting.GOLD);
-
-            // Send to all players except the one who achieved it
-            player.getServer().getPlayerList().getPlayers().forEach(serverPlayer -> {
-                if (!serverPlayer.equals(player)) {
-                    serverPlayer.sendSystemMessage(broadcast);
-                }
-            });
-        } catch (Exception e) {
-            // Log error instead of sending to context
-            ImmortalCultivation.LOGGER.error("Error broadcasting legendary spiritual root achievement", e);
-        }
-    }
-
-    /**
-     * Broadcast heavenly achievement to all players on the server
-     */
-    private static void broadcastHeavenlyAchievement(ServerPlayer player, String type, String talentName, String multiplier) {
-        try {
-            Component playerName = Component.literal(player.getName().getString())
-                .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD);
-            Component talent = Component.literal(talentName)
-                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
-
-            Component broadcast = Component.literal("💫 ════ HEAVEN-DEFYING MIRACLE ════ 💫\n")
-                .append(Component.literal("THE HEAVENS SHAKE! "))
-                .append(playerName)
-                .append(Component.literal(" has DEFIED FATE!\n"))
-                .append(Component.literal("The legendary "))
-                .append(talent)
-                .append(Component.literal(" has chosen them!\n"))
-                .append(Component.literal("DESTINED FOR IMMORTALITY! ("))
-                .append(Component.literal(multiplier + " cultivation multiplier"))
-                .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)
-                .append(Component.literal(")"))
-                .withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD);
-
-            // Send to all players except the one who achieved it
-            player.getServer().getPlayerList().getPlayers().forEach(serverPlayer -> {
-                if (!serverPlayer.equals(player)) {
-                    serverPlayer.sendSystemMessage(broadcast);
-                }
-            });
-        } catch (Exception e) {
-            // Log error instead of sending to context
-            ImmortalCultivation.LOGGER.error("Error broadcasting heavenly spiritual root achievement", e);
-        }
-    }
-
-    /**
-     * Check if player has achieved ultimate destiny (both heavenly talents) using unified attachment
-     */
-    private static void checkForUltimateDestiny(ServerPlayer player, PlayerTalentAttachment talentAttachment) {
-        try {
-            if (talentAttachment.hasDivineDaoDestiny()) {
-                // ULTIMATE DESTINY ACHIEVED!
-                broadcastUltimateDestiny(player,
-                    talentAttachment.getSpiritualRootDisplayName(),
-                    talentAttachment.getPhysiqueDisplayName());
-            }
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error checking ultimate destiny", e);
-        }
-    }
-
-    /**
-     * Broadcast ultimate destiny achievement - the rarest possible: both heavenly talents
-     */
-    private static void broadcastUltimateDestiny(ServerPlayer player, String rootName, String physiqueName) {
-        try {
-            Component playerName = Component.literal(player.getName().getString())
-                .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
-            Component root = Component.literal(rootName)
-                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
-            Component physique = Component.literal(physiqueName)
-                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
-
-            Component broadcast = Component.literal("⚡ ════════ ULTIMATE DESTINY ════════ ⚡\n")
-                .append(Component.literal("🌟💫 THE WORLD TREMBLES! THE DAO ITSELF BOWS! 💫🌟\n"))
-                .append(playerName)
-                .append(Component.literal(" has achieved ULTIMATE PERFECTION!\n"))
-                .append(Component.literal("Blessed with BOTH the "))
-                .append(root)
-                .append(Component.literal(" AND "))
-                .append(physique)
-                .append(Component.literal("!\n"))
-                .append(Component.literal("CHOSEN BY DESTINY! MASTER OF HEAVEN AND EARTH!\n"))
-                .append(Component.literal("🌟 Combined 2.25x Cultivation Multiplier! 🌟\n"))
-                .append(Component.literal("⚡ Once in ten thousand generations! ⚡"))
-                .withStyle(ChatFormatting.LIGHT_PURPLE, ChatFormatting.BOLD);
-
-            // Send to ALL players including the achiever
-            player.getServer().getPlayerList().getPlayers().forEach(serverPlayer -> {
-                serverPlayer.sendSystemMessage(broadcast);
-            });
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error broadcasting ultimate destiny", e);
         }
     }
 }

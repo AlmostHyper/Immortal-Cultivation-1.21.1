@@ -147,17 +147,17 @@ public class GetRealmCommand {
             .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
 
         // Current focus with strategic context
-        String focusName = snapshot.cultivation.getCurrentFocus().getDisplayName();
+        String focusName = snapshot.cultivation.getCurrentFocus().name();
         source.sendSuccess(() -> Component.literal("Current Focus: " + focusName + " Cultivation (2x rate)")
             .withStyle(ChatFormatting.YELLOW), false);
 
         // Talent information
-        String talentDesc = snapshot.talents.getCombinedTalentDescription();
+        String talentDesc = snapshot.talents.getSpiritualRootType().name() + " / " + snapshot.talents.getPhysiqueType().name();
         source.sendSuccess(() -> Component.literal("Talent Level: " + talentDesc)
             .withStyle(ChatFormatting.LIGHT_PURPLE), false);
 
         // Overall multiplier
-        float overallMultiplier = snapshot.talents.getOverallCultivationMultiplier();
+        float overallMultiplier = snapshot.talents.getSpiritualRootMultiplier() * snapshot.talents.getPhysiqueMultiplier();
         source.sendSuccess(() -> Component.literal("Overall Talent Multiplier: " +
                 String.format("%.2fx", overallMultiplier))
             .withStyle(ChatFormatting.GREEN), false);
@@ -169,18 +169,18 @@ public class GetRealmCommand {
      */
     private void sendRealmInformation(CommandSourceStack source, CultivationDataSnapshot snapshot) {
         // Qi Realm Information
-        String qiRealm = snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getDisplayName();
+        String qiRealm = snapshot.cultivation.getRealm(ICultivationData.CultivationType.QI).getId();
         source.sendSuccess(() -> Component.literal("Qi Realm: " + qiRealm)
             .withStyle(ChatFormatting.AQUA), false);
 
         // Body Realm Information
-        String bodyRealm = snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getDisplayName();
+        String bodyRealm = snapshot.cultivation.getRealm(ICultivationData.CultivationType.BODY).getId();
         source.sendSuccess(() -> Component.literal("Body Realm: " + bodyRealm)
             .withStyle(ChatFormatting.RED), false);
 
         // Overall cultivation level comparison
-        String higherPath = snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getRealmLevel() >=
-            snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getRealmLevel() ? "Qi" : "Body";
+        String higherPath = snapshot.cultivation.getRealm(ICultivationData.CultivationType.QI).getRealmLevel() >=
+            snapshot.cultivation.getRealm(ICultivationData.CultivationType.BODY).getRealmLevel() ? "Qi" : "Body";
         source.sendSuccess(() -> Component.literal("Highest Path: " + higherPath + " Cultivation")
             .withStyle(ChatFormatting.GREEN), false);
     }
@@ -191,8 +191,7 @@ public class GetRealmCommand {
      */
     private void sendFocusInformation(CommandSourceStack source, CultivationDataSnapshot snapshot) {
         // Focus switch availability (simplified check)
-        String currentFocus = snapshot.cultivation.getCurrentFocus().getDisplayName();
-        String switchTo = snapshot.cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ? "Body" : "Qi";
+        String switchTo = snapshot.cultivation.getCurrentFocus() == ICultivationData.CultivationType.QI ? "Body" : "Qi";
 
         source.sendSuccess(() -> Component.literal("Focus Switch: Can switch to " + switchTo)
             .withStyle(ChatFormatting.GREEN), false);
@@ -232,8 +231,8 @@ public class GetRealmCommand {
             bodyCurrent, bodyMax, bodyPercent)).withStyle(ChatFormatting.RED), false);
 
         // Show bonuses if any
-        double qiBonus = snapshot.cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
-        double bodyBonus = snapshot.cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
+        double qiBonus = snapshot.cultivation.getAdditiveBonus(ICultivationData.CultivationType.QI);
+        double bodyBonus = snapshot.cultivation.getAdditiveBonus(ICultivationData.CultivationType.BODY);
 
         if (qiBonus > 0) {
             source.sendSuccess(() -> Component.literal(String.format("Qi Bonus: +%.3f/sec from pills",

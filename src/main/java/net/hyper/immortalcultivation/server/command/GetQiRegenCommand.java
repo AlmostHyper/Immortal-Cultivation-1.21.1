@@ -38,27 +38,28 @@ public class GetQiRegenCommand {
             // Current Qi Energy status
             long currentQi = resources.getCurrentQi();
             long maxQi = resources.getMaxQi();
-            double qiPercent = resources.getQiProgress() * 100;
+            double qiPercent = maxQi > 0 ? (double) currentQi / maxQi * 100 : 0.0;
+
 
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Current Qi Energy: %d/%d (%.1f%%)", currentQi, maxQi, qiPercent))
                     .withStyle(ChatFormatting.BLUE), false);
 
             // Base regeneration rate
-            double baseRate = resources.getBaseQiRegenerationRate();
+            double baseRate = resources.getBaseQiRegen();
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Base Regeneration: %.3f/sec", baseRate))
                     .withStyle(ChatFormatting.GRAY), false);
 
             // Effective regeneration rate (with bonuses)
-            double effectiveRate = resources.getEffectiveQiRegenerationRate();
+            double effectiveRate = resources.getEffectiveQiRegen();
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Effective Regeneration: %.3f/sec", effectiveRate))
                     .withStyle(ChatFormatting.AQUA), false);
 
             // Time to full calculation
             if (currentQi < maxQi && effectiveRate > 0) {
-                double timeToFull = (maxQi - currentQi) / (effectiveRate);
+                double timeToFull = (maxQi - currentQi) / effectiveRate;
                 int minutes = (int) (timeToFull / 60);
                 int seconds = (int) (timeToFull % 60);
 

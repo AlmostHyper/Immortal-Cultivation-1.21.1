@@ -55,7 +55,7 @@ public class GetCultivationCommand {
                     .withStyle(ChatFormatting.RED), false);
 
             // Current Focus
-            String focus = cultivation.getCurrentFocus().getDisplayName();
+            String focus = cultivation.getCurrentFocus().name();
             context.getSource().sendSuccess(() ->
                 Component.literal("Current Focus: " + focus + " (2x rate)")
                     .withStyle(ChatFormatting.YELLOW), false);
@@ -68,8 +68,8 @@ public class GetCultivationCommand {
                     .withStyle(ChatFormatting.GREEN), false);
 
             // Bonuses (if any)
-            double qiBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
-            double bodyBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
+            double qiBonus = cultivation.getAdditiveBonus(ICultivationData.CultivationType.QI);
+            double bodyBonus = cultivation.getAdditiveBonus(ICultivationData.CultivationType.BODY);
 
             if (qiBonus > 0 || bodyBonus > 0) {
                 context.getSource().sendSuccess(() ->

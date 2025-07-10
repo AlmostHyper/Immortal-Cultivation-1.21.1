@@ -55,45 +55,18 @@ public class SetPhysiqueCommand {
                 return 0;
             }
 
-            // Set the physique using the unified system
-            if (talentAttachment.hasPhysiqueAssigned()) {
-                // Force reassignment (admin override)
-                talentAttachment.forceReassignPhysique(physiqueType);
-                context.getSource().sendSuccess(() ->
-                    Component.literal("Forcibly reassigned physique of " + player.getName().getString() +
-                        " to " + physiqueType.getDisplayName() + " (" +
-                        String.format("%.1fx", physiqueType.getCultivationMultiplier()) + " multiplier)"), true);
-            } else {
-                // Normal assignment
-                talentAttachment.assignPhysique(physiqueType);
-                context.getSource().sendSuccess(() ->
-                    Component.literal("Set physique of " + player.getName().getString() +
-                        " to " + physiqueType.getDisplayName() + " (" +
-                        String.format("%.1fx", physiqueType.getCultivationMultiplier()) + " multiplier)"), true);
-            }
+            // Set the physique
+            talentAttachment.setPhysiqueType(physiqueType);
+            context.getSource().sendSuccess(() ->
+                Component.literal("Set physique of " + player.getName().getString() +
+                    " to " + physiqueType.name() + " (" +
+                    String.format("%.1fx", talentAttachment.getPhysiqueMultiplier()) + " multiplier)"), true);
 
             // Send message to the target player if different from command source
-            if (!context.getSource().getEntity().equals(player)) {
+            if (context.getSource().getEntity() != player) {
                 player.sendSystemMessage(Component.literal("Your physique has been set to " +
-                    physiqueType.getDisplayName() + " (" +
-                    String.format("%.1fx", physiqueType.getCultivationMultiplier()) + " cultivation multiplier)"));
-            }
-
-            // Show combined talent status if both talents are assigned
-            if (talentAttachment.hasSpiritualRootAssigned() && talentAttachment.hasPhysiqueAssigned()) {
-                String combinedDesc = talentAttachment.getCombinedTalentDescription();
-                float overallMultiplier = talentAttachment.getOverallCultivationMultiplier();
-
-                context.getSource().sendSuccess(() ->
-                    Component.literal("Combined Talent Status: " + combinedDesc +
-                        " (Overall: " + String.format("%.2fx", overallMultiplier) + " multiplier)"), false);
-
-                // Check for Divine Dao Destiny
-                if (talentAttachment.hasDivineDaoDestiny()) {
-                    context.getSource().sendSuccess(() ->
-                        Component.literal("🌟 DIVINE DAO DESTINY ACHIEVED! 🌟")
-                            .withStyle(net.minecraft.ChatFormatting.LIGHT_PURPLE, net.minecraft.ChatFormatting.BOLD), false);
-                }
+                    physiqueType.name() + " (" +
+                    String.format("%.1fx", talentAttachment.getPhysiqueMultiplier()) + " cultivation multiplier)"));
             }
 
             return 1;

@@ -117,6 +117,14 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
 
     @Override
     public void setRegenFraction(CultivationType type, double fraction) { cultivationFraction.put(type, fraction); }
+    
+    public double getAdditiveBonus(CultivationType type) {
+        return this.additiveBonus.getOrDefault(type, 0.0);
+    }
+
+    public double getMultiplicativeBonus(CultivationType type) {
+        return this.multiplicativeBonus.getOrDefault(type, 0.0);
+    }
 
     public CultivationRealm getRealm(CultivationType type) {
         return currentRealms.get(type);

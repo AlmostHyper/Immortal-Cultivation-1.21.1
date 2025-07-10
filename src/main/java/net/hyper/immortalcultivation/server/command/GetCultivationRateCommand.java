@@ -66,7 +66,6 @@ public class GetCultivationRateCommand {
             // Talent multipliers
             float spiritRootMultiplier = talents.getSpiritualRootMultiplier();
             float physiqueMultiplier = talents.getPhysiqueMultiplier();
-            float overallMultiplier = talents.getOverallCultivationMultiplier();
 
             context.getSource().sendSuccess(() ->
                 Component.literal("=== Talent Multipliers ===")
@@ -76,19 +75,15 @@ public class GetCultivationRateCommand {
                 Component.literal(String.format("Spiritual Root: %.1fx | Physique: %.1fx", spiritRootMultiplier, physiqueMultiplier))
                     .withStyle(ChatFormatting.LIGHT_PURPLE), false);
 
-            context.getSource().sendSuccess(() ->
-                Component.literal(String.format("Combined Talent Multiplier: %.2fx", overallMultiplier))
-                    .withStyle(ChatFormatting.GREEN), false);
-
             // Focus bonus
-            String currentFocus = cultivation.getCurrentFocus().getDisplayName();
+            String currentFocus = cultivation.getCurrentFocus().name();
             context.getSource().sendSuccess(() ->
                 Component.literal("Focus: " + currentFocus + " (2x bonus for focused path)")
                     .withStyle(ChatFormatting.YELLOW), false);
 
             // Pill bonuses
-            double qiBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.QI);
-            double bodyBonus = cultivation.getRawAdditiveBonus(ICultivationData.CultivationType.BODY);
+            double qiBonus = cultivation.getAdditiveBonus(ICultivationData.CultivationType.QI);
+            double bodyBonus = cultivation.getAdditiveBonus(ICultivationData.CultivationType.BODY);
 
             if (qiBonus > 0 || bodyBonus > 0) {
                 context.getSource().sendSuccess(() ->

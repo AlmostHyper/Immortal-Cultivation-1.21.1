@@ -15,29 +15,32 @@ public class GetQiCommand {
             .executes(this::execute)));
     }
 
-    private int execute(CommandContext<CommandSourceStack> commandSourceStackCommandContext) {
+    private int execute(CommandContext<CommandSourceStack> context) {
         try {
-            ServerPlayer player = commandSourceStackCommandContext.getSource().getPlayer();
+            ServerPlayer player = context.getSource().getPlayer();
             if (player == null) {
-                commandSourceStackCommandContext.getSource().sendFailure(Component.literal("This command can only be used by players"));
+                context.getSource().sendFailure(Component.literal("This command can only be used by players"));
                 return 0;
             }
 
-            PlayerResourceAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            if (attachment == null) {
-                commandSourceStackCommandContext.getSource().sendFailure(Component.literal("Failed to get resource data"));
+            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+
+            if (resources == null) {
+                context.getSource().sendFailure(Component.literal("Failed to get resource data"));
                 return 0;
             }
 
-            long currentQi = attachment.getCurrentQi();
-            long maxQi = attachment.getMaxQi();
+            long currentQi = resources.getCurrentQi();
+            long maxQi = resources.getMaxQi();
+            double qiPercent = maxQi > 0 ? (double) currentQi / maxQi * 100 : 0.0;
 
-            commandSourceStackCommandContext.getSource().sendSuccess(() ->
-                Component.literal("Your current Qi Energy is: " + currentQi + "/" + maxQi +
-                    " (" + String.format("%.1f", attachment.getQiProgress() * 100) + "%)"), true);
+            context.getSource().sendSuccess(() ->
+                Component.literal(String.format("Qi Energy: %d/%d (%.1f%%)", currentQi, maxQi, qiPercent)),
+                true);
+
             return 1;
         } catch (Exception e) {
-            commandSourceStackCommandContext.getSource().sendFailure(Component.literal("Error retrieving Qi: " + e.getMessage()));
+            context.getSource().sendFailure(Component.literal("Error retrieving Qi: " + e.getMessage()));
             return 0;
         }
     }
