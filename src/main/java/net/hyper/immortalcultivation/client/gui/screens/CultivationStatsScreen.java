@@ -128,15 +128,6 @@ public class CultivationStatsScreen extends Screen {
     }
 
     @Override
-    protected void init() {
-        super.init();
-        if (!isSubscribed) {
-            NeoForge.EVENT_BUS.register(this);
-            isSubscribed = true;
-        }
-    }
-
-    @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTicks) {
         enableSharpRendering();
 
