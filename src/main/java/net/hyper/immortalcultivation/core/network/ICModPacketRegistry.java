@@ -40,7 +40,7 @@ public class ICModPacketRegistry {
         REGISTRY.playToClient(
                 OpenRaceSelectionSyncPacket.TYPE,
                 OpenRaceSelectionSyncPacket.STREAM_CODEC,
-                (packet, context) -> context.enqueueWork(() -> OpenRaceSelectionSyncPacket.handleClient(packet, context))
+                OpenRaceSelectionSyncPacket::handleClient
         );
 
         // === CLIENT -> SERVER === //
@@ -51,49 +51,11 @@ public class ICModPacketRegistry {
                 UnifiedActionRequestPacket::handleServer
         );
 
-        REGISTRY.playToServer(
-                RaceSelectionRequestPacket.TYPE,
-                RaceSelectionRequestPacket.STREAM_CODEC,
-                RaceSelectionRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                CultivationRequestPacket.TYPE,
-                CultivationRequestPacket.STREAM_CODEC,
-                CultivationRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                ResourceRequestPacket.TYPE,
-                ResourceRequestPacket.STREAM_CODEC,
-                ResourceRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                TalentRequestPacket.TYPE,
-                TalentRequestPacket.STREAM_CODEC,
-                TalentRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                CultivationFocusTogglePacket.TYPE,
-                CultivationFocusTogglePacket.STREAM_CODEC,
-                CultivationFocusTogglePacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                CombatStatsRequestPacket.TYPE,
-                CombatStatsRequestPacket.STREAM_CODEC,
-                CombatStatsRequestPacket::handleServer
-        );
-
         ImmortalCultivation.LOGGER.info("Network packets registered successfully!");
     }
 
     private static <T extends ISyncPacket> void registerClientPacket(CustomPacketPayload.Type<T> type, StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
-        REGISTRY.playToClient(type, codec, (packet, context) -> {
-            context.enqueueWork(packet::handleOnClient);
-        });
+        REGISTRY.playToClient(type, codec, (packet, context) -> packet.handleOnClient());
     }
 
     // Utility methods for sending packets

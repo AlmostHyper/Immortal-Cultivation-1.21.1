@@ -26,12 +26,7 @@ public record OpenRaceSelectionSyncPacket() implements CustomPacketPayload {
         return TYPE;
     }
 
-    public static void handleClient(OpenRaceSelectionSyncPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            Minecraft minecraft = Minecraft.getInstance();
-            minecraft.execute(() -> {
-                minecraft.setScreen(new RaceSelectionScreen());
-            });
-        });
+    public static void handleClient(final OpenRaceSelectionSyncPacket packet, final IPayloadContext context) {
+        Minecraft.getInstance().setScreen(new RaceSelectionScreen());
     }
 }
