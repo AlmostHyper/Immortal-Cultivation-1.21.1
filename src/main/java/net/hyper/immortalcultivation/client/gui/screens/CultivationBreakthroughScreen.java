@@ -153,8 +153,8 @@ public class CultivationBreakthroughScreen extends Screen {
             }
 
             return type == PlayerCultivationAttachment.CultivationType.QI ?
-                cultivationData.cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getDisplayName() :
-                cultivationData.cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getDisplayName();
+                cultivationData.cultivation.getRealm(ICultivationData.CultivationType.QI).getDisplayName() :
+                cultivationData.cultivation.getRealm(ICultivationData.CultivationType.BODY).getDisplayName();
         }
 
         /**
@@ -618,8 +618,8 @@ public class CultivationBreakthroughScreen extends Screen {
 
         // Realm information
         String realmsText = String.format("Realms: Qi %s | Body %s",
-            cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getDisplayName(),
-            cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getDisplayName());
+            cultivation.getRealm(ICultivationData.CultivationType.QI).getDisplayName(),
+            cultivation.getRealm(ICultivationData.CultivationType.BODY).getDisplayName());
         guiGraphics.drawString(font, realmsText, windowX + 15, startY + LINE_HEIGHT, 0xFFFFFFFF);
     }
 

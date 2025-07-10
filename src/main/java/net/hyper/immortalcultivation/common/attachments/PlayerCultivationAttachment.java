@@ -356,6 +356,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         return new JsonCultivationRealm(realmData);
     }
 
+
     // === SERIALIZATION === //
 
     public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerCultivationAttachment> {

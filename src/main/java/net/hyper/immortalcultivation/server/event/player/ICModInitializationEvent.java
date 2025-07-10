@@ -52,10 +52,18 @@ public class ICModInitializationEvent {
      * @param player The player to initialize attachments for.
      */
     private static void initializeAttachments(ServerPlayer player) {
-        player.getAttachments().getValues().stream()
-              .filter(IPlayerInitializable.class::isInstance)
-              .map(IPlayerInitializable.class::cast)
-              .forEach(initializer -> initializer.onPlayerLogin(player));
+        try {
+            player.getAttachments().getValues().stream()
+                .filter(IPlayerInitializable.class::isInstance)
+                .map(IPlayerInitializable.class::cast)
+                .forEach(initializer -> initializer.onPlayerLogin(player));
+
+            ImmortalCultivation.LOGGER.debug("Attachment initialization complete for player: {}",
+                player.getName().getString());
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error during attachment initialization for player {}",
+                player.getName().getString(), e);
+        }
     }
 
     /**
@@ -65,13 +73,20 @@ public class ICModInitializationEvent {
      */
     private static void synchronizeAllData(ServerPlayer player) {
         ImmortalCultivation.LOGGER.debug("Starting full data sync for {}", player.getName().getString());
-        player.getAttachments().getValues().stream()
-              .filter(ISyncable.class::isInstance)
-              .map(ISyncable.class::cast)
-              .forEach(syncable -> {
-                  Optional<ISyncPacket> packetOptional = syncable.createPacket(true); // true for full sync
-                  packetOptional.ifPresent(packet -> ICModPacketRegistry.sendToPlayer(packet, player));
-              });
-        ImmortalCultivation.LOGGER.debug("Full data sync for {} complete.", player.getName().getString());
+
+        try {
+            player.getAttachments().getValues().stream()
+                .filter(ISyncable.class::isInstance)
+                .map(ISyncable.class::cast)
+                .forEach(syncable -> {
+                    Optional<ISyncPacket> packetOptional = syncable.createPacket(true); // true for full sync
+                    packetOptional.ifPresent(packet -> ICModPacketRegistry.sendToPlayer(packet, player));
+                });
+
+            ImmortalCultivation.LOGGER.debug("Full data sync for {} complete.", player.getName().getString());
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error during full data sync for player {}",
+                player.getName().getString(), e);
+        }
     }
 }

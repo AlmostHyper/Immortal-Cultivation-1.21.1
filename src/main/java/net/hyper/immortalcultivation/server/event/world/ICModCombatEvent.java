@@ -5,7 +5,7 @@ import net.hyper.immortalcultivation.common.attachments.PlayerCombatStatsAttachm
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
-import net.hyper.immortalcultivation.core.network.packets.server.UnifiedDeltaSyncPacket;
+import net.hyper.immortalcultivation.core.network.packets.server.DamageFeedbackSyncPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
@@ -326,7 +326,7 @@ public class ICModCombatEvent {
 
         // Send damage feedback packet to client if available
         try {
-            UnifiedDeltaSyncPacket packet = UnifiedDeltaSyncPacket.createDamageFeedbackPacket(
+            DamageFeedbackSyncPacket packet = DamageFeedbackSyncPacket.create(
                 damageAmount,
                 damageSource.getMsgId()
             );
@@ -352,7 +352,12 @@ public class ICModCombatEvent {
      */
     private static void initializeCombatStats(ServerPlayer player) {
         try {
-            PlayerCombatStatsAttachment combatStats = PlayerCombatStatsAttachment.getOrCreate(player);
+            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+
+            // Set player reference to ensure proper attachment functionality
+            if (combatStats != null) {
+                combatStats.setPlayer(player);
+            }
 
             ImmortalCultivation.LOGGER.info("Combat stats initialized for player {} - ATK: +{}%, SPD: +{}%, JUMP: +{}%",
                 player.getName().getString(),
@@ -639,8 +644,8 @@ public class ICModCombatEvent {
 
         try {
             // Calculate effective bonuses
-            double attackBonus = combatStats.getDisplayAttackBonus();
-            double speedBonus = combatStats.getDisplaySpeedBonus();
+            double attackBonus = combatStats.getAttackDamageBonus();
+            double speedBonus = combatStats.getMovementSpeedBonus();
 
             if (attackBonus > 0.0 || speedBonus > 0.0) {
                 // Add header
@@ -732,11 +737,11 @@ public class ICModCombatEvent {
         try {
             switch (statType.toLowerCase()) {
                 case "attack":
-                    return String.format("%.1f", combatStats.getDisplayAttackBonus() * 100);
+                    return String.format("%.1f", combatStats.getAttackDamageBonus() * 100);
                 case "speed":
-                    return String.format("%.1f", combatStats.getDisplaySpeedBonus() * 100);
+                    return String.format("%.1f", combatStats.getMovementSpeedBonus() * 100);
                 case "jump":
-                    return String.format("%.1f", combatStats.getDisplayJumpBonus() * 100);
+                    return String.format("%.1f", combatStats.getJumpHeightBonus() * 100);
                 default:
                     return "0.0";
             }

@@ -247,14 +247,14 @@ public class QiHUDScreen {
      */
     private static void updateAllTextCache(CultivationDataSnapshot snapshot) {
         // Cache Qi Cultivation text with percentage and absolute values
-        double qiCultivationPercentage = snapshot.cultivation.getRealmProgressionPercentage(ICultivationData.CultivationType.QI) * 100;
+        double qiCultivationPercentage = snapshot.cultivation.getProgress(ICultivationData.CultivationType.QI) * 100;
         cachedQiCultivationText = String.format("Qi Cultivation: %.0f%% (%d/%d)",
             qiCultivationPercentage,
             snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI),
             snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI));
 
         // Cache Body Cultivation text
-        double bodyCultivationPercentage = snapshot.cultivation.getRealmProgressionPercentage(ICultivationData.CultivationType.BODY) * 100;
+        double bodyCultivationPercentage = snapshot.cultivation.getProgress(ICultivationData.CultivationType.BODY) * 100;
         cachedBodyCultivationText = String.format("Body Cultivation: %.0f%% (%d/%d)",
             bodyCultivationPercentage,
             snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY),
@@ -266,14 +266,14 @@ public class QiHUDScreen {
             snapshot.resources.getMaxHealth());
 
         // Cache Qi Energy text
-        double qiEnergyPercentage = snapshot.resources.getQiProgress() * 100;
+        double qiEnergyPercentage = snapshot.resources.getQiPercentage() * 100;
         cachedQiEnergyText = String.format("Qi Energy: %.0f%% (%d/%d)",
             qiEnergyPercentage,
             snapshot.resources.getCurrentQi(),
             snapshot.resources.getMaxQi());
 
         // Cache Body Energy text
-        double bodyEnergyPercentage = snapshot.resources.getBodyProgress() * 100;
+        double bodyEnergyPercentage = snapshot.resources.getBodyPercentage() * 100;
         cachedBodyEnergyText = String.format("Body Energy: %.0f%% (%d/%d)",
             bodyEnergyPercentage,
             snapshot.resources.getCurrentBody(),
@@ -285,8 +285,8 @@ public class QiHUDScreen {
 
         // Cache realm summary showing both cultivation paths
         cachedRealmSummaryText = String.format("Qi: %s | Body: %s",
-            snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.QI).getDisplayName(),
-            snapshot.cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY).getDisplayName());
+            snapshot.cultivation.getRealm(ICultivationData.CultivationType.QI).getDisplayName(),
+            snapshot.cultivation.getRealm(ICultivationData.CultivationType.BODY).getDisplayName());
 
         // Cache talent summary
         cachedTalentSummaryText = String.format("Talent: %.1fx | %.1fx",

@@ -4,7 +4,7 @@ import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
-import net.hyper.immortalcultivation.core.network.packets.client.CultivationFocusTogglePacket;
+import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -361,11 +361,11 @@ public class CultivationStatsScreen extends Screen {
 
         // Race info
         if (raceAttachment != null && raceAttachment.hasRaceAssigned()) {
-            String raceText = String.format("Race: %s", raceAttachment.getRaceDisplayName());
+            String raceText = String.format("Race: %s", raceAttachment.getRaceType().getDisplayName());
             drawStringAligned(guiGraphics, raceText, windowX + margin, currentY, RACE_COLOR);
             currentY += lineHeight;
 
-            String bonusText = raceAttachment.getRaceBonusDescription();
+            String bonusText = raceAttachment.getRaceType().getDescription();
             if (!bonusText.equals("No bonuses or penalties")) {
                 drawStringAligned(guiGraphics, "  " + bonusText, windowX + margin, currentY, 0xFFCCCCCC);
                 currentY += lineHeight;
@@ -376,7 +376,7 @@ public class CultivationStatsScreen extends Screen {
         if (talentAttachment != null) {
             if (talentAttachment.hasSpiritualRootAssigned()) {
                 String rootText = String.format("Spiritual Root: %s (×%.1f)",
-                    talentAttachment.getSpiritualRootDisplayName(),
+                    talentAttachment.getSpiritualRootType().getDisplayName(),
                     talentAttachment.getSpiritualRootMultiplier());
                 drawStringAligned(guiGraphics, rootText, windowX + margin, currentY, QI_COLOR);
                 currentY += lineHeight;
@@ -384,7 +384,7 @@ public class CultivationStatsScreen extends Screen {
 
             if (talentAttachment.hasPhysiqueAssigned()) {
                 String physiqueText = String.format("Physique: %s (×%.1f)",
-                    talentAttachment.getPhysiqueDisplayName(),
+                    talentAttachment.getPhysiqueType().getDisplayName(),
                     talentAttachment.getPhysiqueMultiplier());
                 drawStringAligned(guiGraphics, physiqueText, windowX + margin, currentY, BODY_COLOR);
                 currentY += lineHeight;
@@ -404,8 +404,8 @@ public class CultivationStatsScreen extends Screen {
         drawStringAligned(guiGraphics, focusText, windowX + margin, currentY, focusColor);
         currentY += lineHeight;
 
-        CultivationRealm qiRealm = cultivationAttachment.getCurrentRealm(ICultivationData.CultivationType.QI);
-        CultivationRealm bodyRealm = cultivationAttachment.getCurrentRealm(ICultivationData.CultivationType.BODY);
+        CultivationRealm qiRealm = cultivationAttachment.getRealm(ICultivationData.CultivationType.QI);
+        CultivationRealm bodyRealm = cultivationAttachment.getRealm(ICultivationData.CultivationType.BODY);
         String realmsText = String.format("Realms: Qi %s | Body %s", qiRealm.getDisplayName(), bodyRealm.getDisplayName());
         drawStringAligned(guiGraphics, realmsText, windowX + margin, currentY, 0xFFFFFFFF);
         currentY += lineHeight;
@@ -497,14 +497,14 @@ public class CultivationStatsScreen extends Screen {
 
             // Race name
             String raceName = raceAttachment.hasRaceAssigned() ?
-                raceAttachment.getRaceDisplayName() : "Not Assigned";
+                raceAttachment.getRaceType().getDisplayName() : "Not Assigned";
             String raceText = "Current Race: " + raceName;
             drawStringAligned(guiGraphics, raceText, windowX + margin, currentY, RACE_COLOR);
             currentY += lineHeight + 3;
 
             if (raceAttachment.hasRaceAssigned()) {
                 // Race description
-                String raceDesc = raceAttachment.getRaceDescription();
+                String raceDesc = raceAttachment.getRaceType().getDescription();
                 if (raceDesc != null && !raceDesc.isEmpty()) {
                     // Word wrap the description if it's too long
                     int maxWidth = windowWidth - 2 * margin - 20;
@@ -536,7 +536,7 @@ public class CultivationStatsScreen extends Screen {
                 }
 
                 // Race bonus/penalty description
-                String bonusDesc = raceAttachment.getRaceBonusDescription();
+                String bonusDesc = raceAttachment.getRaceType().getBonusDescription();
                 if (bonusDesc != null && !bonusDesc.isEmpty()) {
                     String bonusText = "Racial Effects: " + bonusDesc;
                     drawStringAligned(guiGraphics, bonusText, windowX + margin, currentY, 0xFFAADDFF);
@@ -615,7 +615,7 @@ public class CultivationStatsScreen extends Screen {
 
                 if (qiRaceMultiplier != 1.0f) {
                     String qiRaceText = String.format("  Qi from Race (%s): ×%.1f",
-                        raceAttachment.getRaceDisplayName(), qiRaceMultiplier);
+                        raceAttachment.getRaceType().getDisplayName(), qiRaceMultiplier);
                     int qiRaceColor = qiRaceMultiplier > 1.0f ? 0xFF77FF77 : 0xFFFF7777;
                     drawStringAligned(guiGraphics, qiRaceText, windowX + margin, currentY, qiRaceColor);
                     currentY += lineHeight;
@@ -623,7 +623,7 @@ public class CultivationStatsScreen extends Screen {
 
                 if (bodyRaceMultiplier != 1.0f) {
                     String bodyRaceText = String.format("  Body from Race (%s): ×%.1f",
-                        raceAttachment.getRaceDisplayName(), bodyRaceMultiplier);
+                        raceAttachment.getRaceType().getDisplayName(), bodyRaceMultiplier);
                     int bodyRaceColor = bodyRaceMultiplier > 1.0f ? 0xFF77FF77 : 0xFFFF7777;
                     drawStringAligned(guiGraphics, bodyRaceText, windowX + margin, currentY, bodyRaceColor);
                     currentY += lineHeight;
@@ -633,7 +633,7 @@ public class CultivationStatsScreen extends Screen {
                 if (talentAttachment != null) {
                     if (talentAttachment.hasSpiritualRootAssigned()) {
                         String rootText = String.format("  Qi from Spiritual Root (%s): ×%.1f",
-                            talentAttachment.getSpiritualRootDisplayName(),
+                            talentAttachment.getSpiritualRootType().getDisplayName(),
                             talentAttachment.getSpiritualRootMultiplier());
                         drawStringAligned(guiGraphics, rootText, windowX + margin, currentY, QI_COLOR);
                         currentY += lineHeight;
@@ -641,7 +641,7 @@ public class CultivationStatsScreen extends Screen {
 
                     if (talentAttachment.hasPhysiqueAssigned()) {
                         String physiqueText = String.format("  Body from Physique (%s): ×%.1f",
-                            talentAttachment.getPhysiqueDisplayName(),
+                            talentAttachment.getPhysiqueType().getDisplayName(),
                             talentAttachment.getPhysiqueMultiplier());
                         drawStringAligned(guiGraphics, physiqueText, windowX + margin, currentY, BODY_COLOR);
                         currentY += lineHeight;
@@ -668,7 +668,7 @@ public class CultivationStatsScreen extends Screen {
         currentY += lineHeight + 3;
 
         CultivationRealm currentRealm = type == PlayerCultivationAttachment.CultivationType.QI ?
-            cultivationAttachment.getCurrentRealm(ICultivationData.CultivationType.QI) : cultivationAttachment.getCurrentRealm(ICultivationData.CultivationType.BODY);
+            cultivationAttachment.getRealm(ICultivationData.CultivationType.QI) : cultivationAttachment.getRealm(ICultivationData.CultivationType.BODY);
         drawStringAligned(guiGraphics, "Realm: " + currentRealm.getDisplayName(), x, currentY, 0xFFFFFFFF);
         currentY += lineHeight;
 
@@ -681,13 +681,13 @@ public class CultivationStatsScreen extends Screen {
             max = cultivationAttachment.getMaxCultivation(ICultivationData.CultivationType.QI);
             baseRate = cultivationAttachment.getBaseCultivationRate(ICultivationData.CultivationType.QI);
             effectiveRate = cultivationAttachment.getEffectiveCultivationRate(ICultivationData.CultivationType.QI);
-            percentage = cultivationAttachment.getRealmProgressionPercentage(ICultivationData.CultivationType.QI);
+            percentage = cultivationAttachment.getProgress(ICultivationData.CultivationType.QI);
         } else {
             current = cultivationAttachment.getCurrentCultivation(ICultivationData.CultivationType.BODY);
             max = cultivationAttachment.getMaxCultivation(ICultivationData.CultivationType.BODY);
             baseRate = cultivationAttachment.getBaseCultivationRate(ICultivationData.CultivationType.BODY);
             effectiveRate = cultivationAttachment.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY);
-            percentage = cultivationAttachment.getRealmProgressionPercentage(ICultivationData.CultivationType.BODY);
+            percentage = cultivationAttachment.getProgress(ICultivationData.CultivationType.BODY);
         }
 
         String progressText = String.format("%.1f%% (%d/%d)", percentage * 100, current, max);
@@ -765,7 +765,7 @@ public class CultivationStatsScreen extends Screen {
 
     private void switchCultivationFocus() {
         if (cultivationAttachment != null) {
-            ICModPacketRegistry.sendToServer(new CultivationFocusTogglePacket());
+            ICModPacketRegistry.sendToServer(UnifiedActionRequestPacket.createFocusToggle());
             // Rebuild interface to update button text
             clearWidgets();
             setupInterface();
@@ -773,12 +773,8 @@ public class CultivationStatsScreen extends Screen {
     }
 
     private void refreshStats() {
-        if (cultivationAttachment != null) cultivationAttachment.forceSync();
-        if (resourceAttachment != null) resourceAttachment.forceSync();
-        if (talentAttachment != null) talentAttachment.forceSync();
-        if (raceAttachment != null) raceAttachment.forceSync();
-        if (combatStatsAttachment != null) combatStatsAttachment.forceSync();
-
+        // No need for forceSync() - NetworkSyncManager handles server-side sync automatically
+        // On client-side, just refresh the UI by re-initializing to read current attachment data
         init();
     }
 

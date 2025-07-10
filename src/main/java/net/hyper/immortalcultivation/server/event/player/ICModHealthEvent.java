@@ -811,7 +811,7 @@ public class ICModHealthEvent {
             emergencyProtectionActive.remove(playerId);
 
             // Trigger immediate network sync through NetworkSyncManager
-            NetworkSyncManager.scheduleSync(player, NetworkSyncManager.SyncPriority.HIGH);
+            NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RESOURCES::get, true);
 
             ImmortalCultivation.LOGGER.warn("Performed emergency health sync for player {}",
                 player.getName().getString());
