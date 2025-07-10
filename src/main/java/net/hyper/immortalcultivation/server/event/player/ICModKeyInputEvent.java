@@ -11,6 +11,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.InputEvent;
+import org.lwjgl.glfw.GLFW;
 
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID, value = Dist.CLIENT)
 public class ICModKeyInputEvent {
@@ -22,7 +23,8 @@ public class ICModKeyInputEvent {
             return;
         }
 
-        if (event.getAction() == InputEvent.Key.RELEASE) {
+        // We only want to handle key presses, not releases
+        if (event.getAction() != GLFW.GLFW_PRESS) {
             return;
         }
 
@@ -31,7 +33,7 @@ public class ICModKeyInputEvent {
         } else if (ICModKeyBinds.BREAKTHROUGH_SCREEN_KEY.consumeClick()) {
             mc.setScreen(new CultivationBreakthroughScreen());
         } else if (ICModKeyBinds.CULTIVATION_FOCUS_TOGGLE_KEY.consumeClick()) {
-            ICModPacketRegistry.CHANNEL.sendToServer(UnifiedActionRequestPacket.createFocusToggle());
+            ICModPacketRegistry.sendToServer(UnifiedActionRequestPacket.createFocusToggle());
         }
     }
 }
