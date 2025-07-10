@@ -46,13 +46,13 @@ public class GetQiRegenCommand {
                     .withStyle(ChatFormatting.BLUE), false);
 
             // Base regeneration rate
-            double baseRate = resources.getBaseQiRegen();
+            double baseRate = resources.getBaseQiRegenerationRate();
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Base Regeneration: %.3f/sec", baseRate))
                     .withStyle(ChatFormatting.GRAY), false);
 
             // Effective regeneration rate (with bonuses)
-            double effectiveRate = resources.getEffectiveQiRegen();
+            double effectiveRate = resources.getEffectiveQiRegenerationRate();
             context.getSource().sendSuccess(() ->
                 Component.literal(String.format("Effective Regeneration: %.3f/sec", effectiveRate))
                     .withStyle(ChatFormatting.AQUA), false);

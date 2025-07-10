@@ -40,7 +40,7 @@ public class SetRandomPhysiqueCommand {
             }
 
             // Set the random physique type
-            talentAttachment.setPhysiqueType(randomPhysique);
+            talentAttachment.assignPhysique(randomPhysique);
 
             // Send success message
             context.getSource().sendSuccess(() ->

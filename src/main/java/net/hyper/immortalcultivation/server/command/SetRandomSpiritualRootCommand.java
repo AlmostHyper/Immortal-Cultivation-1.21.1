@@ -40,7 +40,7 @@ public class SetRandomSpiritualRootCommand {
             }
 
             // Set the random spiritual root type
-            talentAttachment.setSpiritualRootType(randomRoot);
+            talentAttachment.assignSpiritualRoot(randomRoot);
 
             // Send success message
             context.getSource().sendSuccess(() ->

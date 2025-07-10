@@ -289,7 +289,7 @@ public class GetRealmCommand {
         // Health Information
         long healthCurrent = snapshot.resources.getCurrentHealth();
         long healthMax = snapshot.resources.getMaxHealth();
-        double healthPercent = snapshot.resources.getHealthProgress() * 100;
+        double healthPercent = snapshot.resources.getCurrentHealth() * 100;
 
         source.sendSuccess(() -> Component.literal(String.format("Health: %d/%d (%.1f%%)",
             healthCurrent, healthMax, healthPercent)).withStyle(ChatFormatting.LIGHT_PURPLE), false);
@@ -297,7 +297,7 @@ public class GetRealmCommand {
         // Qi Energy Information
         long qiCurrent = snapshot.resources.getCurrentQi();
         long qiMax = snapshot.resources.getMaxQi();
-        double qiPercent = snapshot.resources.getQiProgress() * 100;
+        double qiPercent = snapshot.resources.getCurrentQi() * 100;
 
         source.sendSuccess(() -> Component.literal(String.format("Qi Energy: %d/%d (%.1f%%)",
             qiCurrent, qiMax, qiPercent)).withStyle(ChatFormatting.BLUE), false);
@@ -305,7 +305,7 @@ public class GetRealmCommand {
         // Body Energy Information
         long bodyCurrent = snapshot.resources.getCurrentBody();
         long bodyMax = snapshot.resources.getMaxBody();
-        double bodyPercent = snapshot.resources.getBodyProgress() * 100;
+        double bodyPercent = snapshot.resources.getCurrentBody() * 100;
 
         source.sendSuccess(() -> Component.literal(String.format("Body Energy: %d/%d (%.1f%%)",
             bodyCurrent, bodyMax, bodyPercent)).withStyle(ChatFormatting.DARK_RED), false);

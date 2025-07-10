@@ -56,7 +56,7 @@ public class SetSpiritualRootCommand {
             }
 
             // Set the spiritual root
-            talentAttachment.setSpiritualRootType(rootType);
+            talentAttachment.assignSpiritualRoot(rootType);
             context.getSource().sendSuccess(() ->
                 Component.literal("Set spiritual root of " + player.getName().getString() +
                     " to " + rootType.name() + " (" +
