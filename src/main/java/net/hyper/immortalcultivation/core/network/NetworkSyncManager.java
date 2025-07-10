@@ -46,7 +46,7 @@ public class NetworkSyncManager {
     }
 
     @SubscribeEvent
-    public static void onServerTick(ServerTickEvent.Post event) {
+    public void onServerTick(ServerTickEvent.Post event) {
         INSTANCE.processSyncs();
     }
 
