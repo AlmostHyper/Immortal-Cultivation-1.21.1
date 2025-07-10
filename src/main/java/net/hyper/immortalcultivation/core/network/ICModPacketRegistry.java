@@ -5,6 +5,7 @@ import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttach
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.network.helpers.BreakthroughFeedbackHelper;
 import net.hyper.immortalcultivation.core.network.packets.client.*;
 import net.hyper.immortalcultivation.core.network.packets.server.*;
@@ -89,8 +90,34 @@ public class ICModPacketRegistry {
             switch (packet.actionType()) {
                 case BREAKTHROUGH_REQUEST -> handleBreakthroughRequest(player, packet);
                 case CULTIVATION_FOCUS_TOGGLE -> handleFocusToggle(player);
-                // Other cases for race selection etc. would go here
+                case SELECT_RACE -> handleRaceSelection(player, packet);
             }
+        }
+
+        private static void handleRaceSelection(ServerPlayer player, UnifiedActionRequestPacket packet) {
+            var raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+            raceAttachment.setPlayer(player);
+
+            if (raceAttachment.hasRaceAssigned()) {
+                player.sendSystemMessage(Component.literal("You have already chosen a race.").withStyle(ChatFormatting.RED));
+                return;
+            }
+            
+            packet.stringParam().ifPresentOrElse(raceId -> {
+                try {
+                    var raceType = RaceType.valueOf(raceId.toUpperCase());
+                    raceAttachment.assignRace(raceType);
+                    player.sendSystemMessage(Component.literal("You are now a " + raceType.getDisplayName() + "!").withStyle(ChatFormatting.GOLD));
+                    // A full sync is appropriate after a major change like race selection.
+                    NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
+                } catch (IllegalArgumentException e) {
+                    player.sendSystemMessage(Component.literal("Invalid race selected.").withStyle(ChatFormatting.RED));
+                    ImmortalCultivation.LOGGER.warn("Player {} tried to select invalid race: {}", player.getName().getString(), raceId);
+                }
+            }, () -> {
+                player.sendSystemMessage(Component.literal("No race selected.").withStyle(ChatFormatting.RED));
+                ImmortalCultivation.LOGGER.warn("Player {} sent a race selection packet with no race parameter.", player.getName().getString());
+            });
         }
 
         private static void handleFocusToggle(ServerPlayer player) {
