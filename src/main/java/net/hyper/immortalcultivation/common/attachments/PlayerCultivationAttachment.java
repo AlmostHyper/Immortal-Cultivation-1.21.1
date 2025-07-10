@@ -208,6 +208,20 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         if (currentFocus == type) baseRate *= 2.0;
         return baseRate;
     }
+    
+    public void addBonusWithDiminishing(CultivationType type, double bonusAmount, double minBonus, double maxBonus) {
+        if (bonusAmount <= 0) return;
+
+        // Get the current bonus and apply the new one, capping at the max
+        double currentBonus = this.additiveBonus.getOrDefault(type, 0.0);
+        double newBonus = Math.min(currentBonus + bonusAmount, maxBonus);
+
+        // Ensure the bonus doesn't fall below the minimum
+        newBonus = Math.max(newBonus, minBonus);
+
+        this.additiveBonus.put(type, newBonus);
+        this.markDirty();
+    }
 
     @Override
     public void addRegenFraction(CultivationType type, double amount) {
@@ -329,7 +343,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
     // === HELPER METHODS === //
 
     private CultivationRealm getDefaultMortalRealm() {
-        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
+        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_Mortal_REALM_ID);
         return mortalRealm != null ? mortalRealm : createTemporaryMortalRealm();
     }
 

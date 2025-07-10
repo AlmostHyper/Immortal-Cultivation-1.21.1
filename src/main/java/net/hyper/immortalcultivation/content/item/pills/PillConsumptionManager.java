@@ -25,7 +25,10 @@ public class PillConsumptionManager {
     public double calculateEffectiveness(Item pillItem, PillFurnaceBlockEntity.PillRarity rarity) {
         String key = getPillKey(pillItem, rarity);
         int consumptionCount = consumptionData.getOrDefault(key, 0);
-
+        return calculateEffectivenessAtCount(rarity, consumptionCount);
+    }
+    
+    public static double calculateEffectivenessAtCount(PillFurnaceBlockEntity.PillRarity rarity, int consumptionCount) {
         if (consumptionCount == 0) {
             return 1.0;
         }
@@ -48,6 +51,16 @@ public class PillConsumptionManager {
         consumptionData.put(key, currentCount + 1);
         markDirty();
         return effectiveness;
+    }
+    
+    public int getConsumptionCount(Item pillItem, PillFurnaceBlockEntity.PillRarity rarity) {
+        String key = getPillKey(pillItem, rarity);
+        return consumptionData.getOrDefault(key, 0);
+    }
+    
+    public double getNextConsumptionEffectiveness(Item pillItem, PillFurnaceBlockEntity.PillRarity rarity) {
+        int currentCount = getConsumptionCount(pillItem, rarity);
+        return calculateEffectivenessAtCount(rarity, currentCount);
     }
 
     public boolean isDirty() {
