@@ -24,7 +24,7 @@ public class SetRealmCommand {
     };
 
     private static final SuggestionProvider<CommandSourceStack> REALM_SUGGESTIONS = (context, builder) -> {
-        return SharedSuggestionProvider.suggest(ICModCultivationRealms.getRealmsByLevel(), builder);
+        return SharedSuggestionProvider.suggest(ICModCultivationRealms.getRealmIds(), builder);
     };
 
     public SetRealmCommand(CommandDispatcher<CommandSourceStack> dispatcher) {

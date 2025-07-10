@@ -9,6 +9,7 @@ import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ICModCultivationRealms {
 
@@ -89,6 +90,12 @@ public class ICModCultivationRealms {
             return allRealms.values();
         }
         return REALM_MAP.values();
+    }
+    
+    public static String[] getRealmIds() {
+        return getAllRealms().stream()
+                .map(CultivationRealm::getId)
+                .toArray(String[]::new);
     }
 
     /**
