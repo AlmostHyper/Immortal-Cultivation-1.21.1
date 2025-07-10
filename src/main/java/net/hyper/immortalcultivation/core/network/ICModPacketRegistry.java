@@ -38,12 +38,6 @@ public class ICModPacketRegistry {
         registerClientPacket(PlayerCombatStatsSyncPacket.TYPE, PlayerCombatStatsSyncPacket.STREAM_CODEC);
 
         REGISTRY.playToClient(
-                UnifiedDeltaSyncPacket.TYPE,
-                UnifiedDeltaSyncPacket.STREAM_CODEC,
-                UnifiedDeltaSyncPacket::handleClient
-        );
-
-        REGISTRY.playToClient(
                 OpenRaceSelectionSyncPacket.TYPE,
                 OpenRaceSelectionSyncPacket.STREAM_CODEC,
                 OpenRaceSelectionSyncPacket::handleClient
@@ -55,42 +49,6 @@ public class ICModPacketRegistry {
                 UnifiedActionRequestPacket.TYPE,
                 UnifiedActionRequestPacket.STREAM_CODEC,
                 UnifiedActionRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                RaceSelectionRequestPacket.TYPE,
-                RaceSelectionRequestPacket.STREAM_CODEC,
-                RaceSelectionRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                CultivationRequestPacket.TYPE,
-                CultivationRequestPacket.STREAM_CODEC,
-                CultivationRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                ResourceRequestPacket.TYPE,
-                ResourceRequestPacket.STREAM_CODEC,
-                ResourceRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                TalentRequestPacket.TYPE,
-                TalentRequestPacket.STREAM_CODEC,
-                TalentRequestPacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                CultivationFocusTogglePacket.TYPE,
-                CultivationFocusTogglePacket.STREAM_CODEC,
-                CultivationFocusTogglePacket::handleServer
-        );
-
-        REGISTRY.playToServer(
-                CombatStatsRequestPacket.TYPE,
-                CombatStatsRequestPacket.STREAM_CODEC,
-                CombatStatsRequestPacket::handleServer
         );
 
         ImmortalCultivation.LOGGER.info("Network packets registered successfully!");

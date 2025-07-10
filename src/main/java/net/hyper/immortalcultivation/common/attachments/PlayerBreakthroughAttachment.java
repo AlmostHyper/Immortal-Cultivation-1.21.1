@@ -145,7 +145,7 @@ public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
             return new BreakthroughResult(false, reason, null, breakthroughType, 0.0, getBreakthroughAttempts(cultivationType));
         }
 
-        CultivationRealm currentRealm = cultivation.getCurrentRealm(cultivationType);
+        CultivationRealm currentRealm = cultivation.getRealm(cultivationType);
         List<CultivationRealm> nextRealms = currentRealm.getNextCultivationRealms();
         if (nextRealms.isEmpty()) return new BreakthroughResult(false, "No higher realm available", null, breakthroughType, 0.0, getBreakthroughAttempts(cultivationType));
 
@@ -163,7 +163,7 @@ public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
 
         boolean success = player.getRandom().nextDouble() < successChance;
         if (success) {
-            cultivation.setCurrentRealm(cultivationType, targetRealm);
+            cultivation.setRealm(cultivationType, targetRealm);
             if (cultivationType == PlayerCultivationAttachment.CultivationType.QI) setQiBreakthroughAttempts(0L);
             else setBodyBreakthroughAttempts(0L);
             String message = String.format("%s %s breakthrough successful! (%d attempts, %.0f%% chance)", cultivationType.getDisplayName(), breakthroughType.getDisplayName(), currentAttempts, successChance * 100);
@@ -197,7 +197,7 @@ public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
         if (player == null) return false;
         PlayerCultivationAttachment cultivation = getCultivationAttachment();
         if (cultivation == null || !cultivation.canBreakthrough(cultivationType) || isBreakthroughOnCooldown(cultivationType)) return false;
-        return !cultivation.getCurrentRealm(cultivationType).getNextCultivationRealms().isEmpty();
+        return !cultivation.getRealm(cultivationType).getNextCultivationRealms().isEmpty();
     }
 
     // === IMPLEMENTATIONS === //
@@ -277,7 +277,7 @@ public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
         if (cultivation == null) return "Cultivation system unavailable";
         if (!cultivation.canBreakthrough(cultivationType)) return cultivationType.getDisplayName() + " cultivation not at maximum";
         if (isBreakthroughOnCooldown(cultivationType)) return cultivationType.getDisplayName() + " breakthrough on cooldown";
-        if (cultivation.getCurrentRealm(cultivationType).getNextCultivationRealms().isEmpty()) return "No higher realm available";
+        if (cultivation.getRealm(cultivationType).getNextCultivationRealms().isEmpty()) return "No higher realm available";
         return "Requirements not met";
     }
 
@@ -314,7 +314,7 @@ public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
             PlayerCultivationAttachment.CultivationType cultivationType,
             BreakthroughType breakthroughType,
             PlayerCultivationAttachment cultivation) {
-        CultivationRealm currentRealm = cultivation.getCurrentRealm(
+        CultivationRealm currentRealm = cultivation.getRealm(
                 cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
                         ICultivationData.CultivationType.QI : ICultivationData.CultivationType.BODY
         );
