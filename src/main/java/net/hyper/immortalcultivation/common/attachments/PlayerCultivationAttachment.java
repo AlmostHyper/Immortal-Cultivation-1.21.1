@@ -118,15 +118,6 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
     @Override
     public void setRegenFraction(CultivationType type, double fraction) { cultivationFraction.put(type, fraction); }
 
-    public CultivationType getCurrentFocus() { return this.currentFocus; }
-
-    public void setCurrentFocus(CultivationType focus) {
-        if (this.currentFocus != focus) {
-            this.currentFocus = focus;
-            this.markDirty();
-        }
-    }
-
     public CultivationRealm getRealm(CultivationType type) {
         return currentRealms.get(type);
     }
@@ -138,6 +129,33 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             this.timeInCurrentRealm.put(type, 0L);
             this.markDirty();
         }
+    }
+    
+    // === FOCUS METHODS === //
+
+    public CultivationType getCurrentFocus() { return this.currentFocus; }
+
+    public void setCurrentFocus(CultivationType focus) {
+        if (this.currentFocus != focus) {
+            this.currentFocus = focus;
+            this.markDirty();
+        }
+    }
+
+    public long getLastFocusChangeTime() {
+        return this.lastFocusChangeTime;
+    }
+
+    public boolean toggleFocus() {
+        if (player == null) return false;
+        long currentTime = player.level().getGameTime();
+        if (currentTime - lastFocusChangeTime < FOCUS_CHANGE_COOLDOWN) {
+            return false; // Cooldown active
+        }
+        this.currentFocus = (currentFocus == CultivationType.QI) ? CultivationType.BODY : CultivationType.QI;
+        this.lastFocusChangeTime = currentTime;
+        markDirty();
+        return true;
     }
 
 
@@ -380,7 +398,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         att.maxCultivation.put(CultivationType.QI, qiMax);
         att.currentRealms.put(CultivationType.BODY, ICModCultivationRealms.get(bodyRealm));
         att.currentCultivation.put(CultivationType.BODY, bodyCurrent);
-        att.maxCultivation.put(CultivationType.BODY, bodyMax);
+        att.maxCultivation.put(_CultivationType.BODY, bodyMax);
         att.currentFocus = CultivationType.valueOf(focus);
         return att;
     }
