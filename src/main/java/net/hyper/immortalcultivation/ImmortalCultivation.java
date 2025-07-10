@@ -28,14 +28,13 @@ public class ImmortalCultivation
 {
     public static final String MOD_ID = "immortalcultivation";
     public static final Logger LOGGER = LogUtils.getLogger();
-    public static final NetworkSyncManager SYNC_MANAGER = new NetworkSyncManager();
 
 
     public ImmortalCultivation(IEventBus modEventBus, ModContainer modContainer) {
         LOGGER.info("Initializing Immortal Cultivation mod...");
 
         NeoForge.EVENT_BUS.register(this);
-        NeoForge.EVENT_BUS.register(SYNC_MANAGER);
+        NeoForge.EVENT_BUS.register(NetworkSyncManager.INSTANCE);
 
 
         ICModBlocks.register(modEventBus);

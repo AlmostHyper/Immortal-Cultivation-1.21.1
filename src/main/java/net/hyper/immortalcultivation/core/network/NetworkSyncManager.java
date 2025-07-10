@@ -4,8 +4,6 @@ import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
@@ -14,7 +12,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
-@EventBusSubscriber
 public class NetworkSyncManager {
 
     public static final NetworkSyncManager INSTANCE = new NetworkSyncManager();
