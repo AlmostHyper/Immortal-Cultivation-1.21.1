@@ -1,9 +1,17 @@
 package net.hyper.immortalcultivation.server.event.world;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCombatStatsAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerPillConsumptionAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerRaceAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerResourceAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
+import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -30,25 +38,30 @@ public class ICModTickEvent {
 
         // --- Process Tickable Attachments ---
         if ((player.tickCount + playerOffset) % TICKABLE_INTERVAL == 0) {
-            player.getAttachments().getValues().stream()
-                  .filter(attachment -> attachment instanceof ITickable)
-                  .forEach(attachment -> ((ITickable) attachment).tick());
+            player.getExistingData(ICModAttachmentTypes.PLAYER_CULTIVATION.get()).ifPresent(ITickable::tick);
+            player.getExistingData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()).ifPresent(ITickable::tick);
+            player.getExistingData(ICModAttachmentTypes.PLAYER_RESOURCES.get()).ifPresent(ITickable::tick);
+            player.getExistingData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get()).ifPresent(ITickable::tick);
         }
 
         // --- Process Syncable Attachments ---
         if ((player.tickCount + playerOffset) % SYNC_CHECK_INTERVAL == 0) {
-            player.getAttachments().getValues().stream()
-                  .filter(attachment -> attachment instanceof ISyncable)
-                  .map(attachment -> (ISyncable) attachment)
-                  .filter(ISyncable::isDirty)
-                  .forEach(syncable -> {
-                      // Create a sync packet for the dirty attachment. 'false' indicates this is not a full-sync request.
-                      Optional<ISyncPacket> packetOptional = syncable.createPacket(false);
-                      packetOptional.ifPresent(packet -> {
-                          // Send the specific packet for this attachment directly to the player
-                          ICModPacketRegistry.sendToPlayer(packet, player);
-                      });
-                  });
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get()));
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_RACE.get()));
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get()));
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()));
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get()));
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get()));
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get()));
+        }
+    }
+
+    private static void checkAndSendSyncPacket(ServerPlayer player, ISyncable syncable) {
+        if (syncable.isDirty()) {
+            Optional<ISyncPacket> packetOptional = syncable.createPacket(false);
+            packetOptional.ifPresent(packet -> {
+                ICModPacketRegistry.sendToPlayer(packet, player);
+            });
         }
     }
 }

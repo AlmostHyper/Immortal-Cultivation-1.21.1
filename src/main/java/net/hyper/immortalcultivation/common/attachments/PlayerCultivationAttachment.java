@@ -399,7 +399,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         att.maxCultivation.put(CultivationType.QI, qiMax);
         att.currentRealms.put(CultivationType.BODY, ICModCultivationRealms.get(bodyRealm));
         att.currentCultivation.put(CultivationType.BODY, bodyCurrent);
-        att.maxCultivation.put(_CultivationType.BODY, bodyMax);
+        att.maxCultivation.put(CultivationType.BODY, bodyMax);
         att.currentFocus = CultivationType.valueOf(focus);
         return att;
     }
