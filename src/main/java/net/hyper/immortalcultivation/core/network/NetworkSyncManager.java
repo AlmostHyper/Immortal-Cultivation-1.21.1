@@ -5,11 +5,13 @@ import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 @Mod.EventBusSubscriber
 public class NetworkSyncManager {
@@ -20,27 +22,24 @@ public class NetworkSyncManager {
 
     private static class SyncRequest {
         final ServerPlayer player;
-        ISyncable syncable;
+        final Supplier<AttachmentType<? extends ISyncable>> attachmentType;
         boolean fullSync;
 
-        SyncRequest(ServerPlayer player, ISyncable syncable, boolean fullSync) {
+        SyncRequest(ServerPlayer player, Supplier<AttachmentType<? extends ISyncable>> attachmentType, boolean fullSync) {
             this.player = player;
-            this.syncable = syncable;
+            this.attachmentType = attachmentType;
             this.fullSync = fullSync;
         }
 
-        void merge(ISyncable other, boolean isFullSync) {
-            // If either request requires a full sync, the merged request must be a full sync.
+        void merge(boolean isFullSync) {
             this.fullSync = this.fullSync || isFullSync;
-            // The actual syncable object doesn't need to be merged here,
-            // as the final packet creation will pull the latest state from the player.
         }
     }
 
-    public void scheduleSync(ServerPlayer player, ISyncable syncable, boolean fullSync) {
-        pendingSyncs.merge(player.getUUID(), new SyncRequest(player, syncable, fullSync),
+    public void scheduleSync(ServerPlayer player, Supplier<AttachmentType<? extends ISyncable>> attachmentType, boolean fullSync) {
+        pendingSyncs.merge(player.getUUID(), new SyncRequest(player, attachmentType, fullSync),
                 (existing, a) -> {
-                    existing.merge(syncable, fullSync);
+                    existing.merge(fullSync);
                     return existing;
                 });
     }
@@ -55,18 +54,15 @@ public class NetworkSyncManager {
             return;
         }
 
-        // Process all pending syncs at the end of the tick
         for (SyncRequest request : pendingSyncs.values()) {
-            // The ISyncable in the request might be stale, so we re-fetch it from the player
-            // This ensures we are always syncing the most up-to-date information.
-            // Note: This assumes the attachment type is known or can be retrieved.
-            // For this example, we'll continue with the stored syncable.
-            Optional<ISyncPacket> packet = request.syncable.createPacket(request.fullSync);
-
-            packet.ifPresent(p -> {
-                ICModPacketRegistry.sendToPlayer(p, request.player);
-                request.syncable.clearDirty();
-            });
+            ISyncable syncable = request.player.getData(request.attachmentType.get());
+            if (syncable != null) {
+                Optional<ISyncPacket> packet = syncable.createPacket(request.fullSync);
+                packet.ifPresent(p -> {
+                    ICModPacketRegistry.sendToPlayer(p, request.player);
+                    syncable.clearDirty();
+                });
+            }
         }
         pendingSyncs.clear();
     }

@@ -116,13 +116,11 @@ public record UnifiedActionRequestPacket(
     // --- Server Handling ---
 
     public static void handleServer(UnifiedActionRequestPacket packet, IPayloadContext context) {
-        context.enqueueWork(() -> {
-            if (context.player() instanceof ServerPlayer serverPlayer) {
-                actionHandlers.getOrDefault(packet.actionType, (p, pkt) ->
-                    ImmortalCultivation.LOGGER.warn("No handler for action type: {}", pkt.actionType)
-                ).accept(serverPlayer, packet);
-            }
-        });
+        if (context.player() instanceof ServerPlayer serverPlayer) {
+            actionHandlers.getOrDefault(packet.actionType, (p, pkt) ->
+                ImmortalCultivation.LOGGER.warn("No handler for action type: {}", pkt.actionType)
+            ).accept(serverPlayer, packet);
+        }
     }
 
     // --- Action Implementations ---
@@ -135,7 +133,7 @@ public record UnifiedActionRequestPacket(
         var result = breakthrough.attemptTypedBreakthrough(packet.cultivationType.get(), packet.breakthroughType.get());
 
         BreakthroughFeedbackHelper.sendBreakthroughFeedback(player, result, packet.breakthroughType.get());
-        NetworkSyncManager.INSTANCE.scheduleSync(player, player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()), true);
+        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true);
     }
 
     private static void processFocusToggle(ServerPlayer player) {
@@ -158,7 +156,7 @@ public record UnifiedActionRequestPacket(
         }
         
         // This action only affects cultivation data, so a targeted sync is efficient.
-        NetworkSyncManager.INSTANCE.scheduleSync(player, player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get()), false);
+        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, false);
     }
 
     private static void processRaceSelection(ServerPlayer player, UnifiedActionRequestPacket packet) {
@@ -175,7 +173,7 @@ public record UnifiedActionRequestPacket(
             raceAttachment.assignRace(player, raceType);
             player.sendSystemMessage(Component.literal("You are now a " + raceType.getDisplayName() + "!").withStyle(ChatFormatting.GOLD));
             // A full sync is appropriate after a major change like race selection.
-            NetworkSyncManager.INSTANCE.scheduleSync(player, player.getData(ICModAttachmentTypes.PLAYER_RACE.get()), true);
+            NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
         } catch (IllegalArgumentException e) {
             player.sendSystemMessage(Component.literal("Invalid race selected.").withStyle(ChatFormatting.RED));
             ImmortalCultivation.LOGGER.warn("Player {} tried to select invalid race: {}", player.getName().getString(), packet.stringParam.get());
