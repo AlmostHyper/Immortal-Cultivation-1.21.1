@@ -26,8 +26,9 @@ import java.util.stream.Stream;
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class ICModInitializationEvent {
 
-    // A list of all attachment types to be managed.
-    private static final List<Supplier<AttachmentType<?>>> ATTACHMENT_TYPES = List.of(
+    // A list of all attachment type suppliers to be managed.
+    // The wildcard `? extends` is used to allow for different specific attachment types.
+    private static final List<Supplier<? extends AttachmentType<?>>> ATTACHMENT_TYPES = List.of(
             ICModAttachmentTypes.PLAYER_CULTIVATION,
             ICModAttachmentTypes.PLAYER_BREAKTHROUGH,
             ICModAttachmentTypes.PLAYER_RESOURCES,
@@ -63,7 +64,7 @@ public class ICModInitializationEvent {
     }
 
     private static Stream<Object> getAttachments(ServerPlayer player) {
-        return ATTACHMENT_TYPES.stream().map(type -> player.getData(type.get()));
+        return ATTACHMENT_TYPES.stream().map(supplier -> player.getData(supplier.get()));
     }
 
     /**
