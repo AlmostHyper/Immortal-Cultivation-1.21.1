@@ -14,6 +14,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
@@ -55,7 +56,7 @@ public class ICModPacketRegistry {
     }
 
     private static <T extends ISyncPacket> void registerClientPacket(CustomPacketPayload.Type<T> type, StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
-        REGISTRY.playToClient(type, codec, (packet, context) -> packet.handleOnClient());
+        REGISTRY.playToClient(type, codec, (packet, context) -> packet.handleOnClient(context.player()));
     }
 
     // Utility methods for sending packets
