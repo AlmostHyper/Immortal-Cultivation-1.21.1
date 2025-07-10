@@ -4,13 +4,18 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.IPlayerInitializable;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
+import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * A unified event handler for critical player lifecycle events.
@@ -20,6 +25,17 @@ import java.util.Optional;
  */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class ICModInitializationEvent {
+
+    // A list of all attachment types to be managed.
+    private static final List<Supplier<AttachmentType<?>>> ATTACHMENT_TYPES = List.of(
+            ICModAttachmentTypes.PLAYER_CULTIVATION,
+            ICModAttachmentTypes.PLAYER_BREAKTHROUGH,
+            ICModAttachmentTypes.PLAYER_RESOURCES,
+            ICModAttachmentTypes.PLAYER_COMBAT_STATS,
+            ICModAttachmentTypes.PLAYER_TALENTS,
+            ICModAttachmentTypes.PLAYER_RACE,
+            ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION
+    );
 
     @SubscribeEvent
     public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
@@ -46,6 +62,10 @@ public class ICModInitializationEvent {
         }
     }
 
+    private static Stream<Object> getAttachments(ServerPlayer player) {
+        return ATTACHMENT_TYPES.stream().map(type -> player.getData(type.get()));
+    }
+
     /**
      * Iterates through all attachments on the player and calls the onPlayerLogin method
      * for any that implement the IPlayerInitializable interface.
@@ -53,7 +73,7 @@ public class ICModInitializationEvent {
      */
     private static void initializeAttachments(ServerPlayer player) {
         try {
-            player.getAttachments().getValues().stream()
+            getAttachments(player)
                 .filter(IPlayerInitializable.class::isInstance)
                 .map(IPlayerInitializable.class::cast)
                 .forEach(initializer -> initializer.onPlayerLogin(player));
@@ -75,7 +95,7 @@ public class ICModInitializationEvent {
         ImmortalCultivation.LOGGER.debug("Starting full data sync for {}", player.getName().getString());
 
         try {
-            player.getAttachments().getValues().stream()
+            getAttachments(player)
                 .filter(ISyncable.class::isInstance)
                 .map(ISyncable.class::cast)
                 .forEach(syncable -> {
