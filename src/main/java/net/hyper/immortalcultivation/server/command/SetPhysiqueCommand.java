@@ -57,6 +57,7 @@ public class SetPhysiqueCommand {
 
             // Set the physique
             talentAttachment.assignPhysique(physiqueType);
+            talentAttachment.markDirty();
             context.getSource().sendSuccess(() ->
                 Component.literal("Set physique of " + player.getName().getString() +
                     " to " + physiqueType.name() + " (" +

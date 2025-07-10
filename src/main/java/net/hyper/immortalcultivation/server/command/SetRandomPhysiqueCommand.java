@@ -41,7 +41,7 @@ public class SetRandomPhysiqueCommand {
 
             // Set the random physique type
             talentAttachment.assignPhysique(randomPhysique);
-
+            talentAttachment.markDirty();
             // Send success message
             context.getSource().sendSuccess(() ->
                 Component.literal("Set random physique for " + player.getName().getString() + " to " +

@@ -1,3 +1,4 @@
+
 package net.hyper.immortalcultivation.server.command;
 
 import com.mojang.brigadier.CommandDispatcher;
@@ -97,7 +98,7 @@ public class SetCultivationCommand {
 
             // Check if this change affects breakthrough readiness
             checkAndReportBreakthroughStatus(context.getSource(), cultivation, PlayerCultivationAttachment.CultivationType.QI);
-
+            cultivation.markDirty();
             return 1;
         } catch (Exception e) {
             context.getSource().sendFailure(Component.literal("Error setting Qi cultivation: " + e.getMessage()));
@@ -154,7 +155,7 @@ public class SetCultivationCommand {
 
             // Check if this change affects breakthrough readiness
             checkAndReportBreakthroughStatus(context.getSource(), cultivation, PlayerCultivationAttachment.CultivationType.BODY);
-
+            cultivation.markDirty();
             return 1;
         } catch (Exception e) {
             context.getSource().sendFailure(Component.literal("Error setting Body cultivation: " + e.getMessage()));
@@ -236,6 +237,7 @@ public class SetCultivationCommand {
                         cultivation.getEffectiveCultivationRate(ICultivationData.CultivationType.BODY)))
                     .withStyle(ChatFormatting.AQUA), false);
 
+            cultivation.markDirty();
             return 1;
         } catch (Exception e) {
             context.getSource().sendFailure(Component.literal("Error setting cultivation focus: " + e.getMessage()));

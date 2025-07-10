@@ -77,7 +77,7 @@ public class SetRealmCommand {
 
             // Set the realm using the unified system
             cultivation.setRealm(cultivationType, realm);
-
+            cultivation.markDirty();
             context.getSource().sendSuccess(() ->
                 Component.literal("Set " + cultivationType.name() + " cultivation realm of " + player.getName().getString() +
                     " to " + realm.getId()), true);
