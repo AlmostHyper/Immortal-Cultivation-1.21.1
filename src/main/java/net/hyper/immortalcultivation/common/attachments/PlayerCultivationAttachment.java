@@ -86,7 +86,12 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         long oldValue = currentCultivation.get(type);
         long newValue = Math.max(0, Math.min(value, maxCultivation.get(type)));
         currentCultivation.put(type, newValue);
-        if (oldValue != newValue) this.markDirty();
+        if (oldValue != newValue) {
+            ImmortalCultivation.LOGGER.debug("Cultivation changed for {}: {} {} -> {}",
+                player != null ? player.getName().getString() : "unknown",
+                type, oldValue, newValue);
+            this.markDirty();
+        }
     }
 
     @Override
@@ -235,13 +240,19 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
     @Override
     public void addRegenFraction(CultivationType type, double amount) {
         double current = cultivationFraction.get(type) + amount;
-        long pointsToAdd = (long) current;
-        if (pointsToAdd > 0) {
-            addCultivation(type, pointsToAdd);
-            current -= pointsToAdd;
+
+        // Only convert to long if the fraction is >= 1.0
+        if (current >= 1.0) {
+            long pointsToAdd = (long) current;
+            if (pointsToAdd > 0) {
+                addCultivation(type, pointsToAdd); // This will call markDirty() if values change
+                current -= pointsToAdd;
+                // markDirty() is called by addCultivation() -> setCurrentCultivation()
+            }
         }
+
         cultivationFraction.put(type, current);
-        this.markDirty();
+        // Don't mark dirty here - only mark dirty when actual cultivation points are added
     }
 
     public boolean canBreakthrough(CultivationType type) {
@@ -295,15 +306,16 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             ImmortalCultivation.LOGGER.debug("Adding QI realm to sync: {}", qiRealmId.get());
         }
 
+        // Fix: Use .equals() for Long comparison instead of !=
         if (isFullSync || lastSyncedState == null ||
-            currentCultivation.get(CultivationType.QI) != lastSyncedState.currentCultivation.get(CultivationType.QI)) {
+            !currentCultivation.get(CultivationType.QI).equals(lastSyncedState.currentCultivation.get(CultivationType.QI))) {
             qiCurrent = Optional.of(currentCultivation.get(CultivationType.QI));
             qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.CURRENT_MASK;
             ImmortalCultivation.LOGGER.debug("Adding QI current to sync: {}", qiCurrent.get());
         }
 
         if (isFullSync || lastSyncedState == null ||
-            maxCultivation.get(CultivationType.QI) != lastSyncedState.maxCultivation.get(CultivationType.QI)) {
+            !maxCultivation.get(CultivationType.QI).equals(lastSyncedState.maxCultivation.get(CultivationType.QI))) {
             qiMax = Optional.of(maxCultivation.get(CultivationType.QI));
             qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.MAX_MASK;
             ImmortalCultivation.LOGGER.debug("Adding QI max to sync: {}", qiMax.get());
@@ -314,7 +326,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             fieldMask |= PlayerCultivationSyncPacket.QI_CULTIVATION_MASK;
         }
 
-        // Build Body cultivation payload (similar pattern)
+        // Build Body cultivation payload (similar pattern with .equals())
         byte bodyPayloadMask = 0;
         Optional<String> bodyRealmId = Optional.empty();
         Optional<Long> bodyCurrent = Optional.empty();
@@ -327,13 +339,13 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         }
 
         if (isFullSync || lastSyncedState == null ||
-            currentCultivation.get(CultivationType.BODY) != lastSyncedState.currentCultivation.get(CultivationType.BODY)) {
+            !currentCultivation.get(CultivationType.BODY).equals(lastSyncedState.currentCultivation.get(CultivationType.BODY))) {
             bodyCurrent = Optional.of(currentCultivation.get(CultivationType.BODY));
             bodyPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.CURRENT_MASK;
         }
 
         if (isFullSync || lastSyncedState == null ||
-            maxCultivation.get(CultivationType.BODY) != lastSyncedState.maxCultivation.get(CultivationType.BODY)) {
+            !maxCultivation.get(CultivationType.BODY).equals(lastSyncedState.maxCultivation.get(CultivationType.BODY))) {
             bodyMax = Optional.of(maxCultivation.get(CultivationType.BODY));
             bodyPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.MAX_MASK;
         }
@@ -357,6 +369,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             return Optional.empty();
         }
 
+        // Update last synced state ONLY when we have changes to send
         this.lastSyncedState = this.copy();
 
         return Optional.of(new PlayerCultivationSyncPacket(fieldMask, qiPayload, bodyPayload, focusPayload));
