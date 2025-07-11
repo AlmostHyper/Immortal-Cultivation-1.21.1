@@ -127,6 +127,20 @@ public abstract class CultivationRealm {
      */
     public abstract double getBaseQiRegenerationRate();
 
+    // === Qi-Related Stats ===
+
+    /**
+     * Maximum Body capacity for this realm
+     * @return Max Body value
+     */
+    public abstract long getBaseMaxBody();
+
+    /**
+     * Body regeneration rate per second
+     * @return Body regen per second
+     */
+    public abstract double getBaseBodyRegenerationRate();
+
     // === Unified Cultivation Breakthrough Logic ===
 
     /**

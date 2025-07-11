@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.server.event.world;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.*;
+import net.hyper.immortalcultivation.common.interfaces.IDebug;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
@@ -21,7 +22,7 @@ public class ICModTickEvent {
     // Base tick intervals for different systems
     private static final int TICKABLE_INTERVAL = 1; // Tick every tick
     private static final int SYNC_CHECK_INTERVAL = 5; // Check for syncs every 5 ticks (4 times per second)
-    private static boolean DEBUG_SYNC = true;
+    private static boolean DEBUG_SYNC = false;
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {

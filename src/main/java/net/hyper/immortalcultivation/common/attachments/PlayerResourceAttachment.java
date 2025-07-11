@@ -36,14 +36,14 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     private double healthRegenFraction = 0.0;
 
     // --- Qi Data ---
-    private long permanentMaxQiBonus = 0L;
+    private long permanentQiBonus = 0L;
     private double permanentQiRegenBonus = 0.0;
     private long currentQi = MORTAL_BASE_QI;
     private long maxQi = MORTAL_BASE_QI;
     private double qiRegenFraction = 0.0;
 
     // --- Body Data ---
-    private long permanentMaxBodyBonus = 0L;
+    private long permanentBodyBonus = 0L;
     private double permanentBodyRegenBonus = 0.0;
     private long currentBody = MORTAL_BASE_BODY;
     private long maxBody = MORTAL_BASE_BODY;
@@ -77,6 +77,13 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
     }
 
+    public void setPermanentHealthBonus(long permanentHealthBonus) {
+        if (this.permanentHealthBonus != permanentHealthBonus) {
+            this.permanentHealthBonus = permanentHealthBonus;
+            markDirty();
+        }
+    }
+
     @Override
     public long getMaxHealth() { return maxHealth; }
 
@@ -89,6 +96,13 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     @Override
     public double getRegenFraction() { return healthRegenFraction; }
 
+    public void setPermanentHealthRegenBonus(double permanentHealthRegenBonus) {
+        if (this.permanentHealthRegenBonus != permanentHealthRegenBonus) {
+            this.permanentHealthRegenBonus = permanentHealthRegenBonus;
+            markDirty();
+        }
+    }
+
     @Override
     public void setRegenFraction(double fraction) { this.healthRegenFraction = fraction; }
 
@@ -97,17 +111,6 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public long getBaseMaxHealth() { return MORTAL_BASE_HEALTH + permanentHealthBonus; }
-
-    public void addPermanentHealthBonus(long bonus) {
-        this.permanentHealthBonus += bonus;
-        recalculateMaxHealth();
-        markDirty();
-    }
-
-    public void addPermanentHealthRegenBonus(double bonus) {
-        this.permanentHealthRegenBonus += bonus;
-        markDirty();
-    }
 
     // --- Qi Methods ---
     @Override
@@ -120,6 +123,16 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (oldQi != this.currentQi) markDirty();
     }
 
+    public void setPermanentQiBonus(long permanentQiBonus) {
+        if (this.permanentQiBonus != permanentQiBonus) {
+            this.permanentQiBonus = permanentQiBonus;
+            markDirty();
+        }
+    }
+
+    @Override
+    public long getBaseMaxQi() { return MORTAL_BASE_QI + permanentQiBonus; }
+
     @Override
     public long getMaxQi() { return maxQi; }
 
@@ -129,8 +142,12 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     @Override
     public double getEffectiveQiRegenerationRate() { return getBaseQiRegenerationRate(); }
 
-    @Override
-    public long getBaseMaxQi() { return MORTAL_BASE_QI + permanentMaxQiBonus; }
+    public void setPermanentQiRegenBonus(double permanentQiRegenBonus) {
+        if (this.permanentQiRegenBonus != permanentQiRegenBonus) {
+            this.permanentQiRegenBonus = permanentQiRegenBonus;
+            markDirty();
+        }
+    }
 
     @Override
     public void consumeQi(long amount) {
@@ -139,7 +156,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         markDirty();
     }
     public void addPermanentMaxQiBonus(long bonus) {
-        this.permanentMaxQiBonus += bonus;
+        this.permanentQiBonus += bonus;
         recalculateMaxQi();
         markDirty();
     }
@@ -160,6 +177,13 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         if (oldBody != this.currentBody) markDirty();
     }
 
+    public void setPermanentBodyBonus(long permanentBodyBonus) {
+        if (this.permanentBodyBonus != permanentBodyBonus) {
+            this.permanentBodyBonus = permanentBodyBonus;
+            markDirty();
+        }
+    }
+
     @Override
     public long getMaxBody() { return maxBody; }
 
@@ -169,14 +193,21 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     @Override
     public double getEffectiveBodyRegenerationRate() { return getBaseBodyRegenerationRate(); }
 
+    public void setPermanentBodyRegenBonus(double permanentBodyRegenBonus) {
+        if (this.permanentBodyRegenBonus != permanentBodyRegenBonus) {
+            this.permanentBodyRegenBonus = permanentBodyRegenBonus;
+            markDirty();
+        }
+    }
+
     @Override
-    public long getBaseMaxBody() { return MORTAL_BASE_BODY + permanentMaxBodyBonus; }
+    public long getBaseMaxBody() { return MORTAL_BASE_BODY + permanentBodyBonus; }
 
     @Override
     public void consumeBody(long amount) { setCurrentBody(currentBody - amount); }
 
     public void addPermanentMaxBodyBonus(long bonus) {
-        this.permanentMaxBodyBonus += bonus;
+        this.permanentBodyBonus += bonus;
         recalculateMaxBody();
         markDirty();
     }
@@ -213,14 +244,14 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         // Include Qi data
         data.putLong(PlayerResourcesSyncPacket.KEY_CURRENT_QI, this.currentQi);
         data.putLong("max_q", this.maxQi);
-        data.putLong(PlayerResourcesSyncPacket.KEY_PERM_QI_BONUS, this.permanentMaxQiBonus);
+        data.putLong(PlayerResourcesSyncPacket.KEY_PERM_QI_BONUS, this.permanentQiBonus);
         data.putDouble(PlayerResourcesSyncPacket.KEY_PERM_QI_REGEN, this.permanentQiRegenBonus);
         data.putDouble("q_r_f", this.qiRegenFraction);
 
         // Include Body data
         data.putLong(PlayerResourcesSyncPacket.KEY_CURRENT_BODY, this.currentBody);
         data.putLong("max_b", this.maxBody);
-        data.putLong(PlayerResourcesSyncPacket.KEY_PERM_BODY_BONUS, this.permanentMaxBodyBonus);
+        data.putLong(PlayerResourcesSyncPacket.KEY_PERM_BODY_BONUS, this.permanentBodyBonus);
         data.putDouble(PlayerResourcesSyncPacket.KEY_PERM_BODY_REGEN, this.permanentBodyRegenBonus);
         data.putDouble("b_r_f", this.bodyRegenFraction);
 
@@ -283,7 +314,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
 
         if (data.contains(PlayerResourcesSyncPacket.KEY_PERM_QI_BONUS)) {
-            this.permanentMaxQiBonus = data.getLong(PlayerResourcesSyncPacket.KEY_PERM_QI_BONUS);
+            this.permanentQiBonus = data.getLong(PlayerResourcesSyncPacket.KEY_PERM_QI_BONUS);
         }
 
         if (data.contains(PlayerResourcesSyncPacket.KEY_PERM_QI_REGEN)) {
@@ -304,7 +335,7 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         }
 
         if (data.contains(PlayerResourcesSyncPacket.KEY_PERM_BODY_BONUS)) {
-            this.permanentMaxBodyBonus = data.getLong(PlayerResourcesSyncPacket.KEY_PERM_BODY_BONUS);
+            this.permanentBodyBonus = data.getLong(PlayerResourcesSyncPacket.KEY_PERM_BODY_BONUS);
         }
 
         if (data.contains(PlayerResourcesSyncPacket.KEY_PERM_BODY_REGEN)) {
@@ -410,11 +441,11 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
         copy.permanentHealthRegenBonus = this.permanentHealthRegenBonus;
         copy.maxHealth = this.maxHealth;
         copy.currentQi = this.currentQi;
-        copy.permanentMaxQiBonus = this.permanentMaxQiBonus;
+        copy.permanentQiBonus = this.permanentQiBonus;
         copy.permanentQiRegenBonus = this.permanentQiRegenBonus;
         copy.maxQi = this.maxQi;
         copy.currentBody = this.currentBody;
-        copy.permanentMaxBodyBonus = this.permanentMaxBodyBonus;
+        copy.permanentBodyBonus = this.permanentBodyBonus;
         copy.permanentBodyRegenBonus = this.permanentBodyRegenBonus;
         copy.maxBody = this.maxBody;
         return copy;
@@ -452,10 +483,10 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
                     Codec.LONG.fieldOf("permanent_health_bonus").forGetter(d -> d.permanentHealthBonus),
                     Codec.DOUBLE.fieldOf("permanent_health_regen_bonus").forGetter(d -> d.permanentHealthRegenBonus),
                     Codec.LONG.fieldOf("current_qi").forGetter(d -> d.currentQi),
-                    Codec.LONG.fieldOf("permanent_max_qi_bonus").forGetter(d -> d.permanentMaxQiBonus),
+                    Codec.LONG.fieldOf("permanent_max_qi_bonus").forGetter(d -> d.permanentQiBonus),
                     Codec.DOUBLE.fieldOf("permanent_qi_regen_bonus").forGetter(d -> d.permanentQiRegenBonus),
                     Codec.LONG.fieldOf("current_body").forGetter(d -> d.currentBody),
-                    Codec.LONG.fieldOf("permanent_max_body_bonus").forGetter(d -> d.permanentMaxBodyBonus),
+                    Codec.LONG.fieldOf("permanent_max_body_bonus").forGetter(d -> d.permanentBodyBonus),
                     Codec.DOUBLE.fieldOf("permanent_body_regen_bonus").forGetter(d -> d.permanentBodyRegenBonus)
             ).apply(instance, (curHealth, permHealthBonus, permHealthRegen, curQi, permMaxQi, permQiRegen, curBody, permMaxBody, permBodyRegen) -> {
                 PlayerResourceAttachment data = new PlayerResourceAttachment();
@@ -463,10 +494,10 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
                 data.permanentHealthBonus = permHealthBonus;
                 data.permanentHealthRegenBonus = permHealthRegen;
                 data.currentQi = curQi;
-                data.permanentMaxQiBonus = permMaxQi;
+                data.permanentQiBonus = permMaxQi;
                 data.permanentQiRegenBonus = permQiRegen;
                 data.currentBody = curBody;
-                data.permanentMaxBodyBonus = permMaxBody;
+                data.permanentBodyBonus = permMaxBody;
                 data.permanentBodyRegenBonus = permBodyRegen;
                 data.recalculateAll();
                 return data;

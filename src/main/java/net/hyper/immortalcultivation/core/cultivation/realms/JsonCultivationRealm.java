@@ -1,7 +1,11 @@
 package net.hyper.immortalcultivation.core.cultivation.realms;
 
+import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.attachments.PlayerCombatStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.server.event.world.ICModCombatEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
@@ -110,6 +114,14 @@ public class JsonCultivationRealm extends CultivationRealm {
     public double getBaseQiRegenerationRate() {
         return data.baseQiRegenerationRate();
     }
+
+    // === Body Stats === //
+
+    @Override
+    public long getBaseMaxBody() {return data.baseMaxBody();}
+
+    @Override
+    public double getBaseBodyRegenerationRate() {return data.baseBodyRegenerationRate();}
 
     // === Realm Navigation ===
 
@@ -391,5 +403,46 @@ public class JsonCultivationRealm extends CultivationRealm {
         // Play advancement sound
         player.level().playSound(null, player.blockPosition(),
             SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.0F, 1.0F);
+    }
+
+    @Override
+    public void applyRealmModifiers(Player player, ICultivationData cultivationData, ICultivationData.CultivationType type) {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        try {
+            PlayerCombatStatsAttachment combatStats = serverPlayer.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            if (combatStats == null) {
+                ImmortalCultivation.LOGGER.warn("No combat stats attachment found for player {}", player.getName().getString());
+                return;
+            }
+
+            // ADD the realm bonuses to existing bonuses (cumulative progression)
+            double currentAttackBonus = combatStats.getPermanentAttackDamageBonus();
+            double currentSpeedBonus = combatStats.getPermanentMovementSpeedBonus();
+            double currentJumpBonus = combatStats.getPermanentJumpHeightBonus();
+
+            combatStats.setPermanentAttackDamageBonus(currentAttackBonus + getBaseAttackDamage());
+            combatStats.setPermanentMovementSpeedBonus(currentSpeedBonus + getBaseMovementSpeed());
+            combatStats.setPermanentJumpHeightBonus(currentJumpBonus + getBaseJumpHeight());
+
+            // Force refresh the attribute modifiers to apply the changes immediately
+            ICModCombatEvent.refreshCombatStats(serverPlayer);
+
+            ImmortalCultivation.LOGGER.info("Applied cumulative realm modifiers for {} advancing to {} - Added ATK: +{}%, SPD: +{}%, JUMP: +{}% (Total: ATK +{}%, SPD +{}%, JUMP +{}%)",
+                player.getName().getString(),
+                getDisplayName(),
+                String.format("%.1f", getBaseAttackDamage() * 100),
+                String.format("%.1f", getBaseMovementSpeed() * 100),
+                String.format("%.1f", getBaseJumpHeight() * 100),
+                String.format("%.1f", combatStats.getPermanentAttackDamageBonus() * 100),
+                String.format("%.1f", combatStats.getPermanentMovementSpeedBonus() * 100),
+                String.format("%.1f", combatStats.getPermanentJumpHeightBonus() * 100));
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying realm modifiers for player {} in realm {}",
+                player.getName().getString(), getId(), e);
+        }
     }
 }

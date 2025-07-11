@@ -2,10 +2,12 @@ package net.hyper.immortalcultivation.server.event.player;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.*;
+import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IPlayerInitializable;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -30,13 +32,13 @@ public class ICModInitializationEvent {
     // A list of all attachment type suppliers to be managed.
     // The wildcard `? extends` is used to allow for different specific attachment types.
     private static final List<Supplier<? extends AttachmentType<?>>> ATTACHMENT_TYPES = List.of(
-            ICModAttachmentTypes.PLAYER_CULTIVATION,
-            ICModAttachmentTypes.PLAYER_BREAKTHROUGH,
-            ICModAttachmentTypes.PLAYER_RESOURCES,
-            ICModAttachmentTypes.PLAYER_COMBAT_STATS,
-            ICModAttachmentTypes.PLAYER_TALENTS,
-            ICModAttachmentTypes.PLAYER_RACE,
-            ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION
+        ICModAttachmentTypes.PLAYER_CULTIVATION,
+        ICModAttachmentTypes.PLAYER_BREAKTHROUGH,
+        ICModAttachmentTypes.PLAYER_RESOURCES,
+        ICModAttachmentTypes.PLAYER_COMBAT_STATS,
+        ICModAttachmentTypes.PLAYER_TALENTS,
+        ICModAttachmentTypes.PLAYER_RACE,
+        ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION
     );
 
     @SubscribeEvent
@@ -44,6 +46,10 @@ public class ICModInitializationEvent {
         if (event.getEntity() instanceof ServerPlayer player) {
             ImmortalCultivation.LOGGER.info("Processing login for player: {}", player.getName().getString());
             initializeAttachments(player);
+
+            // Apply current realm modifiers after initialization but before sync
+            applyCurrentRealmModifiers(player);
+
             synchronizeAllData(player);
         }
     }
@@ -52,6 +58,10 @@ public class ICModInitializationEvent {
     public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ImmortalCultivation.LOGGER.info("Processing respawn for player: {}", player.getName().getString());
+
+            // Reapply realm modifiers on respawn to ensure they persist
+            applyCurrentRealmModifiers(player);
+
             synchronizeAllData(player);
         }
     }
@@ -60,7 +70,40 @@ public class ICModInitializationEvent {
     public static void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
             ImmortalCultivation.LOGGER.info("Processing dimension change for player: {}", player.getName().getString());
+
+            // Reapply realm modifiers on dimension change to ensure they persist
+            applyCurrentRealmModifiers(player);
+
             synchronizeAllData(player);
+        }
+    }
+
+    /**
+     * Applies current realm modifiers for all cultivation types.
+     * This recalculates from scratch to ensure accuracy and handle any data inconsistencies.
+     */
+    private static void applyCurrentRealmModifiers(ServerPlayer player) {
+        try {
+            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (cultivation == null) {
+                ImmortalCultivation.LOGGER.warn("No cultivation attachment found for player {}", player.getName().getString());
+                return;
+            }
+
+            // Recalculate all bonuses from scratch on login to ensure accuracy
+            // This handles cases where data might be out of sync
+            for (ICultivationData.CultivationType type : ICultivationData.CultivationType.values()) {
+                CultivationRealm currentRealm = cultivation.getRealm(type);
+                if (currentRealm != null && currentRealm.getRealmLevel() > 0) {
+                    cultivation.recalculateAllRealmBonuses(player, type);
+                    ImmortalCultivation.LOGGER.debug("Recalculated {} realm bonuses for {} (current realm: {})",
+                        type.getDisplayName(), player.getName().getString(), currentRealm.getDisplayName());
+                }
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying realm modifiers for player {} during lifecycle event",
+                player.getName().getString(), e);
         }
     }
 
@@ -140,5 +183,4 @@ public class ICModInitializationEvent {
             ImmortalCultivation.LOGGER.error("INIT: Set player reference for PlayerPillConsumptionAttachment");
         }
     }
-
 }
