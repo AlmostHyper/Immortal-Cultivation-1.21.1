@@ -140,6 +140,8 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         return currentRealms.get(type);
     }
 
+    // Replace your existing setRealm method in PlayerCultivationAttachment with this updated version:
+
     public void setRealm(CultivationType type, CultivationRealm realm) {
         if (realm != null && !realm.equals(this.currentRealms.get(type))) {
             CultivationRealm previousRealm = this.currentRealms.get(type);
@@ -153,7 +155,6 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             // Handle realm transition for ServerPlayer
             if (player instanceof ServerPlayer serverPlayer) {
                 try {
-                    // For command-based realm setting, we need to handle both advancement and manual setting
                     boolean isAdvancement = previousRealm == null || realm.getRealmLevel() > previousRealm.getRealmLevel();
 
                     if (isAdvancement) {
@@ -161,18 +162,19 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
                         realm.applyRealmModifiers(serverPlayer, this, type);
                         realm.onRealmAdvancement(serverPlayer, this, previousRealm, type);
                     } else {
-                        // Manual realm setting (like commands) - recalculate total bonuses from scratch
+                        // Manual realm setting (like commands) or realm downgrade
+                        // Recalculate total bonuses from scratch to ensure accuracy
                         recalculateAllRealmBonuses(serverPlayer, type);
 
-                        // Send notification but not advancement message
+                        // Send notification message
                         serverPlayer.sendSystemMessage(
                             Component.literal("Your " + type.getDisplayName() + " cultivation realm has been set to " + realm.getDisplayName())
                                 .withStyle(ChatFormatting.AQUA)
                         );
                     }
 
-                    ImmortalCultivation.LOGGER.info("Successfully applied realm change for player {} - {} cultivation set to {}",
-                        serverPlayer.getName().getString(), type.getDisplayName(), realm.getDisplayName());
+                    ImmortalCultivation.LOGGER.info("Successfully applied realm change for player {} - {} cultivation set to {} (level {})",
+                        serverPlayer.getName().getString(), type.getDisplayName(), realm.getDisplayName(), realm.getRealmLevel());
 
                 } catch (Exception e) {
                     ImmortalCultivation.LOGGER.error("Error applying realm modifiers during realm change for player {}",
