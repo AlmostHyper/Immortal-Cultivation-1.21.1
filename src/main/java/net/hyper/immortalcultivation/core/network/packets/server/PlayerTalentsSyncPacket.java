@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.core.network.packets.server;
 
-import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.server.event.world.ICModAttachmentUpdateEvent;
@@ -28,7 +28,7 @@ public record PlayerTalentsSyncPacket(CompoundTag talentData) implements ISyncPa
     @Override
     public void handleOnClient(Player player) {
         if (player != null) {
-            PlayerTalentAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerTalentsAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
             if (attachment != null) {
                 attachment.applySync(this.talentData);
 

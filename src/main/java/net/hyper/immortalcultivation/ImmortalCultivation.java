@@ -1,5 +1,6 @@
 package net.hyper.immortalcultivation;
 
+import net.hyper.immortalcultivation.client.gui.screens.QiHUDScreen;
 import net.hyper.immortalcultivation.common.config.ImmortalCultivationConfig;
 import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.server.event.world.ICModTickEvent;
@@ -79,6 +80,8 @@ public class ImmortalCultivation
             // Some client setup code
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
+            QiHUDScreen.register();
+
         }
 
         @SubscribeEvent

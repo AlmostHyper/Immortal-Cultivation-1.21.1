@@ -133,8 +133,11 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
     public long getBaseMaxQi() { return MORTAL_BASE_QI + permanentMaxQiBonus; }
 
     @Override
-    public void consumeQi(long amount) { setCurrentQi(currentQi - amount); }
-
+    public void consumeQi(long amount) {
+        if (amount <= 0) return;
+        this.currentQi = Math.max(0, this.currentQi - amount);
+        markDirty();
+    }
     public void addPermanentMaxQiBonus(long bonus) {
         this.permanentMaxQiBonus += bonus;
         recalculateMaxQi();
@@ -194,23 +197,20 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
 
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide() || !isDirty()) return Optional.empty();
-        if (lastSyncedState == null) isFullSync = true;
+        if (player == null) {
+            return Optional.empty();
+        }
+
+        if (!isFullSync && !isDirty()) {
+            return Optional.empty();
+        }
 
         CompoundTag data = new CompoundTag();
-        if (isFullSync || this.currentHealth != lastSyncedState.currentHealth) data.putLong(PlayerResourcesSyncPacket.KEY_CURRENT_HEALTH, this.currentHealth);
-        if (isFullSync || this.permanentHealthBonus != lastSyncedState.permanentHealthBonus) data.putLong(PlayerResourcesSyncPacket.KEY_PERM_HEALTH_BONUS, this.permanentHealthBonus);
-        if (isFullSync || this.permanentHealthRegenBonus != lastSyncedState.permanentHealthRegenBonus) data.putDouble(PlayerResourcesSyncPacket.KEY_PERM_HEALTH_REGEN, this.permanentHealthRegenBonus);
-        if (isFullSync || this.currentQi != lastSyncedState.currentQi) data.putLong(PlayerResourcesSyncPacket.KEY_CURRENT_QI, this.currentQi);
-        if (isFullSync || this.permanentMaxQiBonus != lastSyncedState.permanentMaxQiBonus) data.putLong(PlayerResourcesSyncPacket.KEY_PERM_QI_BONUS, this.permanentMaxQiBonus);
-        if (isFullSync || this.permanentQiRegenBonus != lastSyncedState.permanentQiRegenBonus) data.putDouble(PlayerResourcesSyncPacket.KEY_PERM_QI_REGEN, this.permanentQiRegenBonus);
-        if (isFullSync || this.currentBody != lastSyncedState.currentBody) data.putLong(PlayerResourcesSyncPacket.KEY_CURRENT_BODY, this.currentBody);
-        if (isFullSync || this.permanentMaxBodyBonus != lastSyncedState.permanentMaxBodyBonus) data.putLong(PlayerResourcesSyncPacket.KEY_PERM_BODY_BONUS, this.permanentMaxBodyBonus);
-        if (isFullSync || this.permanentBodyRegenBonus != lastSyncedState.permanentBodyRegenBonus) data.putDouble(PlayerResourcesSyncPacket.KEY_PERM_BODY_REGEN, this.permanentBodyRegenBonus);
 
         if (!data.isEmpty()) {
+            // Update last synced state but DON'T clear dirty flag here
             this.lastSyncedState = this.copy();
-            clearDirty();
+            // The dirty flag will be cleared by ICModTickEvent AFTER successful send
             return Optional.of(new PlayerResourcesSyncPacket(data));
         }
 

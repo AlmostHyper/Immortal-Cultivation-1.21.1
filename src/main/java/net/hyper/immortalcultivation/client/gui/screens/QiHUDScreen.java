@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.client.gui.screens;
 
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerResourceAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.server.event.world.ICModAttachmentUpdateEvent;
@@ -109,14 +109,12 @@ public class QiHUDScreen {
     private static boolean needsUpdate = true;
     private static QiHUDScreen instance;
 
-
     public static void register() {
         if (instance == null) {
             instance = new QiHUDScreen();
             NeoForge.EVENT_BUS.register(instance);
         }
     }
-
 
     /**
      * Main rendering method for the unified cultivation HUD.
@@ -144,6 +142,7 @@ public class QiHUDScreen {
                 cacheUpdateCounter = 0;
                 updateAllTextCache(snapshot);
             }
+            needsUpdate = false;
         }
 
         // Calculate HUD position
@@ -163,7 +162,7 @@ public class QiHUDScreen {
             // Get unified attachments
             PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            PlayerTalentAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerTalentsAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
 
             // Verify we have all critical data
             if (cultivation == null || resources == null || talents == null) {
@@ -184,50 +183,50 @@ public class QiHUDScreen {
     private static void updateAllAnimations(CultivationDataSnapshot snapshot) {
         // Update Qi Cultivation animation
         updateStatAnimation(
-                snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI),
-                snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI),
-                lastQiCultivation, lastMaxQiCultivation,
-                (progress) -> qiCultivationDisplayProgress = progress
+            snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI),
+            snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI),
+            lastQiCultivation, lastMaxQiCultivation,
+            (progress) -> qiCultivationDisplayProgress = progress
         );
         lastQiCultivation = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
         lastMaxQiCultivation = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
 
         // Update Body Cultivation animation
         updateStatAnimation(
-                snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY),
-                snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY),
-                lastBodyCultivation, lastMaxBodyCultivation,
-                (progress) -> bodyCultivationDisplayProgress = progress
+            snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY),
+            snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY),
+            lastBodyCultivation, lastMaxBodyCultivation,
+            (progress) -> bodyCultivationDisplayProgress = progress
         );
         lastBodyCultivation = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
         lastMaxBodyCultivation = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
 
         // Update Health animation
         updateStatAnimation(
-                snapshot.resources.getCurrentHealth(),
-                snapshot.resources.getMaxHealth(),
-                lastHealth, lastMaxHealth,
-                (progress) -> healthDisplayProgress = progress
+            snapshot.resources.getCurrentHealth(),
+            snapshot.resources.getMaxHealth(),
+            lastHealth, lastMaxHealth,
+            (progress) -> healthDisplayProgress = progress
         );
         lastHealth = snapshot.resources.getCurrentHealth();
         lastMaxHealth = snapshot.resources.getMaxHealth();
 
         // Update Qi Energy animation
         updateStatAnimation(
-                snapshot.resources.getCurrentQi(),
-                snapshot.resources.getMaxQi(),
-                lastQiEnergy, lastMaxQiEnergy,
-                (progress) -> qiEnergyDisplayProgress = progress
+            snapshot.resources.getCurrentQi(),
+            snapshot.resources.getMaxQi(),
+            lastQiEnergy, lastMaxQiEnergy,
+            (progress) -> qiEnergyDisplayProgress = progress
         );
         lastQiEnergy = snapshot.resources.getCurrentQi();
         lastMaxQiEnergy = snapshot.resources.getMaxQi();
 
         // Update Body Energy animation
         updateStatAnimation(
-                snapshot.resources.getCurrentBody(),
-                snapshot.resources.getMaxBody(),
-                lastBodyEnergy, lastMaxBodyEnergy,
-                (progress) -> bodyEnergyDisplayProgress = progress
+            snapshot.resources.getCurrentBody(),
+            snapshot.resources.getMaxBody(),
+            lastBodyEnergy, lastMaxBodyEnergy,
+            (progress) -> bodyEnergyDisplayProgress = progress
         );
         lastBodyEnergy = snapshot.resources.getCurrentBody();
         lastMaxBodyEnergy = snapshot.resources.getMaxBody();
@@ -265,49 +264,49 @@ public class QiHUDScreen {
         // Cache Qi Cultivation text with percentage and absolute values
         double qiCultivationPercentage = snapshot.cultivation.getProgress(ICultivationData.CultivationType.QI) * 100;
         cachedQiCultivationText = String.format("Qi Cultivation: %.0f%% (%d/%d)",
-                qiCultivationPercentage,
-                snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI),
-                snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI));
+            qiCultivationPercentage,
+            snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI),
+            snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI));
 
         // Cache Body Cultivation text
         double bodyCultivationPercentage = snapshot.cultivation.getProgress(ICultivationData.CultivationType.BODY) * 100;
         cachedBodyCultivationText = String.format("Body Cultivation: %.0f%% (%d/%d)",
-                bodyCultivationPercentage,
-                snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY),
-                snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY));
+            bodyCultivationPercentage,
+            snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY),
+            snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY));
 
         // Cache Health text - show absolute values since health is more intuitive that way
         cachedHealthText = String.format("Health: %d/%d",
-                snapshot.resources.getCurrentHealth(),
-                snapshot.resources.getMaxHealth());
+            snapshot.resources.getCurrentHealth(),
+            snapshot.resources.getMaxHealth());
 
         // Cache Qi Energy text
         double qiEnergyPercentage = snapshot.resources.getQiPercentage() * 100;
         cachedQiEnergyText = String.format("Qi Energy: %.0f%% (%d/%d)",
-                qiEnergyPercentage,
-                snapshot.resources.getCurrentQi(),
-                snapshot.resources.getMaxQi());
+            qiEnergyPercentage,
+            snapshot.resources.getCurrentQi(),
+            snapshot.resources.getMaxQi());
 
         // Cache Body Energy text
         double bodyEnergyPercentage = snapshot.resources.getBodyPercentage() * 100;
         cachedBodyEnergyText = String.format("Body Energy: %.0f%% (%d/%d)",
-                bodyEnergyPercentage,
-                snapshot.resources.getCurrentBody(),
-                snapshot.resources.getMaxBody());
+            bodyEnergyPercentage,
+            snapshot.resources.getCurrentBody(),
+            snapshot.resources.getMaxBody());
 
         // Cache focus text with bonus indication
         cachedFocusText = String.format("%s Focus (2x rate)",
-                snapshot.cultivation.getCurrentFocus().getDisplayName());
+            snapshot.cultivation.getCurrentFocus().getDisplayName());
 
         // Cache realm summary showing both cultivation paths
         cachedRealmSummaryText = String.format("Qi: %s | Body: %s",
-                snapshot.cultivation.getRealm(ICultivationData.CultivationType.QI).getDisplayName(),
-                snapshot.cultivation.getRealm(ICultivationData.CultivationType.BODY).getDisplayName());
+            snapshot.cultivation.getRealm(ICultivationData.CultivationType.QI).getDisplayName(),
+            snapshot.cultivation.getRealm(ICultivationData.CultivationType.BODY).getDisplayName());
 
         // Cache talent summary
         cachedTalentSummaryText = String.format("Talent: %.1fx | %.1fx",
-                snapshot.talents.getSpiritualRootMultiplier(),
-                snapshot.talents.getPhysiqueMultiplier());
+            snapshot.talents.getSpiritualRootMultiplier(),
+            snapshot.talents.getPhysiqueMultiplier());
     }
 
     /**
@@ -333,7 +332,7 @@ public class QiHUDScreen {
 
         // Background circle
         guiGraphics.fill(centerX - halfSize, centerY - halfSize,
-                centerX + halfSize, centerY + halfSize, BACKGROUND_COLOR);
+            centerX + halfSize, centerY + halfSize, BACKGROUND_COLOR);
 
         // Border with focus-specific color
         PlayerCultivationAttachment.CultivationType currentFocus = cultivation.getCurrentFocus();
@@ -341,15 +340,15 @@ public class QiHUDScreen {
 
         // Top and bottom borders
         guiGraphics.fill(centerX - halfSize - 1, centerY - halfSize - 1,
-                centerX + halfSize + 1, centerY - halfSize, borderColor);
+            centerX + halfSize + 1, centerY - halfSize, borderColor);
         guiGraphics.fill(centerX - halfSize - 1, centerY + halfSize,
-                centerX + halfSize + 1, centerY + halfSize + 1, borderColor);
+            centerX + halfSize + 1, centerY + halfSize + 1, borderColor);
 
         // Left and right borders
         guiGraphics.fill(centerX - halfSize - 1, centerY - halfSize,
-                centerX - halfSize, centerY + halfSize, borderColor);
+            centerX - halfSize, centerY + halfSize, borderColor);
         guiGraphics.fill(centerX + halfSize, centerY - halfSize,
-                centerX + halfSize + 1, centerY + halfSize, borderColor);
+            centerX + halfSize + 1, centerY + halfSize, borderColor);
 
         // Focus symbol in center
         Font font = Minecraft.getInstance().font;
@@ -381,7 +380,8 @@ public class QiHUDScreen {
 
         // Render focus indicator text
         if (!cachedFocusText.isEmpty()) {
-            int focusColor = snapshot.cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ? FOCUS_QI_COLOR : FOCUS_BODY_COLOR;
+            int focusColor = snapshot.cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ?
+                FOCUS_QI_COLOR : FOCUS_BODY_COLOR;
             guiGraphics.drawString(font, cachedFocusText, textX, currentY, focusColor, false);
             currentY += STAT_SPACING;
         }
@@ -508,18 +508,22 @@ public class QiHUDScreen {
      * This prevents inconsistencies that could occur if attachments change mid-render.
      */
     private record CultivationDataSnapshot(
-            PlayerCultivationAttachment cultivation,
-            PlayerResourceAttachment resources,
-            PlayerTalentAttachment talents
+        PlayerCultivationAttachment cultivation,
+        PlayerResourceAttachment resources,
+        PlayerTalentsAttachment talents
     ) {
     }
 
+    /**
+     * Event handler for attachment updates.
+     * This ensures the HUD refreshes when cultivation data changes.
+     */
     @SubscribeEvent
     public void onAttachmentUpdate(ICModAttachmentUpdateEvent event) {
         if (event.getPlayer().equals(Minecraft.getInstance().player)) {
             if (event.isAttachmentType(ICModAttachmentTypes.PLAYER_CULTIVATION.get()) ||
-                    event.isAttachmentType(ICModAttachmentTypes.PLAYER_RESOURCES.get()) ||
-                    event.isAttachmentType(ICModAttachmentTypes.PLAYER_TALENTS.get())) {
+                event.isAttachmentType(ICModAttachmentTypes.PLAYER_RESOURCES.get()) ||
+                event.isAttachmentType(ICModAttachmentTypes.PLAYER_TALENTS.get())) {
                 needsUpdate = true;
             }
         }

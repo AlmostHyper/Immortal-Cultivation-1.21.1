@@ -4,7 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerResourceAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
@@ -69,12 +69,12 @@ public class CultivationBreakthroughScreen extends Screen {
     private static class CultivationData {
         final PlayerCultivationAttachment cultivation;
         final PlayerResourceAttachment resources;
-        final PlayerTalentAttachment talents;
+        final PlayerTalentsAttachment talents;
         final PlayerBreakthroughAttachment breakthrough;
 
         CultivationData(PlayerCultivationAttachment cultivation,
                         PlayerResourceAttachment resources,
-                        PlayerTalentAttachment talents,
+                        PlayerTalentsAttachment talents,
                         PlayerBreakthroughAttachment breakthrough) {
             this.cultivation = cultivation;
             this.resources = resources;
@@ -273,7 +273,7 @@ public class CultivationBreakthroughScreen extends Screen {
         try {
             PlayerCultivationAttachment cultivation = minecraft.player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             PlayerResourceAttachment resources = minecraft.player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            PlayerTalentAttachment talents = minecraft.player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerTalentsAttachment talents = minecraft.player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
             PlayerBreakthroughAttachment breakthrough = minecraft.player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
 
             // Set player references if needed
@@ -658,7 +658,7 @@ public class CultivationBreakthroughScreen extends Screen {
      * @param startY The starting Y position for rendering
      */
     private void renderBonusInformation(GuiGraphics guiGraphics, int startY) {
-        PlayerTalentAttachment talents = breakthroughData.talents;
+        PlayerTalentsAttachment talents = breakthroughData.talents;
         List<String> bonuses = new ArrayList<>();
 
         // Failed attempt bonuses

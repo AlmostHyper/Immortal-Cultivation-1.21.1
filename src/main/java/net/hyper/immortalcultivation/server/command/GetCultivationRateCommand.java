@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.server.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.ChatFormatting;
@@ -27,7 +27,7 @@ public class GetCultivationRateCommand {
             }
 
             PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            PlayerTalentAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerTalentsAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
 
             if (cultivation == null || talents == null) {
                 context.getSource().sendFailure(Component.literal("Failed to get cultivation data"));

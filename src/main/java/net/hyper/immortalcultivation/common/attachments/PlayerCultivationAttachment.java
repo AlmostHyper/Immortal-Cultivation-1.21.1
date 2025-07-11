@@ -23,6 +23,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 public class PlayerCultivationAttachment implements ICultivationData, ISyncable, ITickable {
@@ -208,7 +209,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         double baseRate = getBaseCultivationRate(type);
         Player p = (player != null && player.isAlive()) ? player : null;
         if (p == null) return baseRate;
-        PlayerTalentAttachment talent = p.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        PlayerTalentsAttachment talent = p.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
         if (talent != null) baseRate *= (type == CultivationType.QI) ? talent.getSpiritualRootMultiplier() : talent.getPhysiqueMultiplier();
         PlayerRaceAttachment race = p.getData(ICModAttachmentTypes.PLAYER_RACE.get());
         if (race != null && race.hasRaceAssigned()) baseRate *= (type == CultivationType.QI) ? race.getQiMultiplier() : race.getBodyMultiplier();
@@ -258,9 +259,16 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
 
     // === IMPLEMENTATIONS === //
 
+    // Example fix for PlayerCultivationAttachment.createPacket()
+// This pattern should be applied to ALL attachment classes
+
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide()) {
+        if (player == null) {
+            return Optional.empty();
+        }
+
+        if (!isFullSync && !isDirty()) {
             return Optional.empty();
         }
 
@@ -268,67 +276,82 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             isFullSync = true;
         }
 
+        byte fieldMask = 0;
+        Optional<PlayerCultivationSyncPacket.CultivationDataPayload> qiPayload = Optional.empty();
+        Optional<PlayerCultivationSyncPacket.CultivationDataPayload> bodyPayload = Optional.empty();
+        Optional<CultivationType> focusPayload = Optional.empty();
+
+        // Build Qi cultivation payload
         byte qiPayloadMask = 0;
         Optional<String> qiRealmId = Optional.empty();
         Optional<Long> qiCurrent = Optional.empty();
         Optional<Long> qiMax = Optional.empty();
 
-        if (isFullSync || !this.currentRealms.get(CultivationType.QI).getId().equals(lastSyncedState.currentRealms.get(CultivationType.QI).getId())) {
+        if (isFullSync || lastSyncedState == null ||
+            !currentRealms.get(CultivationType.QI).getId().equals(lastSyncedState.currentRealms.get(CultivationType.QI).getId())) {
+            qiRealmId = Optional.of(currentRealms.get(CultivationType.QI).getId());
             qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.REALM_ID_MASK;
-            qiRealmId = Optional.of(this.currentRealms.get(CultivationType.QI).getId());
         }
-        if (isFullSync || !this.currentCultivation.get(CultivationType.QI).equals(lastSyncedState.currentCultivation.get(CultivationType.QI))) {
+
+        if (isFullSync || lastSyncedState == null ||
+            currentCultivation.get(CultivationType.QI) != lastSyncedState.currentCultivation.get(CultivationType.QI)) {
+            qiCurrent = Optional.of(currentCultivation.get(CultivationType.QI));
             qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.CURRENT_MASK;
-            qiCurrent = Optional.of(this.currentCultivation.get(CultivationType.QI));
         }
-        if (isFullSync || !this.maxCultivation.get(CultivationType.QI).equals(lastSyncedState.maxCultivation.get(CultivationType.QI))) {
+
+        if (isFullSync || lastSyncedState == null ||
+            maxCultivation.get(CultivationType.QI) != lastSyncedState.maxCultivation.get(CultivationType.QI)) {
+            qiMax = Optional.of(maxCultivation.get(CultivationType.QI));
             qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.MAX_MASK;
-            qiMax = Optional.of(this.maxCultivation.get(CultivationType.QI));
         }
 
-        Optional<PlayerCultivationSyncPacket.CultivationDataPayload> qiPayload = qiPayloadMask != 0
-            ? Optional.of(new PlayerCultivationSyncPacket.CultivationDataPayload(qiPayloadMask, qiRealmId, qiCurrent, qiMax))
-            : Optional.empty();
+        if (qiPayloadMask != 0) {
+            qiPayload = Optional.of(new PlayerCultivationSyncPacket.CultivationDataPayload(qiPayloadMask, qiRealmId, qiCurrent, qiMax));
+            fieldMask |= PlayerCultivationSyncPacket.QI_CULTIVATION_MASK;
+        }
 
+        // Build Body cultivation payload (similar pattern)
         byte bodyPayloadMask = 0;
         Optional<String> bodyRealmId = Optional.empty();
         Optional<Long> bodyCurrent = Optional.empty();
         Optional<Long> bodyMax = Optional.empty();
 
-        if (isFullSync || !this.currentRealms.get(CultivationType.BODY).getId().equals(lastSyncedState.currentRealms.get(CultivationType.BODY).getId())) {
+        if (isFullSync || lastSyncedState == null ||
+            !currentRealms.get(CultivationType.BODY).getId().equals(lastSyncedState.currentRealms.get(CultivationType.BODY).getId())) {
+            bodyRealmId = Optional.of(currentRealms.get(CultivationType.BODY).getId());
             bodyPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.REALM_ID_MASK;
-            bodyRealmId = Optional.of(this.currentRealms.get(CultivationType.BODY).getId());
         }
-        if (isFullSync || !this.currentCultivation.get(CultivationType.BODY).equals(lastSyncedState.currentCultivation.get(CultivationType.BODY))) {
+
+        if (isFullSync || lastSyncedState == null ||
+            currentCultivation.get(CultivationType.BODY) != lastSyncedState.currentCultivation.get(CultivationType.BODY)) {
+            bodyCurrent = Optional.of(currentCultivation.get(CultivationType.BODY));
             bodyPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.CURRENT_MASK;
-            bodyCurrent = Optional.of(this.currentCultivation.get(CultivationType.BODY));
         }
-        if (isFullSync || !this.maxCultivation.get(CultivationType.BODY).equals(lastSyncedState.maxCultivation.get(CultivationType.BODY))) {
+
+        if (isFullSync || lastSyncedState == null ||
+            maxCultivation.get(CultivationType.BODY) != lastSyncedState.maxCultivation.get(CultivationType.BODY)) {
+            bodyMax = Optional.of(maxCultivation.get(CultivationType.BODY));
             bodyPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.MAX_MASK;
-            bodyMax = Optional.of(this.maxCultivation.get(CultivationType.BODY));
         }
 
-        Optional<PlayerCultivationSyncPacket.CultivationDataPayload> bodyPayload = bodyPayloadMask != 0
-            ? Optional.of(new PlayerCultivationSyncPacket.CultivationDataPayload(bodyPayloadMask, bodyRealmId, bodyCurrent, bodyMax))
-            : Optional.empty();
-
-        byte packetMask = 0;
-        Optional<CultivationType> focus = Optional.empty();
-
-        if (qiPayload.isPresent()) packetMask |= PlayerCultivationSyncPacket.QI_CULTIVATION_MASK;
-        if (bodyPayload.isPresent()) packetMask |= PlayerCultivationSyncPacket.BODY_CULTIVATION_MASK;
-
-        if (isFullSync || this.currentFocus != lastSyncedState.currentFocus) {
-            packetMask |= PlayerCultivationSyncPacket.FOCUS_MASK;
-            focus = Optional.of(this.currentFocus);
+        if (bodyPayloadMask != 0) {
+            bodyPayload = Optional.of(new PlayerCultivationSyncPacket.CultivationDataPayload(bodyPayloadMask, bodyRealmId, bodyCurrent, bodyMax));
+            fieldMask |= PlayerCultivationSyncPacket.BODY_CULTIVATION_MASK;
         }
 
-        if (packetMask != 0) {
-            this.lastSyncedState = this.copy();
-            return Optional.of(new PlayerCultivationSyncPacket(packetMask, qiPayload, bodyPayload, focus));
+        // Build focus payload
+        if (isFullSync || lastSyncedState == null || currentFocus != lastSyncedState.currentFocus) {
+            focusPayload = Optional.of(currentFocus);
+            fieldMask |= PlayerCultivationSyncPacket.FOCUS_MASK;
         }
 
-        return Optional.empty();
+        if (fieldMask == 0) {
+            return Optional.empty();
+        }
+
+        this.lastSyncedState = this.copy();
+
+        return Optional.of(new PlayerCultivationSyncPacket(fieldMask, qiPayload, bodyPayload, focusPayload));
     }
 
     @Override

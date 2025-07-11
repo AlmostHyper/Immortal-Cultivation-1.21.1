@@ -141,9 +141,10 @@ public class PlayerCombatStatsAttachment implements ISyncable, ITickable {
     // === IMPLEMENTATIONS === //
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide() || !isDirty()) {
+        if (player == null) {
             return Optional.empty();
         }
+
         CompoundTag data = new CompoundTag();
         data.putDouble("p_attack", permanentAttackDamageBonus);
         data.putDouble("p_speed", permanentMovementSpeedBonus);
@@ -151,7 +152,7 @@ public class PlayerCombatStatsAttachment implements ISyncable, ITickable {
         data.putDouble("t_attack", attackDamageBonus);
         data.putDouble("t_speed", movementSpeedBonus);
         data.putDouble("t_jump", jumpHeightBonus);
-        clearDirty();
+
         return Optional.of(new PlayerCombatStatsSyncPacket(data));
     }
 

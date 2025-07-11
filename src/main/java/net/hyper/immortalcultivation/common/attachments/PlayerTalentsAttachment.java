@@ -23,7 +23,7 @@ import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class PlayerTalentAttachment implements ISyncable, IPlayerInitializable {
+public class PlayerTalentsAttachment implements ISyncable, IPlayerInitializable {
 
     // === INSTANCES === //
 
@@ -38,10 +38,11 @@ public class PlayerTalentAttachment implements ISyncable, IPlayerInitializable {
 
     // --- System Data ---
     private transient boolean isDirty = false;
+    private transient PlayerTalentsAttachment lastSyncedState = null;
 
     // === CONSTRUCTORS === //
 
-    public PlayerTalentAttachment() {}
+    public PlayerTalentsAttachment() {}
 
     // === GETTERS & SETTERS === //
 
@@ -116,17 +117,22 @@ public class PlayerTalentAttachment implements ISyncable, IPlayerInitializable {
 
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide() || !isDirty()) {
+        if (player == null) {
+            return Optional.empty();
+        }
+
+        if (!isFullSync && !isDirty()) {
             return Optional.empty();
         }
 
         CompoundTag data = (CompoundTag) CODEC.encodeStart(NbtOps.INSTANCE, this)
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerTalentAttachment: {}", error))
-                .orElse(new CompoundTag());
+            .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerTalentAttachment: {}", error))
+            .orElse(new CompoundTag());
 
-        clearDirty();
+        // Don't clear dirty here
         return Optional.of(new PlayerTalentsSyncPacket(data));
     }
+
 
     @Override
     public boolean isDirty() {
@@ -147,9 +153,9 @@ public class PlayerTalentAttachment implements ISyncable, IPlayerInitializable {
 
     public void applySync(CompoundTag data) {
         CODEC.decode(NbtOps.INSTANCE, data)
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerTalentAttachment from sync: {}", error))
+                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerTalentsAttachment from sync: {}", error))
                 .ifPresent(pair -> {
-                    PlayerTalentAttachment decoded = pair.getFirst();
+                    PlayerTalentsAttachment decoded = pair.getFirst();
                     this.spiritualRootType = decoded.spiritualRootType;
                     this.spiritualRootAssigned = decoded.spiritualRootAssigned;
                     this.physiqueType = decoded.physiqueType;
@@ -157,15 +163,25 @@ public class PlayerTalentAttachment implements ISyncable, IPlayerInitializable {
                 });
     }
 
+    public PlayerTalentsAttachment copy() {
+        PlayerTalentsAttachment copy = new PlayerTalentsAttachment();
+        copy.spiritualRootType = this.spiritualRootType;
+        copy.spiritualRootAssigned = this.spiritualRootAssigned;
+        copy.physiqueType = this.physiqueType;
+        copy.physiqueAssigned = this.physiqueAssigned;
+
+        return copy;
+    }
+
     // === SERIALIZATION === //
 
-    public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerTalentAttachment> {
+    public static class Serializer implements IAttachmentSerializer<CompoundTag, PlayerTalentsAttachment> {
         @Override
-        public PlayerTalentAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
-            PlayerTalentAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
-                    .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerTalentAttachment: {}", error))
+        public PlayerTalentsAttachment read(IAttachmentHolder holder, CompoundTag tag, HolderLookup.Provider provider) {
+            PlayerTalentsAttachment attachment = CODEC.decode(provider.createSerializationContext(NbtOps.INSTANCE), tag)
+                    .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to decode PlayerTalentsAttachment: {}", error))
                     .map(com.mojang.datafixers.util.Pair::getFirst)
-                    .orElseGet(PlayerTalentAttachment::new);
+                    .orElseGet(PlayerTalentsAttachment::new);
 
             if (holder instanceof Player player) {
                 attachment.setPlayer(player);
@@ -174,23 +190,23 @@ public class PlayerTalentAttachment implements ISyncable, IPlayerInitializable {
         }
 
         @Override
-        public @Nullable CompoundTag write(PlayerTalentAttachment attachment, HolderLookup.Provider provider) {
+        public @Nullable CompoundTag write(PlayerTalentsAttachment attachment, HolderLookup.Provider provider) {
             return (CompoundTag) CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), attachment)
-                    .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerTalentAttachment: {}", error))
+                    .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerTalentsAttachment: {}", error))
                     .orElse(new CompoundTag());
         }
     }
 
     // === CODEC === //
 
-    public static final Codec<PlayerTalentAttachment> CODEC = RecordCodecBuilder.create(instance ->
+    public static final Codec<PlayerTalentsAttachment> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                     Codec.STRING.fieldOf("spiritual_root_type").forGetter(d -> d.spiritualRootType.name()),
                     Codec.BOOL.fieldOf("spiritual_root_assigned").forGetter(d -> d.spiritualRootAssigned),
                     Codec.STRING.fieldOf("physique_type").forGetter(d -> d.physiqueType.name()),
                     Codec.BOOL.fieldOf("physique_assigned").forGetter(d -> d.physiqueAssigned)
             ).apply(instance, (rootType, rootAssigned, physiqueType, physiqueAssigned) -> {
-                PlayerTalentAttachment data = new PlayerTalentAttachment();
+                PlayerTalentsAttachment data = new PlayerTalentsAttachment();
                 try {
                     data.spiritualRootType = SpiritualRootType.valueOf(rootType);
                 } catch (IllegalArgumentException e) {

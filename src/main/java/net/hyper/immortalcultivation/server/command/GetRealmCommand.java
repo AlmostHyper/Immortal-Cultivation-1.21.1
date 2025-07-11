@@ -124,7 +124,7 @@ public class GetRealmCommand {
         try {
             PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
             PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-            PlayerTalentAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerTalentsAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
             PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
 
             // Verify we have critical data
@@ -318,7 +318,7 @@ public class GetRealmCommand {
     private record CultivationDataSnapshot(
         PlayerCultivationAttachment cultivation,
         PlayerResourceAttachment resources,
-        PlayerTalentAttachment talents,
+        PlayerTalentsAttachment talents,
         PlayerCombatStatsAttachment combatStats
     ) {}
 }

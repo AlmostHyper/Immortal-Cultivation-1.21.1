@@ -11,7 +11,7 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 public class ICModAttachmentTypes {
     public static final DeferredRegister<AttachmentType<?>> REGISTRY = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, ImmortalCultivation.MOD_ID);
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerTalentAttachment>> PLAYER_TALENTS;
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerTalentsAttachment>> PLAYER_TALENTS;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerRaceAttachment>> PLAYER_RACE;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerCultivationAttachment>> PLAYER_CULTIVATION;
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<PlayerBreakthroughAttachment>> PLAYER_BREAKTHROUGH;
@@ -21,8 +21,8 @@ public class ICModAttachmentTypes {
 
     static {
         PLAYER_TALENTS = REGISTRY.register("player_talent", () ->
-            AttachmentType.builder(() -> new PlayerTalentAttachment())
-                .serialize(new PlayerTalentAttachment.Serializer())
+            AttachmentType.builder(() -> new PlayerTalentsAttachment())
+                .serialize(new PlayerTalentsAttachment.Serializer())
                 .copyOnDeath()
                 .build());
 

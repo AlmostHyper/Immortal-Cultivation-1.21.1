@@ -51,13 +51,16 @@ public class PlayerPillConsumptionAttachment implements ISyncable {
     // === IMPLEMENTATIONS === //
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        // Full sync is ignored here as we always send the full data block
-        if (player == null || player.level().isClientSide() || !isDirty()) {
+        if (player == null) {
+            return Optional.empty();
+        }
+
+        if (!isFullSync && !isDirty()) {
             return Optional.empty();
         }
         // When a packet is created, we can clear the dirty flag.
         CompoundTag data = pillConsumptionManager.serializeNBT();
-        clearDirty();
+
         return Optional.of(new PlayerPillConsumptionSyncPacket(data));
     }
 

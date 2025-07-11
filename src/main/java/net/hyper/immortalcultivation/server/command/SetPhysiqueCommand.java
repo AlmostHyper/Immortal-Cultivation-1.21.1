@@ -5,7 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
-import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.commands.CommandSourceStack;
@@ -49,7 +49,7 @@ public class SetPhysiqueCommand {
             PhysiqueType physiqueType = PhysiqueType.valueOf(physiqueString);
 
             // Get the unified talent attachment
-            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerTalentsAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
             if (talentAttachment == null) {
                 context.getSource().sendFailure(Component.literal("Failed to get talent data for player"));
                 return 0;

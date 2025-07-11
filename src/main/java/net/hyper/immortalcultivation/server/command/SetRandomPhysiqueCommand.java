@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.server.command;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.hyper.immortalcultivation.common.attachments.PlayerTalentAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.minecraft.commands.CommandSourceStack;
@@ -33,7 +33,7 @@ public class SetRandomPhysiqueCommand {
             PhysiqueType randomPhysique = PhysiqueType.generateRandom(random);
 
             // Get the unified talent attachment
-            PlayerTalentAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerTalentsAttachment talentAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
             if (talentAttachment == null) {
                 context.getSource().sendFailure(Component.literal("Failed to get talent data for player"));
                 return 0;

@@ -13,7 +13,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.Mth;
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.opengl.GL11;
 
 /**
@@ -82,7 +81,7 @@ public class CultivationStatsScreen extends Screen {
     // === PLAYER DATA ===
     private PlayerCultivationAttachment cultivationAttachment;
     private PlayerResourceAttachment resourceAttachment;
-    private PlayerTalentAttachment talentAttachment;
+    private PlayerTalentsAttachment talentAttachment;
     private PlayerRaceAttachment raceAttachment;
     private PlayerCombatStatsAttachment combatStatsAttachment;
 

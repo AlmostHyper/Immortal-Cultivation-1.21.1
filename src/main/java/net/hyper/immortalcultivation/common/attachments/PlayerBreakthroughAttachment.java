@@ -203,9 +203,10 @@ public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
     // === IMPLEMENTATIONS === //
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide() || !isDirty()) {
+        if (player == null) {
             return Optional.empty();
         }
+
         CompoundTag data = new CompoundTag();
         data.putLong("qi_attempts", this.qiBreakthroughAttempts);
         data.putLong("body_attempts", this.bodyBreakthroughAttempts);
@@ -213,7 +214,7 @@ public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
         data.putBoolean("body_cooldown", this.bodyBreakthroughCooldown);
         data.putLong("last_qi_attempt", this.lastQiBreakthroughAttempt);
         data.putLong("last_body_attempt", this.lastBodyBreakthroughAttempt);
-        clearDirty();
+
         return Optional.of(new PlayerBreakthroughSyncPacket(data));
     }
 
@@ -256,7 +257,7 @@ public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
         return cultivation;
     }
 
-    private PlayerTalentAttachment getTalentAttachment() {
+    private PlayerTalentsAttachment getTalentAttachment() {
         if (player == null) return null;
         return player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
     }

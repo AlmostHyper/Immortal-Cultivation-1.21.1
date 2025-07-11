@@ -10,6 +10,7 @@ import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.hyper.immortalcultivation.core.network.packets.server.OpenRaceSelectionSyncPacket;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerRaceSyncPacket;
+import net.hyper.immortalcultivation.core.network.packets.server.PlayerResourcesSyncPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -36,6 +37,8 @@ public class PlayerRaceAttachment implements ISyncable, IPlayerInitializable {
 
     // --- System Data ---
     private transient boolean isDirty = false;
+    private transient PlayerRaceAttachment lastSyncedState = null;
+
 
     // === CONSTRUCTORS === //
 
@@ -86,15 +89,18 @@ public class PlayerRaceAttachment implements ISyncable, IPlayerInitializable {
 
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
-        if (player == null || player.level().isClientSide() || !isDirty()) {
+        if (player == null) {
+            return Optional.empty();
+        }
+
+        if (!isFullSync && !isDirty()) {
             return Optional.empty();
         }
 
         CompoundTag data = (CompoundTag) CODEC.encodeStart(NbtOps.INSTANCE, this)
-                .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerRaceAttachment: {}", error))
-                .orElse(new CompoundTag());
-        
-        clearDirty();
+            .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerRaceAttachment: {}", error))
+            .orElse(new CompoundTag());
+
         return Optional.of(new PlayerRaceSyncPacket(data));
     }
 
@@ -123,6 +129,14 @@ public class PlayerRaceAttachment implements ISyncable, IPlayerInitializable {
                     this.raceType = decoded.raceType;
                     this.raceAssigned = decoded.raceAssigned;
                 });
+    }
+
+    public PlayerRaceAttachment copy() {
+        PlayerRaceAttachment copy = new PlayerRaceAttachment();
+        copy.raceType = this.raceType;
+        copy.raceAssigned = this.raceAssigned;
+
+        return copy;
     }
 
     // === SERIALIZATION === //
