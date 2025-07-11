@@ -24,18 +24,17 @@ import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class PlayerTalentsAttachment implements ISyncable, IPlayerInitializable {
+public class PlayerTalentsAttachment extends PlayerAttachment<PlayerTalentsAttachment> implements IPlayerInitializable {
 
-    // === INSTANCES === //
-
-    @Nullable
-    private transient Player player;
-
-    // --- Talent Data ---
     private SpiritualRootType spiritualRootType = SpiritualRootType.MORTAL_ROOT;
     private boolean spiritualRootAssigned = false;
     private PhysiqueType physiqueType = PhysiqueType.MORTAL_PHYSIQUE;
     private boolean physiqueAssigned = false;
+
+
+    @Nullable
+    private transient Player player;
+
 
     // --- System Data ---
     private transient boolean isDirty = false;
