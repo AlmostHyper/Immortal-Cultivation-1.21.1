@@ -162,11 +162,8 @@ public class ICModHealthEvent {
                 // Apply visual and mechanical effects
                 applyDamageEffects(player, event.getSource(), originalDamage, actualDamage);
 
-                // Mark attachment as dirty for network sync
-                healthAttachment.markDirty();
-
-                // Update vanilla health to reflect custom health percentage
-                updateVanillaHealthFromCustom(player, healthAttachment);
+                // CRITICAL: Force immediate network sync after any health change
+                forceImmediateHealthSync((ServerPlayer) player, healthAttachment);
 
                 ImmortalCultivation.LOGGER.debug("Applied {} custom damage to player {} (vanilla: {})",
                     actualDamage, player.getName().getString(), originalDamage);
@@ -831,5 +828,24 @@ public class ICModHealthEvent {
             sourceMap.entrySet().removeIf(sourceEntry -> sourceEntry.getValue() < cleanupThreshold);
             return sourceMap.isEmpty();
         });
+    }
+
+    private static void forceImmediateHealthSync(ServerPlayer player, PlayerResourceAttachment healthAttachment) {
+        // Mark as dirty for network sync
+        healthAttachment.markDirty();
+
+        // Schedule immediate sync (highest priority)
+        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RESOURCES::get, true);
+
+        // Update vanilla health for UI consistency
+        updateVanillaHealthFromCustom(player, healthAttachment);
+
+        // Update tracking
+        UUID playerId = player.getUUID();
+        lastKnownVanillaHealth.put(playerId, player.getHealth());
+        lastKnownCustomHealth.put(playerId, healthAttachment.getCurrentHealth());
+
+        ImmortalCultivation.LOGGER.debug("Forced immediate health sync for player {}: {}/{}",
+            player.getName().getString(), healthAttachment.getCurrentHealth(), healthAttachment.getMaxHealth());
     }
 }

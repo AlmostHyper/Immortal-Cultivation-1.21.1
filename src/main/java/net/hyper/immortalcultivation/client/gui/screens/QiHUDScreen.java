@@ -1,5 +1,6 @@
 package net.hyper.immortalcultivation.client.gui.screens;
 
+import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerResourceAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
@@ -524,7 +525,22 @@ public class QiHUDScreen {
             if (event.isAttachmentType(ICModAttachmentTypes.PLAYER_CULTIVATION.get()) ||
                 event.isAttachmentType(ICModAttachmentTypes.PLAYER_RESOURCES.get()) ||
                 event.isAttachmentType(ICModAttachmentTypes.PLAYER_TALENTS.get())) {
+
+                // Force immediate cache update for health changes
                 needsUpdate = true;
+                updateCounter = UPDATE_FREQUENCY; // Force immediate update next frame
+
+                // Debug logging to verify client receives updates
+                if (event.isAttachmentType(ICModAttachmentTypes.PLAYER_RESOURCES.get())) {
+                    LocalPlayer player = Minecraft.getInstance().player;
+                    if (player != null) {
+                        PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+                        if (resources != null) {
+                            ImmortalCultivation.LOGGER.info("Client received health update: {}/{}",
+                                resources.getCurrentHealth(), resources.getMaxHealth());
+                        }
+                    }
+                }
             }
         }
     }

@@ -30,6 +30,12 @@ public record PlayerResourcesSyncPacket(CompoundTag resourceData) implements ISy
     public static final String KEY_CURRENT_BODY = "cur_b";
     public static final String KEY_PERM_BODY_BONUS = "p_b_b";
     public static final String KEY_PERM_BODY_REGEN = "p_b_r";
+    public static final String KEY_MAX_HEALTH = "max_h";
+    public static final String KEY_HEALTH_REGEN_FRAC = "h_r_f";
+    public static final String KEY_MAX_QI = "max_q";
+    public static final String KEY_QI_REGEN_FRAC = "q_r_f";
+    public static final String KEY_MAX_BODY = "max_b";
+    public static final String KEY_BODY_REGEN_FRAC = "b_r_f";
 
     @Override
     public CustomPacketPayload.Type<PlayerResourcesSyncPacket> type() {
