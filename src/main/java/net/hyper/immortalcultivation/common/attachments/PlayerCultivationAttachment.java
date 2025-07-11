@@ -160,7 +160,6 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
                     if (isAdvancement) {
                         // Normal advancement - apply new realm bonuses additively
                         realm.applyRealmModifiers(serverPlayer, this, type);
-                        realm.onRealmAdvancement(serverPlayer, this, previousRealm, type);
                     } else {
                         // Manual realm setting (like commands) or realm downgrade
                         // Recalculate total bonuses from scratch to ensure accuracy
@@ -171,6 +170,13 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
                             Component.literal("Your " + type.getDisplayName() + " cultivation realm has been set to " + realm.getDisplayName())
                                 .withStyle(ChatFormatting.AQUA)
                         );
+                    }
+
+                    // Force network sync to client
+                    this.markDirty();
+                    PlayerResourceAttachment resources = serverPlayer.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+                    if (resources != null) {
+                        resources.markDirty();
                     }
 
                     ImmortalCultivation.LOGGER.info("Successfully applied realm change for player {} - {} cultivation set to {} (level {})",
@@ -184,6 +190,10 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         }
     }
 
+    /**
+     * Recalculates cumulative bonuses from all realms up to the current level.
+     * This is used when manually setting realms via commands.
+     */
     public void recalculateAllRealmBonuses(ServerPlayer player, CultivationType type) {
         try {
             PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
@@ -194,16 +204,16 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
                 return;
             }
 
-            // Get current realm and calculate total bonuses from all realms up to current level
             CultivationRealm currentRealm = this.currentRealms.get(type);
             if (currentRealm == null) {
+                ImmortalCultivation.LOGGER.warn("No current realm found for type {} for player {}", type, player.getName().getString());
                 return;
             }
 
-            // Clear existing bonuses first to avoid double-counting
-            clearAllBonuses(combatStats, resources);
+            ImmortalCultivation.LOGGER.info("Recalculating cumulative bonuses for {} {} cultivation up to level {} ({})",
+                player.getName().getString(), type.getDisplayName(), currentRealm.getRealmLevel(), currentRealm.getDisplayName());
 
-            // Calculate cumulative bonuses from level 0 to current level
+            // Calculate cumulative bonuses from level 1 to current level (excluding mortal level 0)
             long totalHealthBonus = 0;
             double totalHealthRegenBonus = 0.0;
             long totalQiBonus = 0;
@@ -214,11 +224,8 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             double totalSpeedBonus = 0.0;
             double totalJumpBonus = 0.0;
 
-            ImmortalCultivation.LOGGER.info("Calculating cumulative bonuses for {} up to level {} ({})",
-                player.getName().getString(), currentRealm.getRealmLevel(), currentRealm.getDisplayName());
-
-            // Iterate through each realm level from 0 to current
-            for (int level = 0; level <= currentRealm.getRealmLevel(); level++) {
+            // Iterate through each realm level from 1 to current level
+            for (int level = 1; level <= currentRealm.getRealmLevel(); level++) {
                 CultivationRealm realm = findRealmByLevel(level);
                 if (realm != null) {
                     // Add this realm's bonuses to the totals
@@ -226,47 +233,46 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
                     totalHealthRegenBonus += realm.getBaseHealthRegeneration();
                     totalQiBonus += realm.getBaseMaxQi();
                     totalQiRegenBonus += realm.getBaseQiRegenerationRate();
-                    totalBodyBonus += realm.getBaseBodyRegenerationRate();
-                    totalBodyRegenBonus += realm.getBaseMaxBody();
+                    totalBodyBonus += realm.getBaseMaxBody();
+                    totalBodyRegenBonus += realm.getBaseBodyRegenerationRate();
                     totalAttackBonus += realm.getBaseAttackDamage();
                     totalSpeedBonus += realm.getBaseMovementSpeed();
                     totalJumpBonus += realm.getBaseJumpHeight();
 
-                    ImmortalCultivation.LOGGER.debug("Level {}: {} contributes Health +{}, ATK +{}%, SPD +{}%, JUMP +{}%",
-                        level, realm.getDisplayName(), realm.getBaseHealth(),
-                        String.format("%.1f", realm.getBaseAttackDamage() * 100),
-                        String.format("%.1f", realm.getBaseMovementSpeed() * 100),
-                        String.format("%.1f", realm.getBaseJumpHeight() * 100));
+                    ImmortalCultivation.LOGGER.debug("Added bonuses from {} (Level {}): Health +{}, Qi +{}, Body +{}",
+                        realm.getDisplayName(), level, realm.getBaseHealth(), realm.getBaseMaxQi(), realm.getBaseMaxBody());
                 }
             }
 
-            // Apply the calculated totals
+            // Apply cumulative bonuses to attachments
+            // For resources, we SET the permanent bonuses to the cumulative totals
             resources.setPermanentHealthBonus(totalHealthBonus);
             resources.setPermanentHealthRegenBonus(totalHealthRegenBonus);
             resources.setPermanentQiBonus(totalQiBonus);
             resources.setPermanentQiRegenBonus(totalQiRegenBonus);
             resources.setPermanentBodyBonus(totalBodyBonus);
             resources.setPermanentBodyRegenBonus(totalBodyRegenBonus);
+
+            // For combat stats, we SET the permanent bonuses to the cumulative totals
             combatStats.setPermanentAttackDamageBonus(totalAttackBonus);
             combatStats.setPermanentMovementSpeedBonus(totalSpeedBonus);
             combatStats.setPermanentJumpHeightBonus(totalJumpBonus);
 
-            // Refresh modifiers
+            // Recalculate derived values and force sync
+            resources.recalculateAll();
+            resources.markDirty();
+
+            // Refresh combat stats to apply the changes immediately
             ICModCombatEvent.refreshCombatStats(player);
 
-            ImmortalCultivation.LOGGER.info("Applied cumulative bonuses for {} {} cultivation (level {}): Health +{}, ATK +{}%, SPD +{}%, JUMP +{}%{}",
-                player.getName().getString(),
-                type.getDisplayName(),
-                currentRealm.getRealmLevel(),
-                totalHealthBonus,
+            ImmortalCultivation.LOGGER.info("Applied cumulative bonuses for {}: Health +{}, Qi +{}, Body +{}, ATK +{}%, SPD +{}%, JUMP +{}%",
+                player.getName().getString(), totalHealthBonus, totalQiBonus, totalBodyBonus,
                 String.format("%.1f", totalAttackBonus * 100),
                 String.format("%.1f", totalSpeedBonus * 100),
-                String.format("%.1f", totalJumpBonus * 100),
-                type == CultivationType.QI ? String.format(", Qi +%d", totalQiBonus) : "");
+                String.format("%.1f", totalJumpBonus * 100));
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("Error recalculating realm bonuses for player {} type {}",
-                player.getName().getString(), type.getDisplayName(), e);
+            ImmortalCultivation.LOGGER.error("Error recalculating realm bonuses for player {}", player.getName().getString(), e);
         }
     }
 
@@ -283,20 +289,15 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         combatStats.setPermanentJumpHeightBonus(0.0);
     }
 
+    /**
+     * Helper method to find a realm by its level.
+     * This searches through all registered realms to find one with the specified level.
+     */
     private CultivationRealm findRealmByLevel(int level) {
-        // Try to find a realm with the exact level
-        for (CultivationRealm realm : ICModCultivationRealms.getAllRealms()) {
-            if (realm.getRealmLevel() == level) {
-                return realm;
-            }
-        }
-
-        // If no exact match found, log it for debugging
-        if (level > 0) { // Don't log for level 0 (mortal) if it doesn't exist
-            ImmortalCultivation.LOGGER.debug("No realm found for level {}", level);
-        }
-
-        return null;
+        return ICModCultivationRealms.getAllRealms().stream()
+            .filter(realm -> realm.getRealmLevel() == level)
+            .findFirst()
+            .orElse(null);
     }
     
     // === FOCUS METHODS === //
