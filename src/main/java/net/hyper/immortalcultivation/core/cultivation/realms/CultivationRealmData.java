@@ -15,7 +15,8 @@ public record CultivationRealmData(
     BasicInfo basicInfo,
     PhysicalStats physicalStats,
     CultivationStats cultivationStats,
-    QiStats qiStats,  // FIXED: Added missing QiStats field
+    QiStats qiStats,
+    BodyStats bodyStats,
     VisualProperties visualProperties,
     Progression progression,
     Features features,
@@ -28,7 +29,8 @@ public record CultivationRealmData(
             BasicInfo.CODEC.fieldOf("basic_info").forGetter(CultivationRealmData::basicInfo),
             PhysicalStats.CODEC.fieldOf("physical_stats").forGetter(CultivationRealmData::physicalStats),
             CultivationStats.CODEC.fieldOf("cultivation_stats").forGetter(CultivationRealmData::cultivationStats),
-            QiStats.CODEC.fieldOf("qi_stats").forGetter(CultivationRealmData::qiStats),  // FIXED: Added QiStats to codec
+            QiStats.CODEC.fieldOf("qi_stats").forGetter(CultivationRealmData::qiStats),
+            BodyStats.CODEC.fieldOf("body_stats").forGetter(CultivationRealmData::bodyStats),
             VisualProperties.CODEC.fieldOf("visual_properties").forGetter(CultivationRealmData::visualProperties),
             Progression.CODEC.fieldOf("progression").forGetter(CultivationRealmData::progression),
             Features.CODEC.fieldOf("features").forGetter(CultivationRealmData::features),
@@ -56,7 +58,9 @@ public record CultivationRealmData(
     // FIXED: These now correctly reference qiStats instead of cultivationStats
     public long baseMaxQi() { return qiStats.baseMaxQi(); }
     public double baseQiRegenerationRate() { return qiStats.baseQiRegenerationRate(); }
-    public double baseCirculatingQiRegenerationRate() { return qiStats.baseCirculatingQiRegenerationRate(); }
+
+    public long baseMaxBody() { return bodyStats.baseMaxBody(); }
+    public double baseBodyRegenerationRate() { return bodyStats.baseBodyRegenerationRate(); }
 
     public int realmColor() { return visualProperties.realmColor(); }
     public String particleEffect() { return visualProperties.particleEffect(); }
@@ -131,15 +135,31 @@ public record CultivationRealmData(
      */
     public record QiStats(
         long baseMaxQi,
-        double baseQiRegenerationRate,
-        double baseCirculatingQiRegenerationRate
+        double baseQiRegenerationRate
     ) {
         public static final Codec<QiStats> CODEC = RecordCodecBuilder.create(instance ->
             instance.group(
                 Codec.LONG.fieldOf("base_max_qi").forGetter(QiStats::baseMaxQi),
-                Codec.DOUBLE.fieldOf("base_qi_regeneration_rate").forGetter(QiStats::baseQiRegenerationRate),
-                Codec.DOUBLE.fieldOf("base_circulating_qi_regeneration_rate").forGetter(QiStats::baseCirculatingQiRegenerationRate)
+                Codec.DOUBLE.fieldOf("base_qi_regeneration_rate").forGetter(QiStats::baseQiRegenerationRate)
             ).apply(instance, QiStats::new)
+        );
+    }
+
+    /**
+     * Body cultivation stats for the realm
+     */
+    /**
+     * Body cultivation stats for the realm
+     */
+    public record BodyStats(
+        long baseMaxBody,
+        double baseBodyRegenerationRate
+    ) {
+        public static final Codec<BodyStats> CODEC = RecordCodecBuilder.create(instance ->
+            instance.group(
+                Codec.LONG.fieldOf("base_max_body").forGetter(BodyStats::baseMaxBody),
+                Codec.DOUBLE.fieldOf("base_body_regeneration_rate").forGetter(BodyStats::baseBodyRegenerationRate)
+            ).apply(instance, BodyStats::new)
         );
     }
 

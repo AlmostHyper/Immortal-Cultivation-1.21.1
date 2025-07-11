@@ -568,11 +568,12 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         var basicInfo = new CultivationRealmData.BasicInfo(DEFAULT_MORTAL_REALM_ID, "Mortal", 0, "Mortal", "Temp");
         var physicalStats = new CultivationRealmData.PhysicalStats(20L, 0.0, 0.0, 0.0, 0.0);
         var cultivationStats = new CultivationRealmData.CultivationStats(DEFAULT_MAX_CULTIVATION, 0.005);
-        var qiStats = new CultivationRealmData.QiStats(0L, 0.0, 0.0);
+        var qiStats = new CultivationRealmData.QiStats(0L, 0.0);
+        var bodyStats = new CultivationRealmData.BodyStats(0L, 0.0);
         var visualProperties = new CultivationRealmData.VisualProperties(8421504, "minecraft:cloud", java.util.Optional.empty());
         var progression = new CultivationRealmData.Progression(java.util.List.of(), java.util.List.of());
         var features = new CultivationRealmData.Features(java.util.List.of(), java.util.List.of(), java.util.List.of());
-        var realmData = new CultivationRealmData(basicInfo, physicalStats, cultivationStats, qiStats, visualProperties, progression, features, java.util.Optional.empty(), java.util.Optional.empty());
+        var realmData = new CultivationRealmData(basicInfo, physicalStats, cultivationStats, qiStats, bodyStats, visualProperties, progression, features, java.util.Optional.empty(), java.util.Optional.empty());  // UPDATE THIS LINE
         return new JsonCultivationRealm(realmData);
     }
 
