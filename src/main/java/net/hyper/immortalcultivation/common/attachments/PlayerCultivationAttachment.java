@@ -274,6 +274,7 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
 
         if (!isFullSync && lastSyncedState == null) {
             isFullSync = true;
+            ImmortalCultivation.LOGGER.debug("Forcing full sync for {} - no lastSyncedState", player.getName().getString());
         }
 
         byte fieldMask = 0;
@@ -291,18 +292,21 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             !currentRealms.get(CultivationType.QI).getId().equals(lastSyncedState.currentRealms.get(CultivationType.QI).getId())) {
             qiRealmId = Optional.of(currentRealms.get(CultivationType.QI).getId());
             qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.REALM_ID_MASK;
+            ImmortalCultivation.LOGGER.debug("Adding QI realm to sync: {}", qiRealmId.get());
         }
 
         if (isFullSync || lastSyncedState == null ||
             currentCultivation.get(CultivationType.QI) != lastSyncedState.currentCultivation.get(CultivationType.QI)) {
             qiCurrent = Optional.of(currentCultivation.get(CultivationType.QI));
             qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.CURRENT_MASK;
+            ImmortalCultivation.LOGGER.debug("Adding QI current to sync: {}", qiCurrent.get());
         }
 
         if (isFullSync || lastSyncedState == null ||
             maxCultivation.get(CultivationType.QI) != lastSyncedState.maxCultivation.get(CultivationType.QI)) {
             qiMax = Optional.of(maxCultivation.get(CultivationType.QI));
             qiPayloadMask |= PlayerCultivationSyncPacket.CultivationDataPayload.MAX_MASK;
+            ImmortalCultivation.LOGGER.debug("Adding QI max to sync: {}", qiMax.get());
         }
 
         if (qiPayloadMask != 0) {
@@ -345,7 +349,11 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
             fieldMask |= PlayerCultivationSyncPacket.FOCUS_MASK;
         }
 
+        ImmortalCultivation.LOGGER.debug("PlayerCultivation createPacket - fieldMask: {}, isFullSync: {}, isDirty: {}",
+            fieldMask, isFullSync, isDirty());
+
         if (fieldMask == 0) {
+            ImmortalCultivation.LOGGER.debug("No cultivation changes detected for player {}", player.getName().getString());
             return Optional.empty();
         }
 

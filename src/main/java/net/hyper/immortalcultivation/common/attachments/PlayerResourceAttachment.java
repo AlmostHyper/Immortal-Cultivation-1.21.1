@@ -205,7 +205,10 @@ public class PlayerResourceAttachment implements IHealthData, IQiData, IBodyData
             return Optional.empty();
         }
 
-        CompoundTag data = new CompoundTag();
+        // FIX: Actually populate the CompoundTag with data
+        CompoundTag data = (CompoundTag) CODEC.encodeStart(NbtOps.INSTANCE, this)
+            .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerResourceAttachment: {}", error))
+            .orElse(new CompoundTag());
 
         if (!data.isEmpty()) {
             // Update last synced state but DON'T clear dirty flag here

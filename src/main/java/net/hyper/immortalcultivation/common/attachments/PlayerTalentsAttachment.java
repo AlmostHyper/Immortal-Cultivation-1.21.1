@@ -1,6 +1,7 @@
 package net.hyper.immortalcultivation.common.attachments;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.IPlayerInitializable;
@@ -47,6 +48,10 @@ public class PlayerTalentsAttachment implements ISyncable, IPlayerInitializable 
     // === GETTERS & SETTERS === //
 
     public void setPlayer(Player player) {
+        ImmortalCultivation.LOGGER.error("setPlayer called for {}: {} -> {}",
+            this.getClass().getSimpleName(),
+            this.player != null ? this.player.getName().getString() : "NULL",
+            player != null ? player.getName().getString() : "NULL");
         this.player = player;
     }
 
@@ -117,20 +122,39 @@ public class PlayerTalentsAttachment implements ISyncable, IPlayerInitializable 
 
     @Override
     public Optional<ISyncPacket> createPacket(boolean isFullSync) {
+        // Use ERROR level to ensure it shows up
+        ImmortalCultivation.LOGGER.error("=== PlayerTalentsAttachment.createPacket() CALLED ===");
+        ImmortalCultivation.LOGGER.error("Player: {}, isFullSync: {}, isDirty: {}",
+            player != null ? player.getName().getString() : "NULL", isFullSync, isDirty());
+
         if (player == null) {
+            ImmortalCultivation.LOGGER.error("Returning empty - player is null");
             return Optional.empty();
         }
 
         if (!isFullSync && !isDirty()) {
+            ImmortalCultivation.LOGGER.error("Returning empty - not dirty");
             return Optional.empty();
         }
 
-        CompoundTag data = (CompoundTag) CODEC.encodeStart(NbtOps.INSTANCE, this)
-            .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerTalentAttachment: {}", error))
-            .orElse(new CompoundTag());
+        // Continue with your method...
+        ImmortalCultivation.LOGGER.error("About to create CompoundTag...");
 
-        // Don't clear dirty here
-        return Optional.of(new PlayerTalentsSyncPacket(data));
+        CompoundTag data = new CompoundTag();
+        data.putString("spiritual_root_type", spiritualRootType.name());
+        data.putBoolean("spiritual_root_assigned", spiritualRootAssigned);
+        data.putString("physique_type", physiqueType.name());
+        data.putBoolean("physique_assigned", physiqueAssigned);
+
+        ImmortalCultivation.LOGGER.error("CompoundTag created, isEmpty: {}", data.isEmpty());
+
+        if (!data.isEmpty()) {
+            ImmortalCultivation.LOGGER.error("Returning packet");
+            return Optional.of(new PlayerTalentsSyncPacket(data));
+        }
+
+        ImmortalCultivation.LOGGER.error("Returning empty - data is empty");
+        return Optional.empty();
     }
 
 

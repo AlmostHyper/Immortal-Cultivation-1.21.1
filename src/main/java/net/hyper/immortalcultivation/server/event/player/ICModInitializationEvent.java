@@ -1,6 +1,7 @@
 package net.hyper.immortalcultivation.server.event.player;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.IPlayerInitializable;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
@@ -100,6 +101,9 @@ public class ICModInitializationEvent {
                 .filter(ISyncable.class::isInstance)
                 .map(ISyncable.class::cast)
                 .forEach(syncable -> {
+                    // FIX: Ensure player reference is set before creating packet
+                    ensurePlayerReferenceSet(syncable, player);
+
                     Optional<ISyncPacket> packetOptional = syncable.createPacket(true); // true for full sync
                     packetOptional.ifPresent(packet -> ICModPacketRegistry.sendToPlayer(packet, player));
                 });
@@ -110,4 +114,31 @@ public class ICModInitializationEvent {
                 player.getName().getString(), e);
         }
     }
+
+    // Add this helper method to ICModInitializationEvent:
+    private static void ensurePlayerReferenceSet(ISyncable syncable, ServerPlayer player) {
+        if (syncable instanceof PlayerTalentsAttachment talents) {
+            talents.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("INIT: Set player reference for PlayerTalentsAttachment");
+        } else if (syncable instanceof PlayerResourceAttachment resources) {
+            resources.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("INIT: Set player reference for PlayerResourceAttachment");
+        } else if (syncable instanceof PlayerCultivationAttachment cultivation) {
+            cultivation.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("INIT: Set player reference for PlayerCultivationAttachment");
+        } else if (syncable instanceof PlayerRaceAttachment race) {
+            race.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("INIT: Set player reference for PlayerRaceAttachment");
+        } else if (syncable instanceof PlayerBreakthroughAttachment breakthrough) {
+            breakthrough.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("INIT: Set player reference for PlayerBreakthroughAttachment");
+        } else if (syncable instanceof PlayerCombatStatsAttachment combat) {
+            combat.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("INIT: Set player reference for PlayerCombatStatsAttachment");
+        } else if (syncable instanceof PlayerPillConsumptionAttachment pills) {
+            pills.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("INIT: Set player reference for PlayerPillConsumptionAttachment");
+        }
+    }
+
 }

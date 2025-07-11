@@ -1,11 +1,13 @@
 package net.hyper.immortalcultivation.server.event.world;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
+import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -19,7 +21,7 @@ public class ICModTickEvent {
     // Base tick intervals for different systems
     private static final int TICKABLE_INTERVAL = 1; // Tick every tick
     private static final int SYNC_CHECK_INTERVAL = 5; // Check for syncs every 5 ticks (4 times per second)
-    private static boolean DEBUG_SYNC = true;              // Toggle for sync debugging
+    private static boolean DEBUG_SYNC = true;
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
@@ -56,42 +58,63 @@ public class ICModTickEvent {
     }
 
     private static void checkAndSendSyncPacket(ServerPlayer player, ISyncable syncable, String attachmentName) {
+        ImmortalCultivation.LOGGER.error("=== checkAndSendSyncPacket called for {} ===", attachmentName);
+
         if (syncable == null) {
-            ImmortalCultivation.LOGGER.warn("Null {} attachment for player {}",
-                attachmentName, player.getName().getString());
+            ImmortalCultivation.LOGGER.warn("Null {} attachment for player {}", attachmentName, player.getName().getString());
             return;
         }
 
-        boolean isDirty = syncable.isDirty();
+        // FIX: Ensure player reference is set before checking if dirty
+        ensurePlayerReferenceSet(syncable, player, attachmentName);
 
-        if (DEBUG_SYNC && isDirty) {
-            ImmortalCultivation.LOGGER.debug("{} attachment is dirty for player {}",
-                attachmentName, player.getName().getString());
-        }
+        boolean isDirty = syncable.isDirty();
+        ImmortalCultivation.LOGGER.error("{} isDirty: {}", attachmentName, isDirty);
 
         if (isDirty) {
             try {
+                ImmortalCultivation.LOGGER.error("About to call createPacket for {}", attachmentName);
                 Optional<ISyncPacket> packetOptional = syncable.createPacket(false);
+                ImmortalCultivation.LOGGER.error("createPacket returned: {}", packetOptional.isPresent() ? "PACKET" : "EMPTY");
 
                 if (packetOptional.isPresent()) {
                     ISyncPacket packet = packetOptional.get();
                     ICModPacketRegistry.sendToPlayer(packet, player);
-                    syncable.clearDirty(); // Clear dirty flag only after successful send
-
-                    if (DEBUG_SYNC) {
-                        ImmortalCultivation.LOGGER.debug("Successfully sent {} sync packet to player {}",
-                            attachmentName, player.getName().getString());
-                    }
-                } else if (DEBUG_SYNC) {
-                    ImmortalCultivation.LOGGER.debug("{} attachment returned empty packet for player {} (dirty flag NOT cleared)",
-                        attachmentName, player.getName().getString());
+                    syncable.clearDirty();
+                    ImmortalCultivation.LOGGER.error("Successfully sent {} packet", attachmentName);
+                } else {
+                    ImmortalCultivation.LOGGER.error("{} returned empty packet (dirty flag NOT cleared)", attachmentName);
                 }
             } catch (Exception e) {
-                ImmortalCultivation.LOGGER.error("Error creating/sending {} packet for player {}: {}",
-                    attachmentName, player.getName().getString(), e.getMessage());
+                ImmortalCultivation.LOGGER.error("Exception in checkAndSendSyncPacket for {}: {}", attachmentName, e.getMessage());
                 e.printStackTrace();
-                // Don't clear dirty flag on error
             }
+        }
+    }
+
+    // Add this helper method to ICModTickEvent:
+    private static void ensurePlayerReferenceSet(ISyncable syncable, ServerPlayer player, String attachmentName) {
+        if (syncable instanceof PlayerTalentsAttachment talents) {
+            talents.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("Set player reference for PlayerTalentsAttachment");
+        } else if (syncable instanceof PlayerResourceAttachment resources) {
+            resources.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("Set player reference for PlayerResourceAttachment");
+        } else if (syncable instanceof PlayerCultivationAttachment cultivation) {
+            cultivation.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("Set player reference for PlayerCultivationAttachment");
+        } else if (syncable instanceof PlayerRaceAttachment race) {
+            race.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("Set player reference for PlayerRaceAttachment");
+        } else if (syncable instanceof PlayerBreakthroughAttachment breakthrough) {
+            breakthrough.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("Set player reference for PlayerBreakthroughAttachment");
+        } else if (syncable instanceof PlayerCombatStatsAttachment combat) {
+            combat.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("Set player reference for PlayerCombatStatsAttachment");
+        } else if (syncable instanceof PlayerPillConsumptionAttachment pills) {
+            pills.setPlayer(player);
+            ImmortalCultivation.LOGGER.error("Set player reference for PlayerPillConsumptionAttachment");
         }
     }
 
