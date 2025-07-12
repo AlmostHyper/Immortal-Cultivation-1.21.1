@@ -23,7 +23,7 @@ import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class PlayerRaceAttachment implements ISyncable, IPlayerInitializable {
+public class PlayerRaceAttachment extends PlayerAttachment<PlayerRaceAttachment> implements ISyncable, IPlayerInitializable {
 
     // === INSTANCES === //
 

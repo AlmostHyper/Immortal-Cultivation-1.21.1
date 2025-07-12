@@ -25,7 +25,7 @@ import java.util.EnumMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class PlayerCultivationAttachment implements ICultivationData, ISyncable, ITickable {
+public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivationAttachment> implements ICultivationData, ISyncable, ITickable {
 
     // === CONSTANTS === //
 

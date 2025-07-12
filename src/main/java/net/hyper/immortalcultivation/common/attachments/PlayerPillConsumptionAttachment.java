@@ -17,7 +17,7 @@ import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import javax.annotation.Nullable;
 import java.util.Optional;
 
-public class PlayerPillConsumptionAttachment implements ISyncable {
+public class PlayerPillConsumptionAttachment extends PlayerAttachment<PlayerPillConsumptionAttachment> implements ISyncable {
 
     // === INSTANCES === //
     @Nullable

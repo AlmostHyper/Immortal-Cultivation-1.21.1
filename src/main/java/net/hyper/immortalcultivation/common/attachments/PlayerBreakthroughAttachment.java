@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class PlayerBreakthroughAttachment implements ISyncable, ITickable {
+public class PlayerBreakthroughAttachment extends PlayerAttachment<PlayerBreakthroughAttachment> implements ISyncable, ITickable {
 
     // === CONSTANTS === //
     private static final long BREAKTHROUGH_COOLDOWN_TICKS = 600L; // 30 seconds at 20 TPS

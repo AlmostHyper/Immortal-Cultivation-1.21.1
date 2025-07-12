@@ -528,48 +528,6 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
         return new PlayerStatsSyncPacket(data);
     }
 
-    // === SERIALIZATION METHODS === //
-
-    /**
-     * Serializes the attachment data to NBT format.
-     * @return CompoundTag containing all attachment data
-     */
-    public CompoundTag serialize() {
-        startPerformanceTracking("serialize");
-        try {
-            return (CompoundTag) CODEC.encodeStart(NbtOps.INSTANCE, this)
-                .resultOrPartial(error -> {
-                    onSyncError("Failed to serialize PlayerStatsAttachment: " + error, player);
-                    ImmortalCultivation.LOGGER.error("Failed to encode PlayerStatsAttachment: {}", error);
-                })
-                .orElse(new CompoundTag());
-        } finally {
-            endPerformanceTracking("serialize", 5); // 5ms warning threshold
-        }
-    }
-
-    /**
-     * Deserializes attachment data from NBT format.
-     * @param tag The CompoundTag containing the data
-     */
-    public void deserialize(CompoundTag tag) {
-        startPerformanceTracking("deserialize");
-        try {
-            CODEC.decode(NbtOps.INSTANCE, tag)
-                .resultOrPartial(error -> {
-                    onSyncError("Failed to deserialize PlayerStatsAttachment: " + error, player);
-                    ImmortalCultivation.LOGGER.error("Failed to decode PlayerStatsAttachment: {}", error);
-                })
-                .ifPresent(pair -> {
-                    PlayerStatsAttachment decoded = pair.getFirst();
-                    copyFrom(decoded);
-                    recalculateAll();
-                });
-        } finally {
-            endPerformanceTracking("deserialize", 5); // 5ms warning threshold
-        }
-    }
-
     // === COPY FUNCTIONALITY === //
 
     /**
