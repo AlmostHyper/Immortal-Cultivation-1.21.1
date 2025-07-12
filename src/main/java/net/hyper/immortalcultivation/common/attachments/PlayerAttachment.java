@@ -83,9 +83,7 @@ public abstract class PlayerAttachment<T extends PlayerAttachment<T>> implements
     public CompoundTag serialize() {
         return (CompoundTag) getCodec()
             .encodeStart(NbtOps.INSTANCE, (T) this)
-            .getOrThrow(false, error ->
-                ImmortalCultivation.LOGGER.error("Failed to encode {}: {}",
-                    this.getClass().getSimpleName(), error));
+            .getOrThrow();
     }
 
     public void deserialize(CompoundTag tag) {
