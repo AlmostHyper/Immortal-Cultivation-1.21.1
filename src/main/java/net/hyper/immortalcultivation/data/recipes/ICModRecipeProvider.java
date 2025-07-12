@@ -1,9 +1,9 @@
-package net.hyper.immortalcultivation.data.server;
+package net.hyper.immortalcultivation.data.recipes;
 
-import net.hyper.immortalcultivation.data.server.helper.ICModPillFurnaceRecipeHelper;
-import net.hyper.immortalcultivation.data.server.helper.ICModShapedRecipeHelper;
-import net.hyper.immortalcultivation.data.server.helper.ICModShapelessRecipeHelper;
-import net.hyper.immortalcultivation.data.server.helper.ICModSmeltingRecipeHelper;
+import net.hyper.immortalcultivation.data.recipes.helper.ICModPillFurnaceRecipeHelper;
+import net.hyper.immortalcultivation.data.recipes.helper.ICModShapedRecipeHelper;
+import net.hyper.immortalcultivation.data.recipes.helper.ICModShapelessRecipeHelper;
+import net.hyper.immortalcultivation.data.recipes.helper.ICModSmeltingRecipeHelper;
 import net.minecraft.advancements.Criterion;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;

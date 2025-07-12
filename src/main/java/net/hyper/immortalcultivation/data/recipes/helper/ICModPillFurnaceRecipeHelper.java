@@ -1,7 +1,7 @@
-package net.hyper.immortalcultivation.data.server.helper;
+package net.hyper.immortalcultivation.data.recipes.helper;
 
 import net.hyper.immortalcultivation.content.recipe.builders.PillFurnaceRecipeBuilder;
-import net.hyper.immortalcultivation.data.server.ICModRecipeProvider;
+import net.hyper.immortalcultivation.data.recipes.ICModRecipeProvider;
 import net.hyper.immortalcultivation.common.registry.ICModItems;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.world.item.Items;

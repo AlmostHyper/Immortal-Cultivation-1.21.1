@@ -2,7 +2,6 @@ package net.hyper.immortalcultivation;
 
 import net.hyper.immortalcultivation.client.gui.screens.QiHUDScreen;
 import net.hyper.immortalcultivation.common.config.ImmortalCultivationConfig;
-import net.hyper.immortalcultivation.core.network.NetworkSyncManager;
 import net.hyper.immortalcultivation.server.event.world.ICModTickEvent;
 import net.hyper.immortalcultivation.common.registry.*;
 import net.hyper.immortalcultivation.client.gui.screens.PillFurnaceScreen;
@@ -35,7 +34,6 @@ public class ImmortalCultivation
         LOGGER.info("Initializing Immortal Cultivation mod...");
 
         NeoForge.EVENT_BUS.register(this);
-        NeoForge.EVENT_BUS.register(NetworkSyncManager.INSTANCE);
 
 
         ICModBlocks.register(modEventBus);

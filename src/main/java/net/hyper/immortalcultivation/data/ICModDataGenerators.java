@@ -4,6 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.data.client.ICModBlockStateProvider;
 import net.hyper.immortalcultivation.data.client.ICModItemModelProvider;
 import net.hyper.immortalcultivation.data.client.ICModLanguageProvider;
+import net.hyper.immortalcultivation.data.recipes.ICModRecipeProvider;
 import net.hyper.immortalcultivation.data.server.*;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.DataGenerator;
