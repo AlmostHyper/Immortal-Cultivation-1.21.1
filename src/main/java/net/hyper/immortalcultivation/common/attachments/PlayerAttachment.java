@@ -27,7 +27,7 @@ import java.util.function.Supplier;
  *
  * @param <T> The specific attachment type extending this class
  */
-public abstract class PlayerAttachment<T extends PlayerAttachment<T>> implements IAttachmentHolder, ISyncable, IDebug  {
+public abstract class PlayerAttachment<T extends PlayerAttachment<T>> implements ISyncable, IDebug  {
 
     // === CORE FIELDS === //
 
@@ -39,7 +39,7 @@ public abstract class PlayerAttachment<T extends PlayerAttachment<T>> implements
 
     // === DEBUG FIELDS === //
 
-    private transient boolean debugEnabled = true;
+    protected transient boolean debugEnabled = true;
     private transient final Map<String, Long> performanceTimers = new ConcurrentHashMap<>();
     private transient long lastSyncTime = 0L;
     private transient long syncCount = 0L;
