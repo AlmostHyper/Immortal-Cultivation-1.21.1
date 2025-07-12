@@ -6,7 +6,7 @@ import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
-import net.hyper.immortalcultivation.server.event.world.ICModCombatEvent;
+import net.hyper.immortalcultivation.server.event.ICModEventManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
@@ -445,7 +445,7 @@ public class JsonCultivationRealm extends CultivationRealm {
             stats.setPermanentJumpHeightBonus(currentJumpBonus + getBaseJumpHeight());
 
             // Force refresh the attribute modifiers to apply the changes immediately
-            ICModCombatEvent.refreshCombatStats(serverPlayer);
+            ICModEventManager.refreshCombatStats(serverPlayer);
 
             ImmortalCultivation.LOGGER.info("Applied cumulative realm modifiers for {} advancing to {} - Added ATK: +{}%, SPD: +{}%, JUMP: +{}% (Total: ATK +{}%, SPD +{}%, JUMP +{}%)",
                 player.getName().getString(),

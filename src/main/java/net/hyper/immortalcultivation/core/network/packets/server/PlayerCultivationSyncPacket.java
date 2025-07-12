@@ -6,7 +6,7 @@ import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachm
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
-import net.hyper.immortalcultivation.server.event.world.ICModAttachmentUpdateEvent;
+import net.hyper.immortalcultivation.server.event.server.ICModAttachmentUpdateEvent;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;

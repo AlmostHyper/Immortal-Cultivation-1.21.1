@@ -55,9 +55,8 @@ public class SyncDebugCommand {
         attachments.put("Cultivation", player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get()));
         attachments.put("Talents", player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get()));
         attachments.put("Race", player.getData(ICModAttachmentTypes.PLAYER_RACE.get()));
-        attachments.put("Resources", player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get()));
+        attachments.put("Stats", player.getData(ICModAttachmentTypes.PLAYER_STATS.get()));
         attachments.put("Breakthrough", player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()));
-        attachments.put("Combat Stats", player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get()));
         attachments.put("Pill Consumption", player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get()));
 
         int dirtyCount = 0;
@@ -117,9 +116,8 @@ public class SyncDebugCommand {
         ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, true);
         ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_TALENTS::get, true);
         ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
-        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.STATS::get, true);
+        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_STATS::get, true);
         ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true);
-        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_COMBAT_STATS::get, true);
         ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION::get, true);
 
         source.sendSuccess(() -> Component.literal("All attachments scheduled for sync!")
@@ -141,9 +139,8 @@ public class SyncDebugCommand {
         player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get()).markDirty();
         player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get()).markDirty();
         player.getData(ICModAttachmentTypes.PLAYER_RACE.get()).markDirty();
-        player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get()).markDirty();
+        player.getData(ICModAttachmentTypes.PLAYER_STATS.get()).markDirty();
         player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()).markDirty();
-        player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get()).markDirty();
         player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get()).markDirty();
 
         source.sendSuccess(() -> Component.literal("All attachments marked as dirty!")
