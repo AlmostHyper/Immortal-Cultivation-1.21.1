@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.*;
+import net.hyper.immortalcultivation.core.network.packets.server.PlayerStatsSyncPacket;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -524,7 +525,7 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     @Override
     protected ISyncPacket createSyncPacket(CompoundTag data) {
 
-        return new PlayerResourcesSyncPacket(data);
+        return new PlayerStatsSyncPacket(data);
     }
 
     // === SERIALIZATION METHODS === //

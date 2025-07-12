@@ -40,10 +40,11 @@ public class ICModPacketRegistry {
 
         // === SERVER -> CLIENT === //
         registerClientPacket(PlayerCultivationSyncPacket.TYPE, PlayerCultivationSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerStatsSyncPacket.TYPE, PlayerStatsSyncPacket.STREAM_CODEC);
+        registerClientPacket(PlayerBreakthroughSyncPacket.TYPE, PlayerBreakthroughSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerTalentsSyncPacket.TYPE, PlayerTalentsSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerRaceSyncPacket.TYPE, PlayerRaceSyncPacket.STREAM_CODEC);
         registerClientPacket(PlayerPillConsumptionSyncPacket.TYPE, PlayerPillConsumptionSyncPacket.STREAM_CODEC);
-        registerClientPacket(PlayerBreakthroughSyncPacket.TYPE, PlayerBreakthroughSyncPacket.STREAM_CODEC);
 
         REGISTRY.playToClient(
             OpenRaceSelectionSyncPacket.TYPE,
