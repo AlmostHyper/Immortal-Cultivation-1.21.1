@@ -3,17 +3,13 @@ package net.hyper.immortalcultivation.common.attachments;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
-import net.hyper.immortalcultivation.common.interfaces.ISyncable;
-import net.hyper.immortalcultivation.common.interfaces.ITickable;
+import net.hyper.immortalcultivation.common.interfaces.*;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealmData;
 import net.hyper.immortalcultivation.core.cultivation.realms.JsonCultivationRealm;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerCultivationSyncPacket;
-import net.hyper.immortalcultivation.server.event.world.ICModCombatEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
@@ -27,7 +23,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 
 public class PlayerCultivationAttachment implements ICultivationData, ISyncable, ITickable {
@@ -174,9 +169,9 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
 
                     // Force network sync to client
                     this.markDirty();
-                    PlayerResourceAttachment resources = serverPlayer.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-                    if (resources != null) {
-                        resources.markDirty();
+                    PlayerStatsAttachment stats = serverPlayer.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+                    if (stats != null) {
+                        stats.markDirty();
                     }
 
                     ImmortalCultivation.LOGGER.info("Successfully applied realm change for player {} - {} cultivation set to {} (level {})",
@@ -196,10 +191,9 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
      */
     public void recalculateAllRealmBonuses(ServerPlayer player, CultivationType type) {
         try {
-            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
 
-            if (combatStats == null || resources == null) {
+            if (stats == null) {
                 ImmortalCultivation.LOGGER.warn("Missing attachments for player {}", player.getName().getString());
                 return;
             }
@@ -229,38 +223,38 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
                 CultivationRealm realm = findRealmByLevel(level);
                 if (realm != null) {
                     // Add this realm's bonuses to the totals
-                    totalHealthBonus += realm.getBaseHealth();
-                    totalHealthRegenBonus += realm.getBaseHealthRegeneration();
+                    totalHealthBonus += realm.getBaseMaxHealth();
+                    totalHealthRegenBonus += realm.getBaseHealthRegenRate();
                     totalQiBonus += realm.getBaseMaxQi();
-                    totalQiRegenBonus += realm.getBaseQiRegenerationRate();
+                    totalQiRegenBonus += realm.getBaseQiRegenRate();
                     totalBodyBonus += realm.getBaseMaxBody();
-                    totalBodyRegenBonus += realm.getBaseBodyRegenerationRate();
+                    totalBodyRegenBonus += realm.getBaseBodyRegenRate();
                     totalAttackBonus += realm.getBaseAttackDamage();
                     totalSpeedBonus += realm.getBaseMovementSpeed();
                     totalJumpBonus += realm.getBaseJumpHeight();
 
                     ImmortalCultivation.LOGGER.debug("Added bonuses from {} (Level {}): Health +{}, Qi +{}, Body +{}",
-                        realm.getDisplayName(), level, realm.getBaseHealth(), realm.getBaseMaxQi(), realm.getBaseMaxBody());
+                        realm.getDisplayName(), level, realm.getBaseMaxHealth(), realm.getBaseMaxQi(), realm.getBaseMaxBody());
                 }
             }
 
             // Apply cumulative bonuses to attachments
             // For resources, we SET the permanent bonuses to the cumulative totals
-            resources.setPermanentHealthBonus(totalHealthBonus);
-            resources.setPermanentHealthRegenBonus(totalHealthRegenBonus);
-            resources.setPermanentQiBonus(totalQiBonus);
-            resources.setPermanentQiRegenBonus(totalQiRegenBonus);
-            resources.setPermanentBodyBonus(totalBodyBonus);
-            resources.setPermanentBodyRegenBonus(totalBodyRegenBonus);
+            stats.setPermanentStatBonus(IStatsData.StatType.HEALTH, totalHealthBonus);
+            stats.setPermanentStatRegenBonus(IStatsData.StatType.HEALTH, totalHealthRegenBonus);
+            stats.setPermanentStatBonus(IStatsData.StatType.QI, totalQiBonus);
+            stats.setPermanentStatRegenBonus(IStatsData.StatType.QI, totalQiRegenBonus);
+            stats.setPermanentStatBonus(IStatsData.StatType.BODY, totalBodyBonus);
+            stats.setPermanentStatRegenBonus(IStatsData.StatType.BODY, totalBodyRegenBonus);
 
             // For combat stats, we SET the permanent bonuses to the cumulative totals
-            combatStats.setPermanentAttackDamageBonus(totalAttackBonus);
-            combatStats.setPermanentMovementSpeedBonus(totalSpeedBonus);
-            combatStats.setPermanentJumpHeightBonus(totalJumpBonus);
+            stats.setPermanentAttackDamageBonus(totalAttackBonus);
+            stats.setPermanentMovementSpeedBonus(totalSpeedBonus);
+            stats.setPermanentJumpHeightBonus(totalJumpBonus);
 
             // Recalculate derived values and force sync
-            resources.recalculateAll();
-            resources.markDirty();
+            stats.recalculateAll();
+            stats.markDirty();
 
             // Refresh combat stats to apply the changes immediately
             ICModCombatEvent.refreshCombatStats(player);
@@ -276,17 +270,17 @@ public class PlayerCultivationAttachment implements ICultivationData, ISyncable,
         }
     }
 
-    private void clearAllBonuses(PlayerCombatStatsAttachment combatStats, PlayerResourceAttachment resources) {
+    private void clearAllBonuses(PlayerStatsAttachment stats) {
         // Clear all permanent bonuses to recalculate from scratch
-        resources.setPermanentHealthBonus(0L);
-        resources.setPermanentHealthRegenBonus(0.0);
-        resources.setPermanentQiBonus(0L);
-        resources.setPermanentQiRegenBonus(0.0);
-        resources.setPermanentBodyBonus(0L);
-        resources.setPermanentBodyRegenBonus(0.0);
-        combatStats.setPermanentAttackDamageBonus(0.0);
-        combatStats.setPermanentMovementSpeedBonus(0.0);
-        combatStats.setPermanentJumpHeightBonus(0.0);
+        stats.setPermanentStatBonus(IStatsData.StatType.HEALTH, 0L);
+        stats.setPermanentStatRegenBonus(IStatsData.StatType.HEALTH,0.0);
+        stats.setPermanentStatBonus(IStatsData.StatType.QI, 0L);
+        stats.setPermanentStatRegenBonus(IStatsData.StatType.QI,0.0);
+        stats.setPermanentStatBonus(IStatsData.StatType.BODY, 0L);
+        stats.setPermanentStatRegenBonus(IStatsData.StatType.BODY,0.0);
+        stats.setPermanentAttackDamageBonus(0.0);
+        stats.setPermanentMovementSpeedBonus(0.0);
+        stats.setPermanentJumpHeightBonus(0.0);
     }
 
     /**

@@ -80,10 +80,9 @@ public class CultivationStatsScreen extends Screen {
 
     // === PLAYER DATA ===
     private PlayerCultivationAttachment cultivationAttachment;
-    private PlayerResourceAttachment resourceAttachment;
+    private PlayerStatsAttachment statsAttachment;
     private PlayerTalentsAttachment talentAttachment;
     private PlayerRaceAttachment raceAttachment;
-    private PlayerCombatStatsAttachment combatStatsAttachment;
 
     public CultivationStatsScreen() {
         super(Component.literal("Cultivation Status"));

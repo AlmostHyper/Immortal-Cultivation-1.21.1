@@ -1,8 +1,9 @@
 package net.hyper.immortalcultivation.core.cultivation.realms;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.PlayerCombatStatsAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.server.event.world.ICModCombatEvent;
@@ -67,12 +68,12 @@ public class JsonCultivationRealm extends CultivationRealm {
     // === Base Physical Stats ===
 
     @Override
-    public long getBaseHealth() {
+    public long getBaseMaxHealth() {
         return data.baseHealth();
     }
 
     @Override
-    public double getBaseHealthRegeneration() {
+    public double getBaseHealthRegenRate() {
         return data.baseHealthRegeneration();
     }
 
@@ -111,7 +112,7 @@ public class JsonCultivationRealm extends CultivationRealm {
     }
 
     @Override
-    public double getBaseQiRegenerationRate() {
+    public double getBaseQiRegenRate() {
         return data.baseQiRegenerationRate();
     }
 
@@ -121,7 +122,7 @@ public class JsonCultivationRealm extends CultivationRealm {
     public long getBaseMaxBody() {return data.baseMaxBody();}
 
     @Override
-    public double getBaseBodyRegenerationRate() {return data.baseBodyRegenerationRate();}
+    public double getBaseBodyRegenRate() {return data.baseBodyRegenerationRate();}
 
     // === Realm Navigation ===
 
@@ -412,20 +413,36 @@ public class JsonCultivationRealm extends CultivationRealm {
         }
 
         try {
-            PlayerCombatStatsAttachment combatStats = serverPlayer.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
-            if (combatStats == null) {
-                ImmortalCultivation.LOGGER.warn("No combat stats attachment found for player {}", player.getName().getString());
+            PlayerStatsAttachment stats = serverPlayer.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            if (stats == null) {
+                ImmortalCultivation.LOGGER.warn("No stats attachment found for player {}", player.getName().getString());
                 return;
             }
 
             // ADD the realm bonuses to existing bonuses (cumulative progression)
-            double currentAttackBonus = combatStats.getPermanentAttackDamageBonus();
-            double currentSpeedBonus = combatStats.getPermanentMovementSpeedBonus();
-            double currentJumpBonus = combatStats.getPermanentJumpHeightBonus();
+            long currentHealthBonus = stats.getPermanentStatBonus(IStatsData.StatType.HEALTH);
+            long currentQiBonus = stats.getPermanentStatBonus(IStatsData.StatType.QI);
+            long currentBodyBonus = stats.getPermanentStatBonus(IStatsData.StatType.BODY);
 
-            combatStats.setPermanentAttackDamageBonus(currentAttackBonus + getBaseAttackDamage());
-            combatStats.setPermanentMovementSpeedBonus(currentSpeedBonus + getBaseMovementSpeed());
-            combatStats.setPermanentJumpHeightBonus(currentJumpBonus + getBaseJumpHeight());
+            double currentHealthRegenBonus = stats.getPermanentStatRegenBonus(IStatsData.StatType.HEALTH);
+            double currentQiRegenBonus = stats.getPermanentStatRegenBonus(IStatsData.StatType.QI);
+            double currentBodyRegenBonus = stats.getPermanentStatRegenBonus(IStatsData.StatType.BODY);
+
+            double currentAttackBonus = stats.getPermanentAttackDamageBonus();
+            double currentSpeedBonus = stats.getPermanentMovementSpeedBonus();
+            double currentJumpBonus = stats.getPermanentJumpHeightBonus();
+
+            stats.setPermanentStatBonus(IStatsData.StatType.HEALTH,currentHealthBonus + getBaseMaxHealth());
+            stats.setPermanentStatBonus(IStatsData.StatType.QI,currentQiBonus + getBaseMaxQi());
+            stats.setPermanentStatBonus(IStatsData.StatType.BODY,currentBodyBonus + getBaseMaxBody());
+
+            stats.setPermanentStatRegenBonus(IStatsData.StatType.HEALTH,currentHealthRegenBonus + getBaseHealthRegenRate());
+            stats.setPermanentStatRegenBonus(IStatsData.StatType.QI,currentQiRegenBonus + getBaseQiRegenRate());
+            stats.setPermanentStatRegenBonus(IStatsData.StatType.BODY,currentBodyRegenBonus + getBaseBodyRegenRate());
+
+            stats.setPermanentAttackDamageBonus(currentAttackBonus + getBaseAttackDamage());
+            stats.setPermanentMovementSpeedBonus(currentSpeedBonus + getBaseMovementSpeed());
+            stats.setPermanentJumpHeightBonus(currentJumpBonus + getBaseJumpHeight());
 
             // Force refresh the attribute modifiers to apply the changes immediately
             ICModCombatEvent.refreshCombatStats(serverPlayer);
@@ -436,9 +453,9 @@ public class JsonCultivationRealm extends CultivationRealm {
                 String.format("%.1f", getBaseAttackDamage() * 100),
                 String.format("%.1f", getBaseMovementSpeed() * 100),
                 String.format("%.1f", getBaseJumpHeight() * 100),
-                String.format("%.1f", combatStats.getPermanentAttackDamageBonus() * 100),
-                String.format("%.1f", combatStats.getPermanentMovementSpeedBonus() * 100),
-                String.format("%.1f", combatStats.getPermanentJumpHeightBonus() * 100));
+                String.format("%.1f", stats.getPermanentAttackDamageBonus() * 100),
+                String.format("%.1f", stats.getPermanentMovementSpeedBonus() * 100),
+                String.format("%.1f", stats.getPermanentJumpHeightBonus() * 100));
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying realm modifiers for player {} in realm {}",

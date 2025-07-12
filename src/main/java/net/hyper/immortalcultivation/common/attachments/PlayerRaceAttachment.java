@@ -10,7 +10,6 @@ import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.hyper.immortalcultivation.core.network.packets.server.OpenRaceSelectionSyncPacket;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerRaceSyncPacket;
-import net.hyper.immortalcultivation.core.network.packets.server.PlayerResourcesSyncPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;

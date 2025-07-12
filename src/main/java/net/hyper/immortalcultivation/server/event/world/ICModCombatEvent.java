@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.server.event.world;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.PlayerCombatStatsAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
@@ -114,17 +114,17 @@ public class ICModCombatEvent {
 
         try {
             // Initialize combat stats attachment
-            initializeCombatStats(serverPlayer);
+            initializeStats(serverPlayer);
 
             // Apply initial attribute modifiers
-            applyCombatStatsModifiers(serverPlayer);
+            applyStatsModifiers(serverPlayer);
 
             // Initialize performance tracking
             UUID playerId = serverPlayer.getUUID();
             lastModifierUpdateTime.put(playerId, System.currentTimeMillis());
-            lastKnownRealmHash.put(playerId, getCombatStatsHash(serverPlayer));
+            lastKnownRealmHash.put(playerId, getStatsHash(serverPlayer));
 
-            ImmortalCultivation.LOGGER.info("Combat system initialized for player {} - ATK: +{}%, SPD: +{}%, JUMP: +{}%",
+            ImmortalCultivation.LOGGER.info(" system initialized for player {} - ATK: +{}%, SPD: +{}%, JUMP: +{}%",
                 serverPlayer.getName().getString(),
                 getFormattedBonusPercentage(serverPlayer, "attack"),
                 getFormattedBonusPercentage(serverPlayer, "speed"),
@@ -136,7 +136,7 @@ public class ICModCombatEvent {
         } finally {
             long processingTime = System.nanoTime() - startTime;
             if (processingTime > MAX_PROCESSING_TIME_NANOS) {
-                ImmortalCultivation.LOGGER.warn("Combat initialization took {}ms for player {} (exceeds 2ms threshold)",
+                ImmortalCultivation.LOGGER.warn(" initialization took {}ms for player {} (exceeds 2ms threshold)",
                     processingTime / 1_000_000.0, serverPlayer.getName().getString());
             }
         }
@@ -180,7 +180,7 @@ public class ICModCombatEvent {
 
             // If main hand weapon changed, refresh all modifiers
             if (event.getSlot().getType() == net.minecraft.world.entity.EquipmentSlot.Type.HAND) {
-                refreshCombatStats(serverPlayer);
+                refreshStats(serverPlayer);
             }
 
         } catch (Exception e) {
@@ -206,7 +206,7 @@ public class ICModCombatEvent {
         }
 
         try {
-            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            PlayerStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
             if (combatStats == null) {
                 return;
             }
@@ -256,7 +256,7 @@ public class ICModCombatEvent {
         List<Component> tooltip = event.getToolTip();
 
         if (stack.getItem() instanceof SwordItem || stack.getItem() instanceof AxeItem) {
-            addCombatStatsTooltip(stack, tooltip, event.getEntity());
+            addStatsTooltip(stack, tooltip, event.getEntity());
         }
     }
 
@@ -350,16 +350,16 @@ public class ICModCombatEvent {
      *
      * @param player The player to initialize combat stats for
      */
-    private static void initializeCombatStats(ServerPlayer player) {
+    private static void initializeStats(ServerPlayer player) {
         try {
-            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            PlayerStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
 
             // Set player reference to ensure proper attachment functionality
             if (combatStats != null) {
                 combatStats.setPlayer(player);
             }
 
-            ImmortalCultivation.LOGGER.info("Combat stats initialized for player {} - ATK: +{}%, SPD: +{}%, JUMP: +{}%",
+            ImmortalCultivation.LOGGER.info(" stats initialized for player {} - ATK: +{}%, SPD: +{}%, JUMP: +{}%",
                 player.getName().getString(),
                 String.format("%.1f", combatStats.getAttackDamageBonus() * 100),
                 String.format("%.1f", combatStats.getMovementSpeedBonus() * 100),
@@ -376,9 +376,9 @@ public class ICModCombatEvent {
      *
      * @param player The player to apply modifiers to
      */
-    public static void applyCombatStatsModifiers(ServerPlayer player) {
+    public static void applyStatsModifiers(ServerPlayer player) {
         try {
-            PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+            PlayerStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
             if (combatStats == null) {
                 return;
             }
@@ -447,7 +447,7 @@ public class ICModCombatEvent {
      *
      * @param player The player to remove modifiers from
      */
-    private static void removeCombatStatsModifiers(ServerPlayer player) {
+    private static void removeStatsModifiers(ServerPlayer player) {
         try {
             // Remove attack damage modifier
             AttributeInstance attackAttr = player.getAttribute(Attributes.ATTACK_DAMAGE);
@@ -479,15 +479,15 @@ public class ICModCombatEvent {
      *
      * @param player The player to refresh modifiers for
      */
-    public static void refreshCombatStats(ServerPlayer player) {
+    public static void refreshStats(ServerPlayer player) {
         try {
             // Simply reapply all modifiers
-            removeCombatStatsModifiers(player);
-            applyCombatStatsModifiers(player);
+            removeStatsModifiers(player);
+            applyStatsModifiers(player);
 
             // Update tracking
             lastModifierUpdateTime.put(player.getUUID(), System.currentTimeMillis());
-            lastKnownRealmHash.put(player.getUUID(), getCombatStatsHash(player));
+            lastKnownRealmHash.put(player.getUUID(), getStatsHash(player));
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error refreshing combat stats modifiers for player {}",
@@ -635,11 +635,11 @@ public class ICModCombatEvent {
      * @param tooltip The tooltip component list to modify
      * @param player The player viewing the tooltip
      */
-    private static void addCombatStatsTooltip(ItemStack stack, List<Component> tooltip, Player player) {
+    private static void addStatsTooltip(ItemStack stack, List<Component> tooltip, Player player) {
         if (player == null) return;
         if (!(stack.getItem() instanceof SwordItem) && !(stack.getItem() instanceof AxeItem)) return;
 
-        PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+        PlayerStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
         if (combatStats == null) return;
 
         try {
@@ -731,7 +731,7 @@ public class ICModCombatEvent {
      * @return Formatted percentage string
      */
     private static String getFormattedBonusPercentage(ServerPlayer player, String statType) {
-        PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+        PlayerStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
         if (combatStats == null) return "0.0";
 
         try {
@@ -756,8 +756,8 @@ public class ICModCombatEvent {
      * @param player The player to generate hash for
      * @return Hash value representing current combat state
      */
-    private static int getCombatStatsHash(ServerPlayer player) {
-        PlayerCombatStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get());
+    private static int getStatsHash(ServerPlayer player) {
+        PlayerStatsAttachment combatStats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
         if (combatStats == null) return 0;
 
         try {
@@ -778,18 +778,18 @@ public class ICModCombatEvent {
      *
      * @param player The player to perform emergency refresh for
      */
-    public static void emergencyCombatRefresh(ServerPlayer player) {
+    public static void emergencyRefresh(ServerPlayer player) {
         try {
             // Remove all existing modifiers
-            removeCombatStatsModifiers(player);
+            removeStatsModifiers(player);
 
             // Reapply all modifiers
-            applyCombatStatsModifiers(player);
+            applyStatsModifiers(player);
 
             // Reset tracking
             UUID playerId = player.getUUID();
             lastModifierUpdateTime.put(playerId, System.currentTimeMillis());
-            lastKnownRealmHash.put(playerId, getCombatStatsHash(player));
+            lastKnownRealmHash.put(playerId, getStatsHash(player));
 
             ImmortalCultivation.LOGGER.warn("Performed emergency combat refresh for player {}",
                 player.getName().getString());

@@ -82,7 +82,7 @@ public class SyncDebugCommand {
         source.sendSuccess(() -> Component.literal("\nTotal dirty attachments: " + finalDirtyCount)
             .withStyle(finalDirtyCount > 0 ? ChatFormatting.YELLOW : ChatFormatting.GREEN), false);
 
-        int pendingSyncs = NetworkSyncManager.INSTANCE.getPendingSyncCount();
+        int pendingSyncs = ICModNetworkManager.INSTANCE.getPendingSyncCount();
         source.sendSuccess(() -> Component.literal("Pending syncs in NetworkSyncManager: " + pendingSyncs)
             .withStyle(pendingSyncs > 0 ? ChatFormatting.YELLOW : ChatFormatting.GREEN), false);
 
@@ -114,13 +114,13 @@ public class SyncDebugCommand {
         source.sendSuccess(() -> Component.literal("Forcing sync of all attachments...").withStyle(ChatFormatting.YELLOW), false);
 
         // Schedule full sync for all attachments
-        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, true);
-        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_TALENTS::get, true);
-        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
-        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RESOURCES::get, true);
-        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true);
-        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_COMBAT_STATS::get, true);
-        NetworkSyncManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION::get, true);
+        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, true);
+        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_TALENTS::get, true);
+        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
+        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.STATS::get, true);
+        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true);
+        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_COMBAT_STATS::get, true);
+        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION::get, true);
 
         source.sendSuccess(() -> Component.literal("All attachments scheduled for sync!")
             .withStyle(ChatFormatting.GREEN), false);

@@ -57,13 +57,13 @@ public abstract class CultivationRealm {
      * Base health points provided by this realm
      * @return Health value
      */
-    public abstract long getBaseHealth();
+    public abstract long getBaseMaxHealth();
 
     /**
      * Base health regeneration rate per second
      * @return Health regen per second
      */
-    public abstract double getBaseHealthRegeneration();
+    public abstract double getBaseHealthRegenRate();
 
     /**
      * Base attack damage multiplier
@@ -125,7 +125,7 @@ public abstract class CultivationRealm {
      * Qi regeneration rate per second
      * @return Qi regen per second
      */
-    public abstract double getBaseQiRegenerationRate();
+    public abstract double getBaseQiRegenRate();
 
     // === Qi-Related Stats ===
 
@@ -139,7 +139,7 @@ public abstract class CultivationRealm {
      * Body regeneration rate per second
      * @return Body regen per second
      */
-    public abstract double getBaseBodyRegenerationRate();
+    public abstract double getBaseBodyRegenRate();
 
     // === Unified Cultivation Breakthrough Logic ===
 
