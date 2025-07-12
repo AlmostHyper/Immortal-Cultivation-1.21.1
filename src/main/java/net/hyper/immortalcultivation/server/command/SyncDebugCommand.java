@@ -4,8 +4,8 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.core.network.ICModNetworkManager;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
-import net.hyper.immortalcultivation.server.event.world.ICModTickEvent;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -91,8 +91,7 @@ public class SyncDebugCommand {
 
     private static int toggleDebugLogging(CommandSourceStack source, boolean enabled) {
         ICModPacketRegistry.setDebugPackets(enabled);
-        ICModTickEvent.setDebugSync(enabled);
-        NetworkSyncManager.setDebugSync(enabled);
+        ICModNetworkManager.setDebugSync(enabled);
 
         source.sendSuccess(() -> Component.literal("Sync debug logging " + (enabled ? "enabled" : "disabled"))
             .withStyle(enabled ? ChatFormatting.GREEN : ChatFormatting.RED), true);

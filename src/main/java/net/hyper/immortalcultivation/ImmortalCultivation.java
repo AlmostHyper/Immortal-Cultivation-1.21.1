@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation;
 
 import net.hyper.immortalcultivation.client.gui.screens.QiHUDScreen;
 import net.hyper.immortalcultivation.common.config.ImmortalCultivationConfig;
-import net.hyper.immortalcultivation.server.event.world.ICModTickEvent;
+import net.hyper.immortalcultivation.core.network.ICModNetworkManager;
 import net.hyper.immortalcultivation.common.registry.*;
 import net.hyper.immortalcultivation.client.gui.screens.PillFurnaceScreen;
 import org.slf4j.Logger;
@@ -50,7 +50,7 @@ public class ImmortalCultivation
 
         LOGGER.info("Registering Handlers...");
 
-        NeoForge.EVENT_BUS.register(ICModTickEvent.class);
+        NeoForge.EVENT_BUS.register(ICModNetworkManager.class);
 
         LOGGER.info("Handlers registered successfully!");
 
