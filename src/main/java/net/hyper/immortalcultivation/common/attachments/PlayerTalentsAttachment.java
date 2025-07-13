@@ -240,6 +240,126 @@ public class PlayerTalentsAttachment extends PlayerAttachment<PlayerTalentsAttac
         return assignTalent(TalentType.PHYSIQUE, type);
     }
 
+    // === ADDITIONAL CONVENIENCE METHODS === //
+
+    /**
+     * Gets the spiritual root multiplier (convenience method).
+     * @return Spiritual root cultivation multiplier
+     */
+    public float getSpiritualRootMultiplier() {
+        return getTalentMultiplier(TalentType.SPIRITUAL_ROOT);
+    }
+
+    /**
+     * Gets the physique multiplier (convenience method).
+     * @return Physique cultivation multiplier
+     */
+    public float getPhysiqueMultiplier() {
+        return getTalentMultiplier(TalentType.PHYSIQUE);
+    }
+
+    /**
+     * Checks if spiritual root has been assigned (convenience method).
+     * @return True if spiritual root is assigned
+     */
+    public boolean hasSpiritualRootAssigned() {
+        return isTalentAssigned(TalentType.SPIRITUAL_ROOT);
+    }
+
+    /**
+     * Checks if physique has been assigned (convenience method).
+     * @return True if physique is assigned
+     */
+    public boolean hasPhysiqueAssigned() {
+        return isTalentAssigned(TalentType.PHYSIQUE);
+    }
+
+    // === TALENT UTILITY METHODS === //
+
+    /**
+     * Gets a formatted string describing all assigned talents.
+     * @return Human-readable talent summary
+     */
+    public String getTalentSummary() {
+        StringBuilder summary = new StringBuilder();
+
+        if (hasSpiritualRootAssigned()) {
+            summary.append("Spiritual Root: ").append(getSpiritualRootType().getDisplayName())
+                .append(" (×").append(String.format("%.2f", getSpiritualRootMultiplier())).append(")");
+        } else {
+            summary.append("Spiritual Root: Unassigned");
+        }
+
+        summary.append(" | ");
+
+        if (hasPhysiqueAssigned()) {
+            summary.append("Physique: ").append(getPhysiqueType().getDisplayName())
+                .append(" (×").append(String.format("%.2f", getPhysiqueMultiplier())).append(")");
+        } else {
+            summary.append("Physique: Unassigned");
+        }
+
+        if (hasAllTalentsAssigned()) {
+            summary.append(" | Total: ×").append(String.format("%.2f", getTotalCultivationMultiplier()));
+        }
+
+        return summary.toString();
+    }
+
+    /**
+     * Resets all talents to unassigned mortal state (for testing/admin purposes).
+     * WARNING: This will permanently remove assigned talents!
+     */
+    public void resetAllTalents() {
+        if (debugEnabled()) {
+            debugLog("Resetting all talents for player {}",
+                player != null ? player.getName().getString() : "NULL");
+        }
+
+        this.spiritualRootType = SpiritualRootType.MORTAL_ROOT;
+        this.spiritualRootAssigned = false;
+        this.physiqueType = PhysiqueType.MORTAL_PHYSIQUE;
+        this.physiqueAssigned = false;
+
+        markDirty();
+    }
+
+    /**
+     * Forces assignment of specific talents (for admin/testing purposes).
+     * @param rootType The spiritual root to force assign
+     * @param physiqueType The physique to force assign
+     */
+    public void forceAssignTalents(SpiritualRootType rootType, PhysiqueType physiqueType) {
+        if (debugEnabled()) {
+            debugLog("Force assigning talents: {} and {} to player {}",
+                rootType.getDisplayName(), physiqueType.getDisplayName(),
+                player != null ? player.getName().getString() : "NULL");
+        }
+
+        this.spiritualRootType = rootType;
+        this.spiritualRootAssigned = true;
+        this.physiqueType = physiqueType;
+        this.physiqueAssigned = true;
+
+        markDirty();
+    }
+
+    // === PERFORMANCE OPTIMIZATION === //
+
+    /**
+     * Performs any necessary cleanup or optimization.
+     * Called periodically by the attachment system.
+     */
+    public void performMaintenance() {
+        // Talents are static once assigned, so no maintenance needed
+        // This method exists for consistency with other attachments
+
+        if (debugEnabled()) {
+            debugLog("Performed maintenance on PlayerTalentsAttachment for player {}",
+                player != null ? player.getName().getString() : "NULL");
+        }
+    }
+
     // === PLAYERATTACHMENT IMPLEMENTATIONS === //
 
     /**
@@ -316,7 +436,7 @@ public class PlayerTalentsAttachment extends PlayerAttachment<PlayerTalentsAttac
             this.physiqueAssigned == other.physiqueAssigned;
     }
 
-    // === IPLAYER_INITIALIZABLE IMPLEMENTATION === //
+    // === IPLAYERINITIALIZABLE IMPLEMENTATION === //
 
     /**
      * Called when a player logs in to assign talents if they haven't been assigned yet.
