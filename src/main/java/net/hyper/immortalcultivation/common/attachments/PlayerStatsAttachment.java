@@ -118,8 +118,8 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
         }
 
         if (oldValue != newValue) {
-            markDirty();
             onStatChanged(type, oldValue, newValue);
+            markDirty();
         }
     }
 
