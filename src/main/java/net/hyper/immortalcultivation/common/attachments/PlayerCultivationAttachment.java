@@ -110,8 +110,10 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
             maxCultivation.put(type, DEFAULT_MAX_CULTIVATION);
             cultivationFraction.put(type, 0.0);
 
-            // Rate initialization
-            accumulationRate.put(type, DEFAULT_ACCUMULATION_RATE);
+            // Rate initialization - FIX: Use realm's base cultivation rate
+            double realmBaseCultivationRate = mortalRealm != null ?
+                mortalRealm.getBaseCultivationRate() : DEFAULT_ACCUMULATION_RATE;
+            accumulationRate.put(type, realmBaseCultivationRate);
             additiveBonus.put(type, DEFAULT_ADDITIVE_BONUS);
             multiplicativeBonus.put(type, DEFAULT_MULTIPLICATIVE_BONUS);
 
@@ -1068,6 +1070,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
 
     /**
      * Processes automatic cultivation based on current focus and rates.
+     * Uses fractional accumulation to handle small cultivation rates properly.
      */
     private void processAutomaticCultivation() {
         if (player == null) return;
@@ -1086,7 +1089,8 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
             effectiveRate *= Math.max(0.1, progressPenalty);
 
             if (effectiveRate > 0) {
-                addCultivation(type, (long) effectiveRate, true);
+                // FIX: Use addRegenFraction for proper fractional accumulation
+                addRegenFraction(type, effectiveRate);
             }
         }
     }
@@ -1094,7 +1098,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     // === UTILITY METHODS === //
 
     /**
-     * Recalculates maximum cultivation values for all cultivation types based on current realms.
+     * Recalculates maximum cultivation values and accumulation rates for all cultivation types.
      * Should be called when realms change or player-specific modifiers are updated.
      */
     private void recalculateAllMaxCultivation() {
@@ -1102,15 +1106,22 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
             CultivationRealm realm = currentRealms.get(type);
             if (realm != null) {
                 long baseMax = realm.getBaseMaxCultivation();
+                double baseRate = realm.getBaseCultivationRate();
+
                 // Apply any player-specific modifiers here if needed
                 maxCultivation.put(type, baseMax);
+                accumulationRate.put(type, baseRate); // FIX: Sync accumulation rate with realm
             }
         }
 
         if (debugEnabled()) {
-            debugLog("Recalculated max cultivation - QI: {}, BODY: {}",
+            debugLog("Recalculated cultivation values - QI: {}/{} rate={}, BODY: {}/{} rate={}",
                 maxCultivation.get(CultivationType.QI),
-                maxCultivation.get(CultivationType.BODY));
+                getCurrentCultivation(CultivationType.QI),
+                accumulationRate.get(CultivationType.QI),
+                maxCultivation.get(CultivationType.BODY),
+                getCurrentCultivation(CultivationType.BODY),
+                accumulationRate.get(CultivationType.BODY));
         }
     }
 
