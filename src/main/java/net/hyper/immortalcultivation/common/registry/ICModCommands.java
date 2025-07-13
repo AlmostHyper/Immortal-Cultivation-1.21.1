@@ -11,18 +11,7 @@ public class ICModCommands {
     @SubscribeEvent
     public static void onCommandRegister(RegisterCommandsEvent event) {
         // Existing commands
-        new GetQiCommand(event.getDispatcher());
-        new GetRealmCommand(event.getDispatcher());
-        new SetCultivationCommand(event.getDispatcher());
-
-        // NEW: Set commands with actual implementations
-        new SetPhysiqueCommand(event.getDispatcher());
-        new SetSpiritualRootCommand(event.getDispatcher());
-        new SetRealmCommand(event.getDispatcher());
-
-        // NEW: Random assignment commands
-        new SetRandomPhysiqueCommand(event.getDispatcher());
-        new SetRandomSpiritualRootCommand(event.getDispatcher());
+        
 
         ConfigCommand.register(event.getDispatcher());
     }

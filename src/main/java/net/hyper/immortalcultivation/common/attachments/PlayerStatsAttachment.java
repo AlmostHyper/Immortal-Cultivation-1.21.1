@@ -166,7 +166,7 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
      * @return Base regeneration rate per second
      */
     @Override
-    public double getBaseStatRegenerationRate(StatType type) {
+    public double getStatRegenRate(StatType type) {
         return switch (type) {
             case HEALTH -> 0.1 + permanentHealthRegenBonus;
             case QI -> 0.2 + permanentQiRegenBonus;

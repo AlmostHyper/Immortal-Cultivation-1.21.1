@@ -123,7 +123,7 @@ public interface IStatsData {
      * @param type The stat type to query
      * @return Base regeneration rate per second
      */
-    double getBaseStatRegenerationRate(StatType type);
+    double getStatRegenRate(StatType type);
 
     /**
      * Gets the effective regeneration rate including all modifiers.
@@ -131,7 +131,7 @@ public interface IStatsData {
      * @return Effective regeneration rate per second
      */
     default double getEffectiveStatRegenerationRate(StatType type) {
-        return getBaseStatRegenerationRate(type);
+        return getStatRegenRate(type);
     }
 
     /**
