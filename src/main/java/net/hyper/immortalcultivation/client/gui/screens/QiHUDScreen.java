@@ -2,9 +2,10 @@ package net.hyper.immortalcultivation.client.gui.screens;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerResourceAttachment;
+import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.server.event.server.ICModAttachmentUpdateEvent;
 import net.minecraft.client.DeltaTracker;
@@ -21,11 +22,16 @@ import net.neoforged.neoforge.common.NeoForge;
  * Enhanced HUD for the unified cultivation system.
  * Displays Qi Cultivation, Body Cultivation, Health, Qi Energy, Body Energy, and current focus.
  * The center symbol shows which cultivation type is currently focused for the 2x bonus.
+ *
+ * This updated implementation properly utilizes the generic methods from PlayerAttachment
+ * and maintains compatibility with the new attachment system.
  */
 @OnlyIn(Dist.CLIENT)
 public class QiHUDScreen {
 
-    // Design constants - optimized for displaying multiple stats efficiently
+    // === DESIGN CONSTANTS === //
+
+    // Layout constants - optimized for displaying multiple stats efficiently
     private static final int CIRCLE_SIZE = 50; // Slightly larger to accommodate focus symbol
     private static final int CIRCLE_RADIUS = CIRCLE_SIZE / 2;
     private static final int PADDING = 10;
@@ -33,9 +39,15 @@ public class QiHUDScreen {
     private static final float TEXT_SCALE = 0.70f; // Slightly smaller to fit more information
     private static final int STAT_SPACING = 14; // Consistent spacing between stat lines
 
-    // Visual styling
+    // Visual styling constants
     private static final int BACKGROUND_COLOR = 0x90000000;
     private static final int BORDER_COLOR = 0xFF8B4513;
+    private static final int TEXT_COLOR = 0xFFFFFFFF;
+    private static final int TEXT_SHADOW = 0xFF000000;
+
+    // Focus indicator colors
+    private static final int FOCUS_QI_COLOR = 0xFF87CEEB;
+    private static final int FOCUS_BODY_COLOR = 0xFFFF6347;
 
     // Qi Cultivation colors (spiritual energy progression)
     private static final int QI_CULTIVATION_COLOR_LOW = 0xFF4A5D23;
@@ -52,36 +64,31 @@ public class QiHUDScreen {
     // Health colors (life force vitality)
     private static final int HEALTH_COLOR_LOW = 0xFF800000;
     private static final int HEALTH_COLOR_MID = 0xFFDC143C;
-    private static final int HEALTH_COLOR_HIGH = 0xFFFF1493;
-    private static final int HEALTH_COLOR_FULL = 0xFFFF69B4;
+    private static final int HEALTH_COLOR_HIGH = 0xFFFF69B4;
+    private static final int HEALTH_COLOR_FULL = 0xFFFF1493;
 
-    // Qi Energy colors (consumable spiritual energy)
-    private static final int QI_ENERGY_COLOR_LOW = 0xFF2E4A8B;
-    private static final int QI_ENERGY_COLOR_MID = 0xFF4169E1;
-    private static final int QI_ENERGY_COLOR_HIGH = 0xFF6495ED;
+    // Qi Energy colors (spiritual energy reserves)
+    private static final int QI_ENERGY_COLOR_LOW = 0xFF000080;
+    private static final int QI_ENERGY_COLOR_MID = 0xFF0000FF;
+    private static final int QI_ENERGY_COLOR_HIGH = 0xFF4169E1;
     private static final int QI_ENERGY_COLOR_FULL = 0xFF00BFFF;
 
-    // Body Energy colors (consumable physical energy)
-    private static final int BODY_ENERGY_COLOR_LOW = 0xFF8B1538;
-    private static final int BODY_ENERGY_COLOR_MID = 0xFFB22222;
-    private static final int BODY_ENERGY_COLOR_HIGH = 0xFFDC143C;
-    private static final int BODY_ENERGY_COLOR_FULL = 0xFFFF0000;
+    // Body Energy colors (physical energy reserves)
+    private static final int BODY_ENERGY_COLOR_LOW = 0xFF8B0000;
+    private static final int BODY_ENERGY_COLOR_MID = 0xFFFF0000;
+    private static final int BODY_ENERGY_COLOR_HIGH = 0xFFFF4500;
+    private static final int BODY_ENERGY_COLOR_FULL = 0xFFFFFF00;
 
-    // Focus indicator colors
-    private static final int FOCUS_QI_COLOR = 0xFF87CEEB;    // Sky blue for Qi focus
-    private static final int FOCUS_BODY_COLOR = 0xFFFF6347; // Tomato red for Body focus
+    // === ANIMATION AND CACHING FIELDS === //
 
-    private static final int TEXT_COLOR = 0xFFFFFFFF;
-    private static final int TEXT_SHADOW = 0x80000000;
-
-    // Performance optimization - smooth animations for all stats
+    // Display progress for smooth animations
     private static float qiCultivationDisplayProgress = 0.0f;
     private static float bodyCultivationDisplayProgress = 0.0f;
-    private static float healthDisplayProgress = 0.0f;
+    private static float healthDisplayProgress = 1.0f;
     private static float qiEnergyDisplayProgress = 0.0f;
     private static float bodyEnergyDisplayProgress = 0.0f;
 
-    // Cache tracking for all stats to optimize updates
+    // Last known values for change detection and animation triggering
     private static long lastQiCultivation = -1;
     private static long lastMaxQiCultivation = -1;
     private static long lastBodyCultivation = -1;
@@ -94,6 +101,7 @@ public class QiHUDScreen {
     private static long lastMaxBodyEnergy = -1;
     private static PlayerCultivationAttachment.CultivationType lastFocus = null;
 
+    // Performance optimization fields
     private static int updateCounter = 0;
     private static final int UPDATE_FREQUENCY = 8; // Update every 8 ticks for smooth performance
 
@@ -108,8 +116,16 @@ public class QiHUDScreen {
     private static String cachedTalentSummaryText = "";
     private static int cacheUpdateCounter = 0;
     private static boolean needsUpdate = true;
+
+    // Singleton instance management
     private static QiHUDScreen instance;
 
+    // === REGISTRATION AND LIFECYCLE === //
+
+    /**
+     * Registers the QiHUDScreen instance with the event bus for attachment updates.
+     * This ensures the HUD updates when cultivation data changes.
+     */
     public static void register() {
         if (instance == null) {
             instance = new QiHUDScreen();
@@ -117,9 +133,14 @@ public class QiHUDScreen {
         }
     }
 
+    // === MAIN RENDERING METHOD === //
+
     /**
      * Main rendering method for the unified cultivation HUD.
      * This orchestrates the display of all cultivation-related information.
+     *
+     * @param guiGraphics The graphics context for rendering
+     * @param deltaTracker Frame delta tracking for smooth animations
      */
     public static void renderQiScreen(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
         Minecraft minecraft = Minecraft.getInstance();
@@ -154,32 +175,52 @@ public class QiHUDScreen {
         renderUnifiedCultivationHUD(guiGraphics, centerX, centerY, snapshot);
     }
 
+    // === DATA GATHERING === //
+
     /**
      * Collects all cultivation-related data from unified attachments in one efficient operation.
      * This reduces the number of attachment lookups and provides a consistent snapshot.
+     *
+     * @param player The player to gather data from
+     * @return CultivationDataSnapshot containing all relevant data, or null if attachments are missing
      */
     private static CultivationDataSnapshot gatherCultivationData(LocalPlayer player) {
         try {
-            // Get unified attachments
+            // Get unified attachments using the generic PlayerAttachment methods
             PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
+            PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
             PlayerTalentsAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
 
             // Verify we have all critical data
-            if (cultivation == null || resources == null || talents == null) {
+            if (cultivation == null || stats == null || talents == null) {
+                if (cultivation != null && cultivation.debugEnabled()) {
+                    cultivation.debugWarn("Missing critical attachments for HUD - cultivation: {}, stats: {}, talents: {}",
+                        cultivation != null, stats != null, talents != null);
+                }
                 return null;
             }
 
-            return new CultivationDataSnapshot(cultivation, resources, talents);
+            // Ensure player references are set (utilizing PlayerAttachment methods)
+            if (cultivation.getPlayer() == null) cultivation.setPlayer(player);
+            if (stats.getPlayer() == null) stats.setPlayer(player);
+            if (talents.getPlayer() == null) talents.setPlayer(player);
+
+            return new CultivationDataSnapshot(cultivation, stats, talents);
         } catch (Exception e) {
             // Gracefully handle any attachment access errors
+            ImmortalCultivation.LOGGER.error("Error gathering cultivation data for HUD: {}", e.getMessage());
             return null;
         }
     }
 
+    // === ANIMATION UPDATES === //
+
     /**
      * Updates all stat animations with smooth interpolation.
      * This creates fluid visual feedback as cultivation values change.
+     * Utilizes the generic cultivation data methods for consistent access.
+     *
+     * @param snapshot The current cultivation data snapshot
      */
     private static void updateAllAnimations(CultivationDataSnapshot snapshot) {
         // Update Qi Cultivation animation
@@ -202,35 +243,35 @@ public class QiHUDScreen {
         lastBodyCultivation = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
         lastMaxBodyCultivation = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
 
-        // Update Health animation
+        // Update Health animation using stats attachment
         updateStatAnimation(
-            snapshot.resources.getCurrentHealth(),
-            snapshot.resources.getMaxHealth(),
+            snapshot.stats.getCurrentStat(IStatsData.StatType.HEALTH),
+            snapshot.stats.getMaxStat(IStatsData.StatType.HEALTH),
             lastHealth, lastMaxHealth,
             (progress) -> healthDisplayProgress = progress
         );
-        lastHealth = snapshot.resources.getCurrentHealth();
-        lastMaxHealth = snapshot.resources.getMaxHealth();
+        lastHealth = snapshot.stats.getCurrentStat(IStatsData.StatType.HEALTH);
+        lastMaxHealth = snapshot.stats.getMaxStat(IStatsData.StatType.HEALTH);
 
         // Update Qi Energy animation
         updateStatAnimation(
-            snapshot.resources.getCurrentQi(),
-            snapshot.resources.getMaxQi(),
+            snapshot.stats.getCurrentStat(IStatsData.StatType.QI),
+            snapshot.stats.getMaxStat(IStatsData.StatType.QI),
             lastQiEnergy, lastMaxQiEnergy,
             (progress) -> qiEnergyDisplayProgress = progress
         );
-        lastQiEnergy = snapshot.resources.getCurrentQi();
-        lastMaxQiEnergy = snapshot.resources.getMaxQi();
+        lastQiEnergy = snapshot.stats.getCurrentStat(IStatsData.StatType.QI);
+        lastMaxQiEnergy = snapshot.stats.getMaxStat(IStatsData.StatType.QI);
 
         // Update Body Energy animation
         updateStatAnimation(
-            snapshot.resources.getCurrentBody(),
-            snapshot.resources.getMaxBody(),
+            snapshot.stats.getCurrentStat(IStatsData.StatType.BODY),
+            snapshot.stats.getMaxStat(IStatsData.StatType.BODY),
             lastBodyEnergy, lastMaxBodyEnergy,
             (progress) -> bodyEnergyDisplayProgress = progress
         );
-        lastBodyEnergy = snapshot.resources.getCurrentBody();
-        lastMaxBodyEnergy = snapshot.resources.getMaxBody();
+        lastBodyEnergy = snapshot.stats.getCurrentStat(IStatsData.StatType.BODY);
+        lastMaxBodyEnergy = snapshot.stats.getMaxStat(IStatsData.StatType.BODY);
 
         // Track focus changes
         lastFocus = snapshot.cultivation.getCurrentFocus();
@@ -239,6 +280,12 @@ public class QiHUDScreen {
     /**
      * Generic animation updater for any cultivation stat.
      * Provides smooth interpolation between old and new values.
+     *
+     * @param current Current stat value
+     * @param max Maximum stat value
+     * @param lastCurrent Previously cached current value
+     * @param lastMax Previously cached maximum value
+     * @param updater Function to update the display progress
      */
     private static void updateStatAnimation(long current, long max, long lastCurrent, long lastMax,
                                             ProgressUpdater updater) {
@@ -257,9 +304,14 @@ public class QiHUDScreen {
         }
     }
 
+    // === TEXT CACHING === //
+
     /**
      * Updates all cached text strings to reduce string allocation during rendering.
      * This optimization is important for maintaining smooth frame rates.
+     * Uses the generic talent methods for consistent data access.
+     *
+     * @param snapshot The current cultivation data snapshot
      */
     private static void updateAllTextCache(CultivationDataSnapshot snapshot) {
         // Cache Qi Cultivation text with percentage and absolute values
@@ -278,22 +330,24 @@ public class QiHUDScreen {
 
         // Cache Health text - show absolute values since health is more intuitive that way
         cachedHealthText = String.format("Health: %d/%d",
-            snapshot.resources.getCurrentHealth(),
-            snapshot.resources.getMaxHealth());
+            snapshot.stats.getCurrentStat(IStatsData.StatType.HEALTH),
+            snapshot.stats.getMaxStat(IStatsData.StatType.HEALTH));
 
         // Cache Qi Energy text
-        double qiEnergyPercentage = snapshot.resources.getQiPercentage() * 100;
+        double qiEnergyPercentage = snapshot.stats.getCurrentStat(IStatsData.StatType.QI) > 0 && snapshot.stats.getMaxStat(IStatsData.StatType.QI) > 0
+            ? (double) snapshot.stats.getCurrentStat(IStatsData.StatType.QI) / snapshot.stats.getMaxStat(IStatsData.StatType.QI) * 100 : 0.0;
         cachedQiEnergyText = String.format("Qi Energy: %.0f%% (%d/%d)",
             qiEnergyPercentage,
-            snapshot.resources.getCurrentQi(),
-            snapshot.resources.getMaxQi());
+            snapshot.stats.getCurrentStat(IStatsData.StatType.QI),
+            snapshot.stats.getMaxStat(IStatsData.StatType.QI));
 
         // Cache Body Energy text
-        double bodyEnergyPercentage = snapshot.resources.getBodyPercentage() * 100;
+        double bodyEnergyPercentage = snapshot.stats.getCurrentStat(IStatsData.StatType.BODY) > 0 && snapshot.stats.getMaxStat(IStatsData.StatType.BODY) > 0
+            ? (double) snapshot.stats.getCurrentStat(IStatsData.StatType.BODY) / snapshot.stats.getMaxStat(IStatsData.StatType.BODY) * 100 : 0.0;
         cachedBodyEnergyText = String.format("Body Energy: %.0f%% (%d/%d)",
             bodyEnergyPercentage,
-            snapshot.resources.getCurrentBody(),
-            snapshot.resources.getMaxBody());
+            snapshot.stats.getCurrentStat(IStatsData.StatType.BODY),
+            snapshot.stats.getMaxStat(IStatsData.StatType.BODY));
 
         // Cache focus text with bonus indication
         cachedFocusText = String.format("%s Focus (2x rate)",
@@ -304,14 +358,27 @@ public class QiHUDScreen {
             snapshot.cultivation.getRealm(ICultivationData.CultivationType.QI).getDisplayName(),
             snapshot.cultivation.getRealm(ICultivationData.CultivationType.BODY).getDisplayName());
 
-        // Cache talent summary
-        cachedTalentSummaryText = String.format("Talent: %.1fx | %.1fx",
-            snapshot.talents.getSpiritualRootMultiplier(),
-            snapshot.talents.getPhysiqueMultiplier());
+        // Cache talent summary using generic talent methods
+        String spiritualRootDisplay = snapshot.talents.getTalentDisplayName(PlayerTalentsAttachment.TalentType.SPIRITUAL_ROOT);
+        String physiqueDisplay = snapshot.talents.getTalentDisplayName(PlayerTalentsAttachment.TalentType.PHYSIQUE);
+        float spiritualRootMultiplier = snapshot.talents.getTalentMultiplier(PlayerTalentsAttachment.TalentType.SPIRITUAL_ROOT);
+        float physiqueMultiplier = snapshot.talents.getTalentMultiplier(PlayerTalentsAttachment.TalentType.PHYSIQUE);
+
+        cachedTalentSummaryText = String.format("%s (%.1fx) | %s (%.1fx)",
+            spiritualRootDisplay, spiritualRootMultiplier,
+            physiqueDisplay, physiqueMultiplier);
     }
+
+    // === RENDERING METHODS === //
 
     /**
      * Renders the complete unified cultivation HUD system.
+     * This includes the focus indicator circle and all cultivation statistics.
+     *
+     * @param guiGraphics The graphics context for rendering
+     * @param centerX The X coordinate of the HUD center
+     * @param centerY The Y coordinate of the HUD center
+     * @param snapshot The current cultivation data snapshot
      */
     private static void renderUnifiedCultivationHUD(GuiGraphics guiGraphics, int centerX, int centerY,
                                                     CultivationDataSnapshot snapshot) {
@@ -325,6 +392,11 @@ public class QiHUDScreen {
     /**
      * Renders the central focus indicator showing which cultivation type has the 2x bonus.
      * This is the most important visual element for strategic gameplay decisions.
+     *
+     * @param guiGraphics The graphics context for rendering
+     * @param centerX The X coordinate of the circle center
+     * @param centerY The Y coordinate of the circle center
+     * @param cultivation The player's cultivation attachment
      */
     private static void renderFocusIndicatorCircle(GuiGraphics guiGraphics, int centerX, int centerY,
                                                    PlayerCultivationAttachment cultivation) {
@@ -365,21 +437,25 @@ public class QiHUDScreen {
 
     /**
      * Renders all cultivation statistics with color-coded progress indicators.
+     * This displays cached text with appropriate colors based on stat levels.
+     *
+     * @param guiGraphics The graphics context for rendering
+     * @param centerX The X coordinate of the HUD center
+     * @param centerY The Y coordinate of the HUD center
+     * @param snapshot The current cultivation data snapshot
      */
     private static void renderCultivationStatistics(GuiGraphics guiGraphics, int centerX, int centerY,
                                                     CultivationDataSnapshot snapshot) {
         Font font = Minecraft.getInstance().font;
 
-        // Use scaled rendering for compact text display
+        // Setup text scaling and positioning
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(TEXT_SCALE, TEXT_SCALE, 1.0f);
 
         int textX = (int) ((centerX + TEXT_OFFSET_X) / TEXT_SCALE);
-        int baseY = (int) ((centerY - 40) / TEXT_SCALE); // Start higher to fit more stats
+        int currentY = (int) ((centerY - (4 * STAT_SPACING)) / TEXT_SCALE);
 
-        int currentY = baseY;
-
-        // Render focus indicator text
+        // Render focus indicator with appropriate color
         if (!cachedFocusText.isEmpty()) {
             int focusColor = snapshot.cultivation.getCurrentFocus() == PlayerCultivationAttachment.CultivationType.QI ?
                 FOCUS_QI_COLOR : FOCUS_BODY_COLOR;
@@ -436,11 +512,13 @@ public class QiHUDScreen {
         guiGraphics.pose().popPose();
     }
 
-    // === Color Calculation Methods ===
-    // These methods provide visual feedback about stat levels through color progression
+    // === COLOR CALCULATION METHODS === //
 
     /**
-     * Determines Qi Cultivation color based on progression (green spectrum for spiritual growth)
+     * Determines Qi Cultivation color based on progression (green spectrum for spiritual growth).
+     *
+     * @param progress The cultivation progress as a float between 0.0 and 1.0
+     * @return The appropriate color based on progress level
      */
     private static int getQiCultivationColor(float progress) {
         if (progress > 0.85f) return QI_CULTIVATION_COLOR_FULL;   // Gold - ready for breakthrough
@@ -450,7 +528,10 @@ public class QiHUDScreen {
     }
 
     /**
-     * Determines Body Cultivation color based on progression (red spectrum for physical power)
+     * Determines Body Cultivation color based on progression (red spectrum for physical power).
+     *
+     * @param progress The cultivation progress as a float between 0.0 and 1.0
+     * @return The appropriate color based on progress level
      */
     private static int getBodyCultivationColor(float progress) {
         if (progress > 0.85f) return BODY_CULTIVATION_COLOR_FULL; // Bright red - peak physical power
@@ -460,7 +541,10 @@ public class QiHUDScreen {
     }
 
     /**
-     * Determines Health color based on current vitality (pink spectrum for life force)
+     * Determines Health color based on current vitality (pink spectrum for life force).
+     *
+     * @param progress The health progress as a float between 0.0 and 1.0
+     * @return The appropriate color based on health level
      */
     private static int getHealthColor(float progress) {
         if (progress > 0.85f) return HEALTH_COLOR_FULL;  // Bright pink - peak vitality
@@ -470,7 +554,10 @@ public class QiHUDScreen {
     }
 
     /**
-     * Determines Qi Energy color based on current reserves (blue spectrum for spiritual energy)
+     * Determines Qi Energy color based on current reserves (blue spectrum for spiritual energy).
+     *
+     * @param progress The energy progress as a float between 0.0 and 1.0
+     * @return The appropriate color based on energy level
      */
     private static int getQiEnergyColor(float progress) {
         if (progress > 0.85f) return QI_ENERGY_COLOR_FULL; // Bright blue - full energy reserves
@@ -480,7 +567,10 @@ public class QiHUDScreen {
     }
 
     /**
-     * Determines Body Energy color based on current reserves (red spectrum for physical energy)
+     * Determines Body Energy color based on current reserves (red spectrum for physical energy).
+     *
+     * @param progress The energy progress as a float between 0.0 and 1.0
+     * @return The appropriate color based on energy level
      */
     private static int getBodyEnergyColor(float progress) {
         if (progress > 0.85f) return BODY_ENERGY_COLOR_FULL; // Bright red - full energy reserves
@@ -489,17 +579,28 @@ public class QiHUDScreen {
         return BODY_ENERGY_COLOR_LOW;                        // Dark red - low energy
     }
 
-    // === Helper Interfaces and Classes ===
+    // === HELPER INTERFACES AND CLASSES === //
 
     /**
-     * Functional interface for smooth animation updates
+     * Functional interface for smooth animation updates.
+     * This allows for flexible progress updating across different stat types.
      */
     @FunctionalInterface
     private interface ProgressUpdater {
+        /**
+         * Updates the progress value for animation interpolation.
+         *
+         * @param newProgress The new progress value to set
+         */
         void updateProgress(float newProgress);
 
+        /**
+         * Gets the current progress value for interpolation calculations.
+         * Default implementation returns 0.0f - should be overridden when needed.
+         *
+         * @return The current progress value
+         */
         default float getCurrentProgress() {
-            // This would need to be implemented by the caller to return current progress
             return 0.0f;
         }
     }
@@ -507,40 +608,45 @@ public class QiHUDScreen {
     /**
      * Data snapshot containing all cultivation information for consistent rendering using unified attachments.
      * This prevents inconsistencies that could occur if attachments change mid-render.
+     * Uses the updated attachment types that properly extend PlayerAttachment.
+     *
+     * @param cultivation The player's cultivation attachment
+     * @param stats The player's stats attachment (replaces the old resource attachment)
+     * @param talents The player's talents attachment
      */
     private record CultivationDataSnapshot(
         PlayerCultivationAttachment cultivation,
-        PlayerResourceAttachment resources,
+        PlayerStatsAttachment stats,
         PlayerTalentsAttachment talents
     ) {
+        /**
+         * Validates that all attachments in the snapshot are properly initialized.
+         *
+         * @return true if all attachments are valid and have debug capabilities
+         */
+        public boolean isValid() {
+            return cultivation != null && stats != null && talents != null &&
+                cultivation.debugEnabled() && stats.debugEnabled() && talents.debugEnabled();
+        }
     }
+
+    // === EVENT HANDLERS === //
 
     /**
      * Event handler for attachment updates.
      * This ensures the HUD refreshes when cultivation data changes.
+     * Utilizes the generic PlayerAttachment debugging capabilities.
+     *
+     * @param event The attachment update event
      */
     @SubscribeEvent
     public void onAttachmentUpdate(ICModAttachmentUpdateEvent event) {
-        if (event.getPlayer().equals(Minecraft.getInstance().player)) {
-            if (event.isAttachmentType(ICModAttachmentTypes.PLAYER_CULTIVATION.get()) ||
-                event.isAttachmentType(ICModAttachmentTypes.PLAYER_RESOURCES.get()) ||
-                event.isAttachmentType(ICModAttachmentTypes.PLAYER_TALENTS.get())) {
+        if (event.getPlayer() != null && event.getPlayer().level().isClientSide) {
+            needsUpdate = true;
 
-                // Force immediate cache update for health changes
-                needsUpdate = true;
-                updateCounter = UPDATE_FREQUENCY; // Force immediate update next frame
-
-                // Debug logging to verify client receives updates
-                if (event.isAttachmentType(ICModAttachmentTypes.PLAYER_RESOURCES.get())) {
-                    LocalPlayer player = Minecraft.getInstance().player;
-                    if (player != null) {
-                        PlayerResourceAttachment resources = player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get());
-                        if (resources != null) {
-                            ImmortalCultivation.LOGGER.info("Client received health update: {}/{}",
-                                resources.getCurrentHealth(), resources.getMaxHealth());
-                        }
-                    }
-                }
+            // Use debug logging if available
+            if (instance != null) {
+                ImmortalCultivation.LOGGER.debug("[QIHUD] Attachment update received, marking for refresh");
             }
         }
     }
