@@ -228,7 +228,17 @@ public class QiHUDScreen {
             snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI),
             snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI),
             lastQiCultivation, lastMaxQiCultivation,
-            (progress) -> qiCultivationDisplayProgress = progress
+            new ProgressUpdater() {
+                @Override
+                public void updateProgress(float newProgress) {
+                    qiCultivationDisplayProgress = newProgress;
+                }
+
+                @Override
+                public float getCurrentProgress() {
+                    return qiCultivationDisplayProgress;
+                }
+            }
         );
         lastQiCultivation = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.QI);
         lastMaxQiCultivation = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.QI);
@@ -238,17 +248,37 @@ public class QiHUDScreen {
             snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY),
             snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY),
             lastBodyCultivation, lastMaxBodyCultivation,
-            (progress) -> bodyCultivationDisplayProgress = progress
+            new ProgressUpdater() {
+                @Override
+                public void updateProgress(float newProgress) {
+                    bodyCultivationDisplayProgress = newProgress;
+                }
+
+                @Override
+                public float getCurrentProgress() {
+                    return bodyCultivationDisplayProgress;
+                }
+            }
         );
         lastBodyCultivation = snapshot.cultivation.getCurrentCultivation(ICultivationData.CultivationType.BODY);
         lastMaxBodyCultivation = snapshot.cultivation.getMaxCultivation(ICultivationData.CultivationType.BODY);
 
-        // Update Health animation using stats attachment
+        // Update Health animation using stats attachment - THIS IS THE KEY FIX
         updateStatAnimation(
             snapshot.stats.getCurrentStat(IStatsData.StatType.HEALTH),
             snapshot.stats.getMaxStat(IStatsData.StatType.HEALTH),
             lastHealth, lastMaxHealth,
-            (progress) -> healthDisplayProgress = progress
+            new ProgressUpdater() {
+                @Override
+                public void updateProgress(float newProgress) {
+                    healthDisplayProgress = newProgress;
+                }
+
+                @Override
+                public float getCurrentProgress() {
+                    return healthDisplayProgress;
+                }
+            }
         );
         lastHealth = snapshot.stats.getCurrentStat(IStatsData.StatType.HEALTH);
         lastMaxHealth = snapshot.stats.getMaxStat(IStatsData.StatType.HEALTH);
@@ -258,7 +288,17 @@ public class QiHUDScreen {
             snapshot.stats.getCurrentStat(IStatsData.StatType.QI),
             snapshot.stats.getMaxStat(IStatsData.StatType.QI),
             lastQiEnergy, lastMaxQiEnergy,
-            (progress) -> qiEnergyDisplayProgress = progress
+            new ProgressUpdater() {
+                @Override
+                public void updateProgress(float newProgress) {
+                    qiEnergyDisplayProgress = newProgress;
+                }
+
+                @Override
+                public float getCurrentProgress() {
+                    return qiEnergyDisplayProgress;
+                }
+            }
         );
         lastQiEnergy = snapshot.stats.getCurrentStat(IStatsData.StatType.QI);
         lastMaxQiEnergy = snapshot.stats.getMaxStat(IStatsData.StatType.QI);
@@ -268,7 +308,17 @@ public class QiHUDScreen {
             snapshot.stats.getCurrentStat(IStatsData.StatType.BODY),
             snapshot.stats.getMaxStat(IStatsData.StatType.BODY),
             lastBodyEnergy, lastMaxBodyEnergy,
-            (progress) -> bodyEnergyDisplayProgress = progress
+            new ProgressUpdater() {
+                @Override
+                public void updateProgress(float newProgress) {
+                    bodyEnergyDisplayProgress = newProgress;
+                }
+
+                @Override
+                public float getCurrentProgress() {
+                    return bodyEnergyDisplayProgress;
+                }
+            }
         );
         lastBodyEnergy = snapshot.stats.getCurrentStat(IStatsData.StatType.BODY);
         lastMaxBodyEnergy = snapshot.stats.getMaxStat(IStatsData.StatType.BODY);

@@ -223,7 +223,32 @@ public class ICModEventManager {
     }
 
     /**
-     * Intercepts healing events for cultivation system
+     * Converts vanilla damage to custom damage using simple 1:1 scaling.
+     * Maintains compatibility with vanilla and all mods.
+     *
+     * @param vanillaDamage Original vanilla damage
+     * @param player The player taking damage
+     * @return Custom damage (1:1 conversion)
+     */
+    private static long convertToCustomDamage(float vanillaDamage, Player player) {
+        // Simple 1:1 conversion for vanilla/mod compatibility
+        return Math.round(vanillaDamage);
+    }
+
+    /**
+     * Converts vanilla healing to custom healing using simple 1:1 scaling.
+     *
+     * @param vanillaHealing Original vanilla healing
+     * @param player The player being healed
+     * @return Custom healing (1:1 conversion)
+     */
+    private static long convertToCustomHealing(float vanillaHealing, Player player) {
+        // Simple 1:1 conversion - REMOVED the *100 multiplier that was causing instant heals
+        return Math.round(vanillaHealing);
+    }
+
+    /**
+     * Fixed healing event handler that maintains vanilla compatibility.
      *
      * @param event Healing event
      */
@@ -243,15 +268,11 @@ public class ICModEventManager {
         // Cancel vanilla healing
         event.setAmount(0.0f);
 
-        // Convert to custom healing
+        // Convert to custom healing with 1:1 scaling (no more 100x multiplier!)
         long customHealing = convertToCustomHealing(vanillaHealing, player);
 
         if (customHealing > 0) {
-            long healthBefore = statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH);
-            statsAttachment.addStat(IStatsData.StatType.HEALTH, customHealing);
-            long healthAfter = statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH);
-
-            long actualHealing = healthAfter - healthBefore;
+            long actualHealing = statsAttachment.addStat(IStatsData.StatType.HEALTH, customHealing);
 
             if (actualHealing > 0) {
                 // Update vanilla health display
@@ -260,8 +281,65 @@ public class ICModEventManager {
                 // Mark for sync
                 statsAttachment.markDirty();
 
-                ImmortalCultivation.LOGGER.debug("Applied {} custom healing to {}",
-                    actualHealing, player.getName().getString());
+                ImmortalCultivation.LOGGER.debug("Applied {} custom healing to {} (vanilla: {})",
+                    actualHealing, player.getName().getString(), vanillaHealing);
+            }
+        }
+    }
+
+    /**
+     * Simple damage event handler with 1:1 conversion.
+     *
+     * @param event Damage event
+     */
+    @SubscribeEvent(priority = EventPriority.HIGH)
+    public static void onDamage(LivingIncomingDamageEvent event) {
+        if (!(event.getEntity() instanceof Player player) || player.level().isClientSide()) {
+            return;
+        }
+
+        UUID playerId = player.getUUID();
+        DamageSource damageSource = event.getSource();
+        String sourceKey = generateDamageSourceKey(damageSource);
+
+        // Check immunity
+        if (isPlayerImmune(playerId, sourceKey)) {
+            event.setCanceled(true);
+            return;
+        }
+
+        PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+        if (statsAttachment == null) {
+            return;
+        }
+
+        float vanillaDamage = event.getAmount();
+
+        // Cancel vanilla damage
+        event.setCanceled(true);
+
+        // Convert to custom damage with 1:1 scaling
+        long customDamage = convertToCustomDamage(vanillaDamage, player);
+
+        if (customDamage > 0) {
+            // Apply custom damage
+            long actualDamage = statsAttachment.consumeStat(IStatsData.StatType.HEALTH, customDamage);
+
+            if (actualDamage > 0) {
+                // Set immunity
+                setPlayerImmunity(playerId, sourceKey, calculateImmunityDuration(customDamage));
+
+                // Update vanilla health display
+                updateVanillaHealthDisplay(player, statsAttachment);
+
+                // Apply damage feedback
+                applyDamageFeedback(player, actualDamage, statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH), damageSource);
+
+                // Mark for sync
+                statsAttachment.markDirty();
+
+                ImmortalCultivation.LOGGER.debug("Applied {} custom damage to {} (vanilla: {})",
+                    actualDamage, player.getName().getString(), vanillaDamage);
             }
         }
     }
@@ -434,28 +512,29 @@ public class ICModEventManager {
     }
 
     /**
-     * Converts vanilla damage to custom damage scaling
+     * Converts vanilla damage to custom damage using simple 1:1 scaling.
+     * Maintains compatibility with vanilla and all mods.
      *
      * @param vanillaDamage Original vanilla damage
      * @param player The player taking damage
-     * @return Scaled custom damage
+     * @return Custom damage (1:1 conversion)
      */
-    private static long convertToCustomDamage(float vanillaDamage, Player player) {
-        // Implement your damage conversion logic here
-        // This is a placeholder - adjust based on your cultivation system
-        return Math.round(vanillaDamage * 100); // Example: 1 vanilla = 100 custom
+    private static long convertToCustomDamage(double vanillaDamage, Player player) {
+        // Simple 1:1 conversion for vanilla/mod compatibility
+        return Math.round(vanillaDamage);
     }
 
     /**
-     * Converts vanilla healing to custom healing scaling
+     * Converts vanilla healing to custom healing using simple 1:1 scaling.
+     * Fixed to remove the 100x multiplier that was causing instant full heals.
      *
      * @param vanillaHealing Original vanilla healing
      * @param player The player being healed
-     * @return Scaled custom healing
+     * @return Custom healing (1:1 conversion)
      */
-    private static long convertToCustomHealing(float vanillaHealing, Player player) {
-        // Implement your healing conversion logic here
-        return Math.round(vanillaHealing * 100); // Example: 1 vanilla = 100 custom
+    private static long convertToCustomHealing(double vanillaHealing, Player player) {
+        // Simple 1:1 conversion - REMOVED the *100 multiplier that was causing instant heals
+        return Math.round(vanillaHealing);
     }
 
     /**

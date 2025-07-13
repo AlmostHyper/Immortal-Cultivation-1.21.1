@@ -138,7 +138,8 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     }
 
     /**
-     * Sets the maximum value for the specified stat type and recalculates current if needed.
+     * Sets the maximum value for the specified stat type and clamps current if needed.
+     * Fixed to only clamp downward, never restore health to max.
      * @param type The stat type to modify
      * @param value The new maximum value
      */
@@ -154,8 +155,22 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
         }
 
         if (oldMax != newMax) {
-            // Clamp current stat to new maximum
-            setCurrentStat(type, getCurrentStat(type));
+            long currentValue = getCurrentStat(type);
+
+            // Only clamp current stat DOWN if it exceeds the new maximum
+            // Never increase current stat - this prevents health restoration bugs
+            if (currentValue > newMax) {
+                setCurrentStat(type, newMax);
+
+                if (debugEnabled()) {
+                    debugLog("Clamped {} from {} to {} due to max change ({} -> {})",
+                        type.getDisplayName(), currentValue, newMax, oldMax, newMax);
+                }
+            } else if (debugEnabled()) {
+                debugLog("Max {} changed from {} to {}, current {} unchanged",
+                    type.getDisplayName(), oldMax, newMax, currentValue);
+            }
+
             markDirty();
         }
     }
@@ -168,9 +183,9 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     @Override
     public double getStatRegenRate(StatType type) {
         return switch (type) {
-            case HEALTH -> 0.1 + permanentHealthRegenBonus;
-            case QI -> 0.2 + permanentQiRegenBonus;
-            case BODY -> 0.15 + permanentBodyRegenBonus;
+            case HEALTH -> 0.0 + permanentHealthRegenBonus;
+            case QI -> 0.0 + permanentQiRegenBonus;
+            case BODY -> 0.0 + permanentBodyRegenBonus;
         };
     }
 
@@ -416,16 +431,26 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     // === UTILITY METHODS === //
 
     /**
-     * Recalculates the maximum value for a specific stat type based on base values and permanent bonuses.
+     * Fixed recalculateStatMaximum to prevent health restoration during combat.
      * @param type The stat type to recalculate
      */
     private void recalculateStatMaximum(StatType type) {
+        long oldMax = getMaxStat(type);
+
         long baseValue = switch (type) {
             case HEALTH -> MORTAL_BASE_HEALTH;
             case QI -> MORTAL_BASE_QI;
             case BODY -> MORTAL_BASE_BODY;
         };
-        setMaxStat(type, baseValue + getPermanentStatBonus(type));
+
+        long newMax = baseValue + getPermanentStatBonus(type);
+
+        if (debugEnabled()) {
+            debugLog("Recalculating {} max: {} -> {} (base: {}, bonus: {})",
+                type.getDisplayName(), oldMax, newMax, baseValue, getPermanentStatBonus(type));
+        }
+
+        setMaxStat(type, newMax);
     }
 
     /**
@@ -435,6 +460,42 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     public void recalculateAll() {
         for (StatType type : StatType.values()) {
             recalculateStatMaximum(type);
+        }
+    }
+
+    /**
+     * Override to add debugging for stat changes - helps track unexpected healing.
+     */
+    @Override
+    public void onStatChanged(StatType type, long oldValue, long newValue) {
+        if (type == StatType.HEALTH && debugEnabled()) {
+            debugLog("Health changed: {} -> {} (diff: {})", oldValue, newValue, newValue - oldValue);
+
+            // Log stack trace for unexpected large heals to help debug
+            if (newValue - oldValue > 5) {
+                debugWarn("Large health change detected! Stack trace:");
+                Thread.dumpStack();
+            }
+        }
+    }
+
+    /**
+     * Override to add debugging for stat additions - helps track regeneration.
+     */
+    @Override
+    public void onStatAdded(StatType type, long amount) {
+        if (type == StatType.HEALTH && debugEnabled()) {
+            debugLog("Health added: +{} points", amount);
+        }
+    }
+
+    /**
+     * Override to add debugging for stat consumption - helps track damage.
+     */
+    @Override
+    public void onStatConsumed(StatType type, long amount) {
+        if (type == StatType.HEALTH && debugEnabled()) {
+            debugLog("Health consumed: -{} points", amount);
         }
     }
 
@@ -463,14 +524,28 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
                     // Add regeneration per tick (divide by 20 for per-second rate)
                     currentFraction += regenRate / 20.0;
 
+                    // Cap the maximum regeneration per tick to prevent instant healing exploits
+                    double maxRegenPerTick = getMaxStat(type) * 0.05; // Max 5% of total health per tick
+
                     if (currentFraction >= 1.0) {
-                        long regenAmount = (long) currentFraction;
+                        long regenAmount = Math.min((long) currentFraction, (long) maxRegenPerTick);
                         currentFraction -= regenAmount;
+
+                        // Additional safety check: prevent healing more than 1 point per tick for health
+                        if (type == StatType.HEALTH) {
+                            regenAmount = Math.min(regenAmount, 1L);
+                        }
 
                         long actualAdded = addStat(type, regenAmount);
                         if (actualAdded > 0) {
                             anyRegenOccurred = true;
                             onStatAdded(type, actualAdded);
+
+                            // Debug log for health regeneration to track the issue
+                            if (type == StatType.HEALTH && debugEnabled()) {
+                                debugLog("Health regeneration: +{} (rate: {}, fraction: {})",
+                                    actualAdded, regenRate, currentFraction);
+                            }
                         }
                     }
 
