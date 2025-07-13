@@ -45,7 +45,7 @@ public abstract class PlayerAttachment<T extends PlayerAttachment<T>> implements
     private transient long syncCount = 0L;
     private transient long errorCount = 0L;
     private transient String lastError = null;
-    private transient long lastStateChangeTime = System.currentTimeMillis();
+    transient long lastStateChangeTime = System.currentTimeMillis();
 
     // === PLAYER REFERENCE MANAGEMENT === //
 
