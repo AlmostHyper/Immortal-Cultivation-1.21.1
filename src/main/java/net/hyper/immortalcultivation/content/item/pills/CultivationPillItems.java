@@ -162,15 +162,15 @@ public class CultivationPillItems {
                     PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
                     double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, this.baseRate);
 
-                    PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
-                    double effectiveness = pillManager.consumePill(this, rarity); // This marks the attachment dirty
+                    // Call consumePill directly on the attachment - no more PillConsumptionManager
+                    double effectiveness = pillAttachment.consumePill(this, rarity); // Attachment handles dirty marking internally
                     double finalRateBonus = rarityMultipliedBonus * effectiveness;
 
                     cultivation.addBonusWithDiminishing(this.cultivationType, finalRateBonus, 0.0, 1.0);
 
                     sendConsumptionMessage(player, this.pillName, rarity, finalRateBonus,
-                            effectiveness, pillManager.getConsumptionCount(this, rarity),
-                            this.cultivationType == ICultivationData.CultivationType.QI ? ChatFormatting.AQUA : ChatFormatting.RED);
+                        effectiveness, pillAttachment.getConsumptionCount(this, rarity),
+                        this.cultivationType == ICultivationData.CultivationType.QI ? ChatFormatting.AQUA : ChatFormatting.RED);
                 })
             );
         }
@@ -193,13 +193,13 @@ public class CultivationPillItems {
             Player player = getPlayerFromContext(context);
             if (player != null) {
                 player.getExistingData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION).ifPresent(pillAttachment -> {
-                    PillConsumptionManager pillManager = pillAttachment.getPillConsumptionManager();
-                    double effectiveness = pillManager.getNextConsumptionEffectiveness(this, rarity);
-                    int count = pillManager.getConsumptionCount(this, rarity);
+                    // Call methods directly on the attachment
+                    double effectiveness = pillAttachment.getNextConsumptionEffectiveness(this, rarity);
+                    int count = pillAttachment.getConsumptionCount(this, rarity);
                     double effectiveRate = rarityAdjustedRate * effectiveness;
 
                     tooltip.add(Component.literal("Current Effect: +" + String.format("%.3f", effectiveRate) + " " + typeName + "/sec")
-                            .withStyle(effectiveness >= 0.8 ? primaryColor : effectiveness >= 0.5 ? ChatFormatting.YELLOW : ChatFormatting.RED));
+                        .withStyle(effectiveness >= 0.8 ? primaryColor : effectiveness >= 0.5 ? ChatFormatting.YELLOW : ChatFormatting.RED));
 
                     if (count > 0 || effectiveness < 1.0) {
                         tooltip.add(Component.empty());
@@ -209,7 +209,8 @@ public class CultivationPillItems {
 
                         if (count < 100) {
                             int milestone = getNextMilestone(count);
-                            double futureEff = PillConsumptionManager.calculateEffectivenessAtCount(rarity, milestone);
+                            // Use static method for future effectiveness calculation
+                            double futureEff = PlayerPillConsumptionAttachment.calculateEffectivenessAtCount(rarity, milestone);
                             tooltip.add(Component.literal("◆ At " + milestone + ": " + String.format("%.1f%%", futureEff * 100) + " eff.").withStyle(ChatFormatting.DARK_GRAY));
                         }
                         if (rarity != null) {

@@ -863,6 +863,39 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
         }
     }
 
+    /**
+     * Adds a bonus to the existing additive bonus for the specified cultivation type.
+     * This method accumulates bonuses rather than replacing them, making it suitable
+     * for permanent consumable effects like pills. The "diminishing" aspect refers
+     * to the fact that the bonus amount passed in has already been reduced by
+     * consumption effectiveness calculations.
+     *
+     * @param type The cultivation type to modify
+     * @param bonusAmount The bonus amount to add (already adjusted for effectiveness)
+     * @param minValue Minimum allowed total bonus value (prevents negative bonuses)
+     * @param maxValue Maximum allowed total bonus value (prevents excessive bonuses)
+     */
+    public void addBonusWithDiminishing(CultivationType type, double bonusAmount, double minValue, double maxValue) {
+        if (bonusAmount == 0.0) return; // No change needed
+
+        double currentBonus = getAdditiveBonus(type);
+        double newBonus = currentBonus + bonusAmount;
+
+        // Apply min/max constraints
+        newBonus = Math.max(minValue, Math.min(maxValue, newBonus));
+
+        // Only update if the value actually changed
+        if (currentBonus != newBonus) {
+            setAdditiveBonus(type, newBonus);
+
+            if (debugEnabled()) {
+                debugLog("Added bonus with diminishing for {}: {} +{} -> {} (clamped to [{}, {}])",
+                    player != null ? player.getName().getString() : "unknown",
+                    type, bonusAmount, newBonus, minValue, maxValue);
+            }
+        }
+    }
+
     // === CULTIVATION EFFICIENCY === //
 
     /**
