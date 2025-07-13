@@ -8,9 +8,11 @@ import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -514,6 +516,128 @@ public class ICModEventManager {
         if (attackAttribute != null) {
             // Remove old modifiers and add new ones based on cultivation
             // Implementation depends on your attribute system
+        }
+    }
+
+    /**
+     * Refreshes and recalculates all player stats after permanent bonuses are applied
+     * from cultivation realm advancement, pills, or other permanent modifiers.
+     * This handles the complete PlayerStatsAttachment system including Health, Qi, Body,
+     * attack damage, movement speed, and jump height.
+     *
+     * @param player The server player whose stats need to be refreshed
+     */
+    public static void refreshStats(ServerPlayer player) {
+        if (player == null) {
+            ImmortalCultivation.LOGGER.warn("Cannot refresh stats for null player");
+            return;
+        }
+
+        try {
+            PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            if (statsAttachment == null) {
+                ImmortalCultivation.LOGGER.warn("Cannot refresh stats: PlayerStatsAttachment not found for player {}",
+                    player.getName().getString());
+                return;
+            }
+
+            // Force recalculation of all stat maximums based on permanent bonuses
+            // This includes Health, Qi, and Body maximum calculations
+            statsAttachment.recalculateAll();
+
+            // Update vanilla health display to match custom health system
+            updateVanillaHealthDisplay(player, statsAttachment);
+
+            // Apply all attribute modifiers (combat stats)
+            applyAllAttributeModifiers(player, statsAttachment);
+
+            // Mark attachment for client synchronization
+            statsAttachment.markDirty();
+
+            ImmortalCultivation.LOGGER.debug("Successfully refreshed all stats for player: {} - H:{}/{} Q:{}/{} B:{}/{}",
+                player.getName().getString(),
+                statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH),
+                statsAttachment.getMaxStat(IStatsData.StatType.HEALTH),
+                statsAttachment.getCurrentStat(IStatsData.StatType.QI),
+                statsAttachment.getMaxStat(IStatsData.StatType.QI),
+                statsAttachment.getCurrentStat(IStatsData.StatType.BODY),
+                statsAttachment.getMaxStat(IStatsData.StatType.BODY));
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error refreshing stats for player {}: {}",
+                player.getName().getString(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Applies all attribute modifiers (attack damage, movement speed, jump height)
+     * based on permanent cultivation bonuses. Uses unique ResourceLocations to avoid conflicts with
+     * equipment-based modifiers handled by recalculatePlayerAttributes.
+     *
+     * @param player The server player to apply modifiers to
+     * @param statsAttachment The stats attachment containing permanent bonuses
+     */
+    private static void applyAllAttributeModifiers(ServerPlayer player, PlayerStatsAttachment statsAttachment) {
+        try {
+            // Use specific ResourceLocations for cultivation-based modifiers (different from equipment modifiers)
+            ResourceLocation cultivationSpeedModifierId = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "cultivation_speed_bonus");
+            ResourceLocation cultivationAttackModifierId = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "cultivation_attack_bonus");
+            ResourceLocation cultivationJumpModifierId = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "cultivation_jump_bonus");
+
+            // Apply movement speed modifier
+            AttributeInstance movementSpeed = player.getAttribute(Attributes.MOVEMENT_SPEED);
+            if (movementSpeed != null) {
+                double totalSpeedBonus = statsAttachment.getPermanentMovementSpeedBonus() +
+                    statsAttachment.getMovementSpeedBonus();
+
+                // Remove existing cultivation speed modifier
+                movementSpeed.removeModifier(cultivationSpeedModifierId);
+
+                if (totalSpeedBonus != 0.0) {
+                    movementSpeed.addPermanentModifier(new AttributeModifier(
+                        cultivationSpeedModifierId,
+                        totalSpeedBonus,
+                        AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+                }
+            }
+
+            // Apply attack damage modifier
+            AttributeInstance attackDamage = player.getAttribute(Attributes.ATTACK_DAMAGE);
+            if (attackDamage != null) {
+                double totalAttackBonus = statsAttachment.getPermanentAttackDamageBonus() +
+                    statsAttachment.getAttackDamageBonus();
+
+                // Remove existing cultivation attack modifier
+                attackDamage.removeModifier(cultivationAttackModifierId);
+
+                if (totalAttackBonus != 0.0) {
+                    attackDamage.addPermanentModifier(new AttributeModifier(
+                        cultivationAttackModifierId,
+                        totalAttackBonus,
+                        AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+                }
+            }
+
+            // Apply jump height modifier
+            AttributeInstance jumpStrength = player.getAttribute(Attributes.JUMP_STRENGTH);
+            if (jumpStrength != null) {
+                double totalJumpBonus = statsAttachment.getPermanentJumpHeightBonus() +
+                    statsAttachment.getJumpHeightBonus();
+
+                // Remove existing cultivation jump modifier
+                jumpStrength.removeModifier(cultivationJumpModifierId);
+
+                if (totalJumpBonus != 0.0) {
+                    jumpStrength.addPermanentModifier(new AttributeModifier(
+                        cultivationJumpModifierId,
+                        totalJumpBonus,
+                        AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+                }
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying attribute modifiers for player {}: {}",
+                player.getName().getString(), e.getMessage(), e);
         }
     }
 
