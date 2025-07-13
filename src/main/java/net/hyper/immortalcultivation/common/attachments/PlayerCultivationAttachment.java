@@ -636,6 +636,30 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     // === FOCUS SYSTEM === //
 
     /**
+     * Toggles the cultivation focus between Qi and Body cultivation types.
+     * This is a convenience method that switches to the opposite of the current focus.
+     * Respects the focus change cooldown and leverages the existing setCurrentFocus infrastructure.
+     *
+     * @return True if focus was successfully toggled, false if on cooldown or other failure
+     */
+    public boolean toggleFocus() {
+        // Determine the opposite focus type
+        CultivationType newFocus = (currentFocus == CultivationType.QI) ?
+            CultivationType.BODY : CultivationType.QI;
+
+        // Use the existing setCurrentFocus method which handles all validation,
+        // cooldowns, dirty marking, and player notifications
+        boolean success = setCurrentFocus(newFocus);
+
+        if (debugEnabled() && !success) {
+            debugLog("Focus toggle failed for {}: cooldown or other restriction",
+                player != null ? player.getName().getString() : "unknown");
+        }
+
+        return success;
+    }
+
+    /**
      * Gets the current cultivation focus type.
      * @return The currently focused cultivation type
      */

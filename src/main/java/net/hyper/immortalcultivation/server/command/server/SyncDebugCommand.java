@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.server.command;
+package net.hyper.immortalcultivation.server.command.server;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;

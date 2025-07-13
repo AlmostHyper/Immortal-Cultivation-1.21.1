@@ -344,6 +344,77 @@ public class PlayerTalentsAttachment extends PlayerAttachment<PlayerTalentsAttac
         markDirty();
     }
 
+    // === BREAKTHROUGH BONUS METHODS === //
+
+    /**
+     * Gets the breakthrough bonus percentage provided by the spiritual root.
+     * Only affects Qi cultivation breakthroughs.
+     * @return Breakthrough bonus percentage (0.0 = no bonus, 0.15 = 15% bonus)
+     */
+    public double getSpiritualRootBreakthroughBonus() {
+        return calculateBreakthroughBonusFromTalent(TalentType.SPIRITUAL_ROOT);
+    }
+
+    /**
+     * Gets the breakthrough bonus percentage provided by the physique.
+     * Only affects Body cultivation breakthroughs.
+     * @return Breakthrough bonus percentage (0.0 = no bonus, 0.15 = 15% bonus)
+     */
+    public double getPhysiqueBreakthroughBonus() {
+        return calculateBreakthroughBonusFromTalent(TalentType.PHYSIQUE);
+    }
+
+    /**
+     * Gets the breakthrough bonus percentage for a specific talent type.
+     * @param talentType The talent type to get bonus for
+     * @return Breakthrough bonus percentage
+     */
+    public double getTalentBreakthroughBonus(TalentType talentType) {
+        return calculateBreakthroughBonusFromTalent(talentType);
+    }
+
+    /**
+     * Calculates the breakthrough bonus from a specific talent type based on its rarity.
+     * @param talentType The talent type to calculate bonus for
+     * @return Breakthrough bonus percentage
+     */
+    private double calculateBreakthroughBonusFromTalent(TalentType talentType) {
+        if (!isTalentAssigned(talentType)) {
+            return 0.0; // No bonus if talent not assigned
+        }
+
+        float multiplier = getTalentMultiplier(talentType);
+        return calculateBonusFromMultiplier(multiplier);
+    }
+
+    /**
+     * Converts talent cultivation multiplier to breakthrough bonus percentage.
+     * Uses a scaling formula that provides meaningful bonuses based on rarity.
+     *
+     * Bonus Scale:
+     * - 1.0f (Mortal): 0% bonus
+     * - 1.1f (Common): 5% bonus
+     * - 1.2f (Rare): 12% bonus
+     * - 1.3f (Epic): 20% bonus
+     * - 1.4f (Legendary): 30% bonus
+     * - 1.5f (Heavenly): 45% bonus
+     *
+     * @param multiplier The talent's cultivation multiplier
+     * @return Breakthrough bonus percentage
+     */
+    private double calculateBonusFromMultiplier(float multiplier) {
+        if (multiplier <= 1.0f) {
+            return 0.0; // Mortal talents provide no breakthrough bonus
+        }
+
+        // Calculate bonus using exponential scaling for higher rarities
+        // Formula: (multiplier - 1.0) * base_factor * rarity_scaling
+        double baseFactor = 50.0; // Base scaling factor
+        double rarityScaling = Math.pow(multiplier - 1.0, 1.2); // Exponential scaling for higher rarities
+
+        return (multiplier - 1.0) * baseFactor * rarityScaling;
+    }
+
     // === PERFORMANCE OPTIMIZATION === //
 
     /**
@@ -657,6 +728,8 @@ public class PlayerTalentsAttachment extends PlayerAttachment<PlayerTalentsAttac
         // Combined information
         info.put("totalMultiplier", getTotalCultivationMultiplier());
         info.put("allTalentsAssigned", hasAllTalentsAssigned());
+        info.put("spiritualRootBreakthroughBonus", String.format("%.2f%%", getSpiritualRootBreakthroughBonus() * 100));
+        info.put("physiqueBreakthroughBonus", String.format("%.2f%%", getPhysiqueBreakthroughBonus() * 100));
     }
 
     /**

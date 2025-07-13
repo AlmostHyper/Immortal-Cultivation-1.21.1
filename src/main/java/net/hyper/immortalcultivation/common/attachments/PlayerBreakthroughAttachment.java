@@ -454,13 +454,34 @@ public class PlayerBreakthroughAttachment extends PlayerAttachment<PlayerBreakth
      * @return Talent bonus as a decimal value
      */
     private double calculateTalentBonus(PlayerCultivationAttachment.CultivationType cultivationType) {
-        if (player == null) return 0.0;
+        if (player == null) {
+            if (debugEnabled()) {
+                debugLog("Cannot calculate talent bonus: player is null");
+            }
+            return 0.0;
+        }
 
         PlayerTalentsAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-        if (talents == null) return 0.0;
+        if (talents == null) {
+            if (debugEnabled()) {
+                debugLog("Cannot calculate talent bonus: PlayerTalentsAttachment not found for player {}",
+                    player.getName().getString());
+            }
+            return 0.0;
+        }
 
-        return cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
+        double bonus = cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
             talents.getSpiritualRootBreakthroughBonus() : talents.getPhysiqueBreakthroughBonus();
+
+        if (debugEnabled() && bonus > 0.0) {
+            debugLog("Calculated talent breakthrough bonus for {}: {:.2f}% from {}",
+                cultivationType.name(), bonus * 100,
+                cultivationType == PlayerCultivationAttachment.CultivationType.QI ?
+                    talents.getSpiritualRootType().getDisplayName() :
+                    talents.getPhysiqueType().getDisplayName());
+        }
+
+        return bonus;
     }
 
     /**

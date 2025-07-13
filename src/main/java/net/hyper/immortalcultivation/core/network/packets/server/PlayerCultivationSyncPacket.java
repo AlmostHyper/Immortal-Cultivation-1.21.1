@@ -1,109 +1,74 @@
 package net.hyper.immortalcultivation.core.network.packets.server;
 
-import io.netty.buffer.ByteBuf;
-import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.server.event.server.ICModAttachmentUpdateEvent;
-import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.common.NeoForge;
 
-import java.util.Optional;
+/**
+ * Network packet for synchronizing player cultivation data from server to client.
+ * Handles Qi and Body cultivation realms, progress, rates, focus mechanics, and statistics.
+ *
+ * This packet is automatically sent when:
+ * - Cultivation progress changes and needs client-side updates
+ * - Player advances realms or changes cultivation focus
+ * - Player logs in, respawns, or changes dimensions
+ * - Manual synchronization is triggered for cultivation data
+ */
+public record PlayerCultivationSyncPacket(CompoundTag cultivationData) implements ISyncPacket {
 
-public record PlayerCultivationSyncPacket(
-        byte fieldMask,
-        Optional<CultivationDataPayload> qiCultivationData,
-        Optional<CultivationDataPayload> bodyCultivationData,
-        Optional<PlayerCultivationAttachment.CultivationType> focus
-) implements ISyncPacket {
+    /**
+     * Unique identifier for this packet type in the network registry.
+     */
+    public static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("immortalcultivation", "player_cultivation_sync");
 
-    public static final byte QI_CULTIVATION_MASK = 1;
-    public static final byte BODY_CULTIVATION_MASK = 2;
-    public static final byte FOCUS_MASK = 4;
+    /**
+     * Packet type definition for NeoForge's network system.
+     */
+    public static final CustomPacketPayload.Type<PlayerCultivationSyncPacket> TYPE = new CustomPacketPayload.Type<>(ID);
 
-    public record CultivationDataPayload(
-            byte fieldMask,
-            Optional<String> realmId,
-            Optional<Long> current,
-            Optional<Long> max
-    ) {
-        public static final byte REALM_ID_MASK = 1;
-        public static final byte CURRENT_MASK = 2;
-        public static final byte MAX_MASK = 4;
-
-        public static void encode(ByteBuf buf, CultivationDataPayload payload) {
-            buf.writeByte(payload.fieldMask);
-            payload.realmId.ifPresent(s -> ByteBufCodecs.STRING_UTF8.encode(buf, s));
-            payload.current.ifPresent(l -> ByteBufCodecs.VAR_LONG.encode(buf, l));
-            payload.max.ifPresent(l -> ByteBufCodecs.VAR_LONG.encode(buf, l));
-        }
-
-        public static CultivationDataPayload decode(ByteBuf buf) {
-            byte fieldMask = buf.readByte();
-            Optional<String> realmId = (fieldMask & REALM_ID_MASK) != 0 ? Optional.of(ByteBufCodecs.STRING_UTF8.decode(buf)) : Optional.empty();
-            Optional<Long> current = (fieldMask & CURRENT_MASK) != 0 ? Optional.of(ByteBufCodecs.VAR_LONG.decode(buf)) : Optional.empty();
-            Optional<Long> max = (fieldMask & MAX_MASK) != 0 ? Optional.of(ByteBufCodecs.VAR_LONG.decode(buf)) : Optional.empty();
-            return new CultivationDataPayload(fieldMask, realmId, current, max);
-        }
-    }
-
-    public static final CustomPacketPayload.Type<PlayerCultivationSyncPacket> TYPE = new CustomPacketPayload.Type<>(
-            ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "sync_cultivation")
+    /**
+     * Stream codec for encoding/decoding packet data over the network.
+     * Handles serialization of the CompoundTag containing player cultivation data.
+     */
+    public static final StreamCodec<FriendlyByteBuf, PlayerCultivationSyncPacket> STREAM_CODEC = StreamCodec.of(
+        (buf, packet) -> buf.writeNbt(packet.cultivationData()),
+        (buf) -> new PlayerCultivationSyncPacket(buf.readNbt())
     );
 
-    public static final StreamCodec<ByteBuf, PlayerCultivationSyncPacket> STREAM_CODEC = StreamCodec.of(
-            PlayerCultivationSyncPacket::encode,
-            PlayerCultivationSyncPacket::decode
-    );
-
-    private static void encode(ByteBuf buf, PlayerCultivationSyncPacket packet) {
-        buf.writeByte(packet.fieldMask);
-        packet.qiCultivationData.ifPresent(payload -> CultivationDataPayload.encode(buf, payload));
-        packet.bodyCultivationData.ifPresent(payload -> CultivationDataPayload.encode(buf, payload));
-        packet.focus.ifPresent(f -> ByteBufCodecs.STRING_UTF8.encode(buf, f.name()));
-    }
-
-    private static PlayerCultivationSyncPacket decode(ByteBuf buf) {
-        byte fieldMask = buf.readByte();
-        Optional<CultivationDataPayload> qiData = (fieldMask & QI_CULTIVATION_MASK) != 0 ? Optional.of(CultivationDataPayload.decode(buf)) : Optional.empty();
-        Optional<CultivationDataPayload> bodyData = (fieldMask & BODY_CULTIVATION_MASK) != 0 ? Optional.of(CultivationDataPayload.decode(buf)) : Optional.empty();
-        Optional<PlayerCultivationAttachment.CultivationType> focus = (fieldMask & FOCUS_MASK) != 0 ? Optional.of(PlayerCultivationAttachment.CultivationType.valueOf(ByteBufCodecs.STRING_UTF8.decode(buf))) : Optional.empty();
-        return new PlayerCultivationSyncPacket(fieldMask, qiData, bodyData, focus);
-    }
-
+    /**
+     * Returns the packet type identifier for the network system.
+     * @return The packet type for PlayerCultivationSyncPacket
+     */
     @Override
-    public Type<? extends CustomPacketPayload> type() {
+    public CustomPacketPayload.Type<PlayerCultivationSyncPacket> type() {
         return TYPE;
     }
 
+    /**
+     * Handles the packet on the client side by applying the synchronized data
+     * to the player's cultivation attachment and triggering update events.
+     *
+     * @param player The client-side player entity receiving the sync
+     */
     @Override
     public void handleOnClient(Player player) {
-        if (player == null) return;
-        PlayerCultivationAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION);
-        if (attachment == null) return;
+        if (player != null) {
+            PlayerCultivationAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            if (attachment != null) {
+                // Apply the synchronized data to the client-side attachment
+                attachment.applySync(this.cultivationData);
 
-        this.qiCultivationData.ifPresent(data -> {
-            data.realmId().ifPresent(id -> attachment.setRealm(PlayerCultivationAttachment.CultivationType.QI, ICModCultivationRealms.get(id)));
-            data.current().ifPresent(val -> attachment.setCurrentCultivation(PlayerCultivationAttachment.CultivationType.QI, val));
-            data.max().ifPresent(val -> attachment.setMaxCultivation(PlayerCultivationAttachment.CultivationType.QI, val));
-        });
-
-        this.bodyCultivationData.ifPresent(data -> {
-            data.realmId().ifPresent(id -> attachment.setRealm(PlayerCultivationAttachment.CultivationType.BODY, ICModCultivationRealms.get(id)));
-            data.current().ifPresent(val -> attachment.setCurrentCultivation(PlayerCultivationAttachment.CultivationType.BODY, val));
-            data.max().ifPresent(val -> attachment.setMaxCultivation(PlayerCultivationAttachment.CultivationType.BODY, val));
-        });
-
-        this.focus.ifPresent(attachment::setCurrentFocus);
-
-        NeoForge.EVENT_BUS.post(new ICModAttachmentUpdateEvent(player, ICModAttachmentTypes.PLAYER_CULTIVATION.get()));
-
-        ImmortalCultivation.LOGGER.debug("Applied cultivation sync packet on client.");
+                // Fire an update event to notify other systems of the change
+                NeoForge.EVENT_BUS.post(new ICModAttachmentUpdateEvent(player, ICModAttachmentTypes.PLAYER_CULTIVATION.get()));
+            }
+        }
     }
 }

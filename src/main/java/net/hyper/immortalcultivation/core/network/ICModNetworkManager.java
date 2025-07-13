@@ -188,9 +188,7 @@ public class ICModNetworkManager {
                 .ifPresent(ITickable::tick);
             player.getExistingData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get())
                 .ifPresent(ITickable::tick);
-            player.getExistingData(ICModAttachmentTypes.PLAYER_RESOURCES.get())
-                .ifPresent(ITickable::tick);
-            player.getExistingData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get())
+            player.getExistingData(ICModAttachmentTypes.PLAYER_STATS.get())
                 .ifPresent(ITickable::tick);
 
             if (DEBUG_TICK) {
@@ -368,12 +366,11 @@ public class ICModNetworkManager {
 
         try {
             // Check all ISyncable attachments for dirty state
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get()), "PlayerTalents");
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_RACE.get()), "PlayerRace");
             checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get()), "PlayerCultivation");
             checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()), "PlayerBreakthrough");
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_RESOURCES.get()), "PlayerResources");
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_COMBAT_STATS.get()), "PlayerCombatStats");
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_STATS.get()), "PlayerStats");
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_RACE.get()), "PlayerRace");
+            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get()), "PlayerTalents");
             checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get()), "PlayerPillConsumption");
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error during sync check for player {}: {}",
@@ -541,8 +538,8 @@ public class ICModNetworkManager {
             if (DEBUG_SYNC) {
                 ImmortalCultivation.LOGGER.debug("Set player reference for PlayerTalentsAttachment");
             }
-        } else if (syncable instanceof PlayerResourceAttachment resources) {
-            resources.setPlayer(player);
+        } else if (syncable instanceof PlayerStatsAttachment stats) {
+            stats.setPlayer(player);
             if (DEBUG_SYNC) {
                 ImmortalCultivation.LOGGER.debug("Set player reference for PlayerResourceAttachment");
             }
@@ -560,11 +557,6 @@ public class ICModNetworkManager {
             breakthrough.setPlayer(player);
             if (DEBUG_SYNC) {
                 ImmortalCultivation.LOGGER.debug("Set player reference for PlayerBreakthroughAttachment");
-            }
-        } else if (syncable instanceof PlayerCombatStatsAttachment combat) {
-            combat.setPlayer(player);
-            if (DEBUG_SYNC) {
-                ImmortalCultivation.LOGGER.debug("Set player reference for PlayerCombatStatsAttachment");
             }
         } else if (syncable instanceof PlayerPillConsumptionAttachment pills) {
             pills.setPlayer(player);
@@ -632,9 +624,8 @@ public class ICModNetworkManager {
         scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, true, EMERGENCY_SYNC_PRIORITY);
         scheduleSync(player, ICModAttachmentTypes.PLAYER_TALENTS::get, true, EMERGENCY_SYNC_PRIORITY);
         scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true, EMERGENCY_SYNC_PRIORITY);
-        scheduleSync(player, ICModAttachmentTypes.PLAYER_RESOURCES::get, true, EMERGENCY_SYNC_PRIORITY);
+        scheduleSync(player, ICModAttachmentTypes.PLAYER_STATS::get, true, EMERGENCY_SYNC_PRIORITY);
         scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true, EMERGENCY_SYNC_PRIORITY);
-        scheduleSync(player, ICModAttachmentTypes.PLAYER_COMBAT_STATS::get, true, EMERGENCY_SYNC_PRIORITY);
         scheduleSync(player, ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION::get, true, EMERGENCY_SYNC_PRIORITY);
     }
 
