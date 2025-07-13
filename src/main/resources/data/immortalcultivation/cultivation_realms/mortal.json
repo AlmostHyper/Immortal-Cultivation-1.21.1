@@ -7,7 +7,7 @@
     "description": "Merely a mortal, unaware of the vast cultivation world. Through meditation and training, one can step onto the path of immortality."
   },
   "physical_stats": {
-    "base_health": 20,
+    "base_health": 0,
     "base_health_regeneration": 0.0,
     "base_attack_damage": 0.0,
     "base_movement_speed": 0.0,

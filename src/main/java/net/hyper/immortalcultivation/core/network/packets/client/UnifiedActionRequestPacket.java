@@ -148,7 +148,7 @@ public record UnifiedActionRequestPacket(
             player.level().playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0f, 1.5f);
             ImmortalCultivation.LOGGER.info("Player {} changed cultivation focus to {}", player.getName().getString(), newFocus.getDisplayName());
         } else {
-            long remainingTicks = 24000 - (player.level().getGameTime() - cultivation.getLastFocusChangeTime());
+            long remainingTicks = cultivation.getFocusChangeCooldownRemaining();
             long remainingMinutes = remainingTicks / 1200;
             player.sendSystemMessage(Component.literal("⏳ Focus change on cooldown! ").append(Component.literal(remainingMinutes + " minutes").withStyle(ChatFormatting.YELLOW)).append(" remaining.").withStyle(ChatFormatting.RED));
             player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0f, 1.0f);
