@@ -85,7 +85,7 @@ public class SetCultivationCommand {
             if (newCultivation > oldCultivation) {
                 // Calculate the difference and add it properly
                 long cultivationGained = newCultivation - oldCultivation;
-                cultivation.addCultivation(ICultivationData.CultivationType.QI, cultivationGained);
+                cultivation.addCultivation(ICultivationData.CultivationType.QI, cultivationGained, false);
             } else {
                 // If setting to a lower value, just set directly (no milestones gained)
                 cultivation.setCurrentCultivation(ICultivationData.CultivationType.QI, newCultivation);
@@ -142,7 +142,7 @@ public class SetCultivationCommand {
             if (newCultivation > oldCultivation) {
                 // Calculate the difference and add it properly
                 long cultivationGained = newCultivation - oldCultivation;
-                cultivation.addCultivation(ICultivationData.CultivationType.BODY, cultivationGained);
+                cultivation.addCultivation(ICultivationData.CultivationType.BODY, cultivationGained, false);
             } else {
                 // If setting to a lower value, just set directly (no milestones gained)
                 cultivation.setCurrentCultivation(ICultivationData.CultivationType.BODY, newCultivation);

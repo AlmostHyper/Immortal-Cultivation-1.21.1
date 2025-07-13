@@ -21,8 +21,8 @@ public interface ICultivationData {
     void setCurrentCultivation(CultivationType type, long value);
     long getMaxCultivation(CultivationType type);
     void setMaxCultivation(CultivationType type, long value);
-    long addCultivation(CultivationType type, long amount);
-    long subtractCultivation(CultivationType type, long amount);
+    void addCultivation(CultivationType type, long amount, boolean respectMaximum);
+    void subtractCultivation(CultivationType type, long amount, boolean respectMinimum);
     double getProgress(CultivationType type);
 
     // === Rates === //
