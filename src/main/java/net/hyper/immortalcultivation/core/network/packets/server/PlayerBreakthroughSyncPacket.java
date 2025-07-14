@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.server.event.server.ICModAttachmentUpdateEvent;
+import net.hyper.immortalcultivation.server.events.server.ICModAttachmentUpdateEvent;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;

@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.server.event.client;
+package net.hyper.immortalcultivation.server.events.client;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.client.gui.screens.CultivationBreakthroughScreen;

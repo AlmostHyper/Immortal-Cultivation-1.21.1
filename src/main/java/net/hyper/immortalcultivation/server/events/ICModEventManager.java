@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.server.event;
+package net.hyper.immortalcultivation.server.events;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.*;

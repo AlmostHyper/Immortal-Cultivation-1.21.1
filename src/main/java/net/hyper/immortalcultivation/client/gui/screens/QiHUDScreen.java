@@ -7,7 +7,7 @@ import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.server.event.server.ICModAttachmentUpdateEvent;
+import net.hyper.immortalcultivation.server.events.server.ICModAttachmentUpdateEvent;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
