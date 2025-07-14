@@ -13,6 +13,7 @@ import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 
 import javax.annotation.Nullable;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -284,6 +285,213 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
         if (oldBonus != bonus) {
             markDirty();
         }
+    }
+
+    /**
+     * Source-based permanent stat bonuses for Health, organized by bonus source.
+     * Allows selective clearing and management of bonuses from different sources.
+     */
+    private final Map<BonusSource, Long> healthBonusBySource = new EnumMap<>(BonusSource.class);
+
+    /**
+     * Source-based permanent stat bonuses for Qi, organized by bonus source.
+     */
+    private final Map<BonusSource, Long> qiBonusBySource = new EnumMap<>(BonusSource.class);
+
+    /**
+     * Source-based permanent stat bonuses for Body, organized by bonus source.
+     */
+    private final Map<BonusSource, Long> bodyBonusBySource = new EnumMap<>(BonusSource.class);
+
+    /**
+     * Source-based permanent regeneration bonuses for Health, organized by bonus source.
+     */
+    private final Map<BonusSource, Double> healthRegenBonusBySource = new EnumMap<>(BonusSource.class);
+
+    /**
+     * Source-based permanent regeneration bonuses for Qi, organized by bonus source.
+     */
+    private final Map<BonusSource, Double> qiRegenBonusBySource = new EnumMap<>(BonusSource.class);
+
+    /**
+     * Source-based permanent regeneration bonuses for Body, organized by bonus source.
+     */
+    private final Map<BonusSource, Double> bodyRegenBonusBySource = new EnumMap<>(BonusSource.class);
+
+    /**
+     * Source-based permanent attack damage bonuses, organized by bonus source.
+     */
+    private final Map<BonusSource, Double> attackDamageBonusBySource = new EnumMap<>(BonusSource.class);
+
+    /**
+     * Source-based permanent movement speed bonuses, organized by bonus source.
+     */
+    private final Map<BonusSource, Double> movementSpeedBonusBySource = new EnumMap<>(BonusSource.class);
+
+    /**
+     * Source-based permanent jump height bonuses, organized by bonus source.
+     */
+    private final Map<BonusSource, Double> jumpHeightBonusBySource = new EnumMap<>(BonusSource.class);
+
+// === SOURCE-BASED STAT BONUS MANAGEMENT === //
+
+    /**
+     * Sets a permanent stat bonus from a specific source.
+     * This allows precise control over which bonuses to clear or modify.
+     *
+     * @param type The stat type to modify
+     * @param source The source providing this bonus
+     * @param bonus The bonus amount
+     */
+    public void setSourcedStatBonus(IStatsData.StatType type, BonusSource source, long bonus) {
+        Map<BonusSource, Long> sourceMap = getStatBonusSourceMap(type);
+        Long oldBonus = sourceMap.get(source);
+
+        if (bonus == 0) {
+            sourceMap.remove(source);
+        } else {
+            sourceMap.put(source, bonus);
+        }
+
+        // Recalculate total bonus if changed
+        if (!java.util.Objects.equals(oldBonus, bonus == 0 ? null : bonus)) {
+            recalculateStatBonusFromSources(type);
+            markDirty();
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Source stat bonus changed for {} from {}: {} -> {} (total: {})",
+                    type, source.getDisplayName(), oldBonus, bonus, getPermanentStatBonus(type));
+            }
+        }
+    }
+
+    /**
+     * Gets a permanent stat bonus from a specific source.
+     *
+     * @param type The stat type to query
+     * @param source The source to check
+     * @return The bonus amount from this source (0 if no bonus)
+     */
+    public long getSourcedStatBonus(IStatsData.StatType type, BonusSource source) {
+        Map<BonusSource, Long> sourceMap = getStatBonusSourceMap(type);
+        return sourceMap.getOrDefault(source, 0L);
+    }
+
+    /**
+     * Clears all bonuses from a specific source for all stat types.
+     * This is useful for realm reapplication or equipment changes.
+     *
+     * @param source The source to clear bonuses from
+     */
+    public void clearBonusesFromSource(BonusSource source) {
+        boolean anyChanged = false;
+
+        // Clear stat bonuses
+        anyChanged |= healthBonusBySource.remove(source) != null;
+        anyChanged |= qiBonusBySource.remove(source) != null;
+        anyChanged |= bodyBonusBySource.remove(source) != null;
+
+        // Clear regen bonuses
+        anyChanged |= healthRegenBonusBySource.remove(source) != null;
+        anyChanged |= qiRegenBonusBySource.remove(source) != null;
+        anyChanged |= bodyRegenBonusBySource.remove(source) != null;
+
+        // Clear combat bonuses
+        anyChanged |= attackDamageBonusBySource.remove(source) != null;
+        anyChanged |= movementSpeedBonusBySource.remove(source) != null;
+        anyChanged |= jumpHeightBonusBySource.remove(source) != null;
+
+        if (anyChanged) {
+            // Recalculate all totals
+            recalculateAllBonusesFromSources();
+            markDirty();
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Cleared all bonuses from source: {}", source.getDisplayName());
+            }
+        }
+    }
+
+    /**
+     * Sets a permanent regeneration bonus from a specific source.
+     *
+     * @param type The stat type to modify
+     * @param source The source providing this bonus
+     * @param bonus The regeneration bonus multiplier
+     */
+    public void setSourcedStatRegenBonus(IStatsData.StatType type, BonusSource source, double bonus) {
+        Map<BonusSource, Double> sourceMap = getStatRegenBonusSourceMap(type);
+        Double oldBonus = sourceMap.get(source);
+
+        if (bonus == 0.0) {
+            sourceMap.remove(source);
+        } else {
+            sourceMap.put(source, bonus);
+        }
+
+        // Recalculate total bonus if changed
+        if (!java.util.Objects.equals(oldBonus, bonus == 0.0 ? null : bonus)) {
+            recalculateStatRegenBonusFromSources(type);
+            markDirty();
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Source regen bonus changed for {} from {}: {} -> {} (total: {})",
+                    type, source.getDisplayName(), oldBonus, bonus, getPermanentStatRegenBonus(type));
+            }
+        }
+    }
+
+    /**
+     * Gets a permanent regeneration bonus from a specific source.
+     *
+     * @param type The stat type to query
+     * @param source The source to check
+     * @return The regeneration bonus from this source (0.0 if no bonus)
+     */
+    public double getSourcedStatRegenBonus(IStatsData.StatType type, BonusSource source) {
+        Map<BonusSource, Double> sourceMap = getStatRegenBonusSourceMap(type);
+        return sourceMap.getOrDefault(source, 0.0);
+    }
+
+    /**
+     * Sets a permanent combat bonus from a specific source.
+     *
+     * @param bonusType The type of combat bonus (attack, speed, jump)
+     * @param source The source providing this bonus
+     * @param bonus The bonus value
+     */
+    public void setSourcedCombatBonus(CombatBonusType bonusType, BonusSource source, double bonus) {
+        Map<BonusSource, Double> sourceMap = getCombatBonusSourceMap(bonusType);
+        Double oldBonus = sourceMap.get(source);
+
+        if (bonus == 0.0) {
+            sourceMap.remove(source);
+        } else {
+            sourceMap.put(source, bonus);
+        }
+
+        // Recalculate total bonus if changed
+        if (!java.util.Objects.equals(oldBonus, bonus == 0.0 ? null : bonus)) {
+            recalculateCombatBonusFromSources(bonusType);
+            markDirty();
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Source combat bonus changed for {} from {}: {} -> {} (total: {})",
+                    bonusType, source.getDisplayName(), oldBonus, bonus, getCurrentCombatBonus(bonusType));
+            }
+        }
+    }
+
+    /**
+     * Gets a permanent combat bonus from a specific source.
+     *
+     * @param bonusType The type of combat bonus to query
+     * @param source The source to check
+     * @return The combat bonus from this source (0.0 if no bonus)
+     */
+    public double getSourcedCombatBonus(CombatBonusType bonusType, BonusSource source) {
+        Map<BonusSource, Double> sourceMap = getCombatBonusSourceMap(bonusType);
+        return sourceMap.getOrDefault(source, 0.0);
     }
 
     // === COMBAT STATS MANAGEMENT === //
@@ -603,6 +811,125 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
         return new PlayerStatsSyncPacket(data);
     }
 
+    // === HELPER METHODS === //
+
+    /**
+     * Gets the appropriate source map for stat bonuses based on stat type.
+     */
+    private Map<BonusSource, Long> getStatBonusSourceMap(IStatsData.StatType type) {
+        return switch (type) {
+            case HEALTH -> healthBonusBySource;
+            case QI -> qiBonusBySource;
+            case BODY -> bodyBonusBySource;
+        };
+    }
+
+    /**
+     * Gets the appropriate source map for regeneration bonuses based on stat type.
+     */
+    private Map<BonusSource, Double> getStatRegenBonusSourceMap(IStatsData.StatType type) {
+        return switch (type) {
+            case HEALTH -> healthRegenBonusBySource;
+            case QI -> qiRegenBonusBySource;
+            case BODY -> bodyRegenBonusBySource;
+        };
+    }
+
+    /**
+     * Gets the appropriate source map for combat bonuses based on bonus type.
+     */
+    private Map<BonusSource, Double> getCombatBonusSourceMap(CombatBonusType bonusType) {
+        return switch (bonusType) {
+            case ATTACK_DAMAGE -> attackDamageBonusBySource;
+            case MOVEMENT_SPEED -> movementSpeedBonusBySource;
+            case JUMP_HEIGHT -> jumpHeightBonusBySource;
+        };
+    }
+
+    /**
+     * Recalculates the total permanent stat bonus from all sources.
+     */
+    private void recalculateStatBonusFromSources(IStatsData.StatType type) {
+        Map<BonusSource, Long> sourceMap = getStatBonusSourceMap(type);
+        long total = sourceMap.values().stream().mapToLong(Long::longValue).sum();
+
+        // Update the legacy field to maintain compatibility
+        switch (type) {
+            case HEALTH -> this.permanentHealthBonus = total;
+            case QI -> this.permanentQiBonus = total;
+            case BODY -> this.permanentBodyBonus = total;
+        }
+
+        recalculateStatMaximum(type);
+    }
+
+    /**
+     * Recalculates the total permanent regeneration bonus from all sources.
+     */
+    private void recalculateStatRegenBonusFromSources(IStatsData.StatType type) {
+        Map<BonusSource, Double> sourceMap = getStatRegenBonusSourceMap(type);
+        double total = sourceMap.values().stream().mapToDouble(Double::doubleValue).sum();
+
+        // Update the legacy field to maintain compatibility
+        switch (type) {
+            case HEALTH -> this.permanentHealthRegenBonus = total;
+            case QI -> this.permanentQiRegenBonus = total;
+            case BODY -> this.permanentBodyRegenBonus = total;
+        }
+    }
+
+    /**
+     * Recalculates the total permanent combat bonus from all sources.
+     */
+    private void recalculateCombatBonusFromSources(CombatBonusType bonusType) {
+        Map<BonusSource, Double> sourceMap = getCombatBonusSourceMap(bonusType);
+        double total = sourceMap.values().stream().mapToDouble(Double::doubleValue).sum();
+
+        // Update the legacy field to maintain compatibility
+        switch (bonusType) {
+            case ATTACK_DAMAGE -> this.permanentAttackDamageBonus = total;
+            case MOVEMENT_SPEED -> this.permanentMovementSpeedBonus = total;
+            case JUMP_HEIGHT -> this.permanentJumpHeightBonus = total;
+        }
+    }
+
+    /**
+     * Recalculates all bonuses from all sources.
+     * Call this after clearing a source to update all totals.
+     */
+    private void recalculateAllBonusesFromSources() {
+        // Recalculate stat bonuses
+        for (IStatsData.StatType type : IStatsData.StatType.values()) {
+            recalculateStatBonusFromSources(type);
+            recalculateStatRegenBonusFromSources(type);
+        }
+
+        // Recalculate combat bonuses
+        for (CombatBonusType type : CombatBonusType.values()) {
+            recalculateCombatBonusFromSources(type);
+        }
+    }
+
+    /**
+     * Gets the current total for a combat bonus type (for compatibility).
+     */
+    private double getCurrentCombatBonus(CombatBonusType bonusType) {
+        return switch (bonusType) {
+            case ATTACK_DAMAGE -> this.permanentAttackDamageBonus;
+            case MOVEMENT_SPEED -> this.permanentMovementSpeedBonus;
+            case JUMP_HEIGHT -> this.permanentJumpHeightBonus;
+        };
+    }
+
+    /**
+     * Enumeration for different types of combat bonuses.
+     */
+    public enum CombatBonusType {
+        ATTACK_DAMAGE,
+        MOVEMENT_SPEED,
+        JUMP_HEIGHT
+    }
+
     // === COPY FUNCTIONALITY === //
 
     /**
@@ -792,125 +1119,187 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     // === CODEC FOR SERIALIZATION === //
 
     /**
-     * Sub-codec for health data
+     * Sub-codec for current stat values (6 fields)
      */
-    private static final Codec<PlayerStatsAttachment> HEALTH_CODEC = RecordCodecBuilder.create(instance ->
+    private static final Codec<PlayerStatsAttachment> CURRENT_STATS_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            Codec.LONG.fieldOf("current_health").forGetter(d -> d.currentHealth),
-            Codec.LONG.fieldOf("permanent_health_bonus").forGetter(d -> d.permanentHealthBonus),
-            Codec.DOUBLE.fieldOf("permanent_health_regen_bonus").forGetter(d -> d.permanentHealthRegenBonus),
-            Codec.DOUBLE.optionalFieldOf("health_regen_fraction", 0.0).forGetter(d -> d.healthRegenFraction)
-        ).apply(instance, (curHealth, permHealthBonus, permHealthRegen, healthRegenFrac) -> {
-            PlayerStatsAttachment data = new PlayerStatsAttachment();
-            data.currentHealth = curHealth;
-            data.permanentHealthBonus = permHealthBonus;
-            data.permanentHealthRegenBonus = permHealthRegen;
-            data.healthRegenFraction = healthRegenFrac;
-            return data;
+            Codec.LONG.fieldOf("currentHealth").forGetter(d -> d.currentHealth),
+            Codec.LONG.fieldOf("currentQi").forGetter(d -> d.currentQi),
+            Codec.LONG.fieldOf("currentBody").forGetter(d -> d.currentBody),
+            Codec.LONG.fieldOf("maxHealth").forGetter(d -> d.maxHealth),
+            Codec.LONG.fieldOf("maxQi").forGetter(d -> d.maxQi),
+            Codec.LONG.fieldOf("maxBody").forGetter(d -> d.maxBody)
+        ).apply(instance, (currentHealth, currentQi, currentBody, maxHealth, maxQi, maxBody) -> {
+            PlayerStatsAttachment attachment = new PlayerStatsAttachment();
+            attachment.currentHealth = currentHealth;
+            attachment.currentQi = currentQi;
+            attachment.currentBody = currentBody;
+            attachment.maxHealth = maxHealth;
+            attachment.maxQi = maxQi;
+            attachment.maxBody = maxBody;
+            return attachment;
         })
     );
 
     /**
-     * Sub-codec for qi data
+     * Sub-codec for regeneration fractions (3 fields)
      */
-    private static final Codec<PlayerStatsAttachment> QI_CODEC = RecordCodecBuilder.create(instance ->
+    private static final Codec<PlayerStatsAttachment> REGEN_FRACTIONS_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            Codec.LONG.fieldOf("current_qi").forGetter(d -> d.currentQi),
-            Codec.LONG.fieldOf("permanent_qi_bonus").forGetter(d -> d.permanentQiBonus),
-            Codec.DOUBLE.fieldOf("permanent_qi_regen_bonus").forGetter(d -> d.permanentQiRegenBonus),
-            Codec.DOUBLE.optionalFieldOf("qi_regen_fraction", 0.0).forGetter(d -> d.qiRegenFraction)
-        ).apply(instance, (curQi, permQiBonus, permQiRegen, qiRegenFrac) -> {
-            PlayerStatsAttachment data = new PlayerStatsAttachment();
-            data.currentQi = curQi;
-            data.permanentQiBonus = permQiBonus;
-            data.permanentQiRegenBonus = permQiRegen;
-            data.qiRegenFraction = qiRegenFrac;
-            return data;
+            Codec.DOUBLE.fieldOf("healthRegenFraction").forGetter(d -> d.healthRegenFraction),
+            Codec.DOUBLE.fieldOf("qiRegenFraction").forGetter(d -> d.qiRegenFraction),
+            Codec.DOUBLE.fieldOf("bodyRegenFraction").forGetter(d -> d.bodyRegenFraction)
+        ).apply(instance, (healthRegenFraction, qiRegenFraction, bodyRegenFraction) -> {
+            PlayerStatsAttachment attachment = new PlayerStatsAttachment();
+            attachment.healthRegenFraction = healthRegenFraction;
+            attachment.qiRegenFraction = qiRegenFraction;
+            attachment.bodyRegenFraction = bodyRegenFraction;
+            return attachment;
         })
     );
 
     /**
-     * Sub-codec for body data
+     * Sub-codec for temporary bonuses (3 fields)
      */
-    private static final Codec<PlayerStatsAttachment> BODY_CODEC = RecordCodecBuilder.create(instance ->
+    private static final Codec<PlayerStatsAttachment> TEMPORARY_BONUSES_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            Codec.LONG.fieldOf("current_body").forGetter(d -> d.currentBody),
-            Codec.LONG.fieldOf("permanent_body_bonus").forGetter(d -> d.permanentBodyBonus),
-            Codec.DOUBLE.fieldOf("permanent_body_regen_bonus").forGetter(d -> d.permanentBodyRegenBonus),
-            Codec.DOUBLE.optionalFieldOf("body_regen_fraction", 0.0).forGetter(d -> d.bodyRegenFraction)
-        ).apply(instance, (curBody, permBodyBonus, permBodyRegen, bodyRegenFrac) -> {
-            PlayerStatsAttachment data = new PlayerStatsAttachment();
-            data.currentBody = curBody;
-            data.permanentBodyBonus = permBodyBonus;
-            data.permanentBodyRegenBonus = permBodyRegen;
-            data.bodyRegenFraction = bodyRegenFrac;
-            return data;
+            Codec.DOUBLE.fieldOf("attackDamageBonus").forGetter(d -> d.attackDamageBonus),
+            Codec.DOUBLE.fieldOf("movementSpeedBonus").forGetter(d -> d.movementSpeedBonus),
+            Codec.DOUBLE.fieldOf("jumpHeightBonus").forGetter(d -> d.jumpHeightBonus)
+        ).apply(instance, (attackDamageBonus, movementSpeedBonus, jumpHeightBonus) -> {
+            PlayerStatsAttachment attachment = new PlayerStatsAttachment();
+            attachment.attackDamageBonus = attackDamageBonus;
+            attachment.movementSpeedBonus = movementSpeedBonus;
+            attachment.jumpHeightBonus = jumpHeightBonus;
+            return attachment;
         })
     );
 
     /**
-     * Sub-codec for combat stats data
+     * Sub-codec for source-based stat bonuses (3 fields)
      */
-    private static final Codec<PlayerStatsAttachment> COMBAT_CODEC = RecordCodecBuilder.create(instance ->
+    private static final Codec<PlayerStatsAttachment> SOURCE_STAT_BONUSES_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            Codec.DOUBLE.optionalFieldOf("permanent_attack_damage_bonus", 0.0).forGetter(d -> d.permanentAttackDamageBonus),
-            Codec.DOUBLE.optionalFieldOf("permanent_movement_speed_bonus", 0.0).forGetter(d -> d.permanentMovementSpeedBonus),
-            Codec.DOUBLE.optionalFieldOf("permanent_jump_height_bonus", 0.0).forGetter(d -> d.permanentJumpHeightBonus),
-            Codec.DOUBLE.optionalFieldOf("attack_damage_bonus", 0.0).forGetter(d -> d.attackDamageBonus),
-            Codec.DOUBLE.optionalFieldOf("movement_speed_bonus", 0.0).forGetter(d -> d.movementSpeedBonus),
-            Codec.DOUBLE.optionalFieldOf("jump_height_bonus", 0.0).forGetter(d -> d.jumpHeightBonus)
-        ).apply(instance, (permAttack, permSpeed, permJump, tempAttack, tempSpeed, tempJump) -> {
-            PlayerStatsAttachment data = new PlayerStatsAttachment();
-            data.permanentAttackDamageBonus = permAttack;
-            data.permanentMovementSpeedBonus = permSpeed;
-            data.permanentJumpHeightBonus = permJump;
-            data.attackDamageBonus = tempAttack;
-            data.movementSpeedBonus = tempSpeed;
-            data.jumpHeightBonus = tempJump;
-            return data;
+            Codec.unboundedMap(BonusSource.CODEC, Codec.LONG)
+                .optionalFieldOf("healthBonusBySource", new HashMap<>())
+                .forGetter(d -> d.healthBonusBySource),
+            Codec.unboundedMap(BonusSource.CODEC, Codec.LONG)
+                .optionalFieldOf("qiBonusBySource", new HashMap<>())
+                .forGetter(d -> d.qiBonusBySource),
+            Codec.unboundedMap(BonusSource.CODEC, Codec.LONG)
+                .optionalFieldOf("bodyBonusBySource", new HashMap<>())
+                .forGetter(d -> d.bodyBonusBySource)
+        ).apply(instance, (healthBonusBySource, qiBonusBySource, bodyBonusBySource) -> {
+            PlayerStatsAttachment attachment = new PlayerStatsAttachment();
+            attachment.healthBonusBySource.putAll(healthBonusBySource);
+            attachment.qiBonusBySource.putAll(qiBonusBySource);
+            attachment.bodyBonusBySource.putAll(bodyBonusBySource);
+            return attachment;
         })
     );
 
     /**
-     * Main codec that combines all sub-codecs
+     * Sub-codec for source-based regeneration bonuses (3 fields)
+     */
+    private static final Codec<PlayerStatsAttachment> SOURCE_REGEN_BONUSES_CODEC = RecordCodecBuilder.create(instance ->
+        instance.group(
+            Codec.unboundedMap(BonusSource.CODEC, Codec.DOUBLE)
+                .optionalFieldOf("healthRegenBonusBySource", new HashMap<>())
+                .forGetter(d -> d.healthRegenBonusBySource),
+            Codec.unboundedMap(BonusSource.CODEC, Codec.DOUBLE)
+                .optionalFieldOf("qiRegenBonusBySource", new HashMap<>())
+                .forGetter(d -> d.qiRegenBonusBySource),
+            Codec.unboundedMap(BonusSource.CODEC, Codec.DOUBLE)
+                .optionalFieldOf("bodyRegenBonusBySource", new HashMap<>())
+                .forGetter(d -> d.bodyRegenBonusBySource)
+        ).apply(instance, (healthRegenBonusBySource, qiRegenBonusBySource, bodyRegenBonusBySource) -> {
+            PlayerStatsAttachment attachment = new PlayerStatsAttachment();
+            attachment.healthRegenBonusBySource.putAll(healthRegenBonusBySource);
+            attachment.qiRegenBonusBySource.putAll(qiRegenBonusBySource);
+            attachment.bodyRegenBonusBySource.putAll(bodyRegenBonusBySource);
+            return attachment;
+        })
+    );
+
+    /**
+     * Sub-codec for source-based combat bonuses (3 fields)
+     */
+    private static final Codec<PlayerStatsAttachment> SOURCE_COMBAT_BONUSES_CODEC = RecordCodecBuilder.create(instance ->
+        instance.group(
+            Codec.unboundedMap(BonusSource.CODEC, Codec.DOUBLE)
+                .optionalFieldOf("attackDamageBonusBySource", new HashMap<>())
+                .forGetter(d -> d.attackDamageBonusBySource),
+            Codec.unboundedMap(BonusSource.CODEC, Codec.DOUBLE)
+                .optionalFieldOf("movementSpeedBonusBySource", new HashMap<>())
+                .forGetter(d -> d.movementSpeedBonusBySource),
+            Codec.unboundedMap(BonusSource.CODEC, Codec.DOUBLE)
+                .optionalFieldOf("jumpHeightBonusBySource", new HashMap<>())
+                .forGetter(d -> d.jumpHeightBonusBySource)
+        ).apply(instance, (attackDamageBonusBySource, movementSpeedBonusBySource, jumpHeightBonusBySource) -> {
+            PlayerStatsAttachment attachment = new PlayerStatsAttachment();
+            attachment.attackDamageBonusBySource.putAll(attackDamageBonusBySource);
+            attachment.movementSpeedBonusBySource.putAll(movementSpeedBonusBySource);
+            attachment.jumpHeightBonusBySource.putAll(jumpHeightBonusBySource);
+            return attachment;
+        })
+    );
+
+// === MAIN CODEC (6 fields - well under 13 limit) === //
+
+    /**
+     * Main codec that combines all sub-codecs for PlayerStatsAttachment.
+     * Each field represents a logical group of related data.
      */
     public static final Codec<PlayerStatsAttachment> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
-            HEALTH_CODEC.fieldOf("health_data").forGetter(d -> d),
-            QI_CODEC.fieldOf("qi_data").forGetter(d -> d),
-            BODY_CODEC.fieldOf("body_data").forGetter(d -> d),
-            COMBAT_CODEC.fieldOf("combat_data").forGetter(d -> d)
-        ).apply(instance, (healthData, qiData, bodyData, combatData) -> {
-            PlayerStatsAttachment data = new PlayerStatsAttachment();
+            CURRENT_STATS_CODEC.fieldOf("current_stats").forGetter(d -> d),
+            REGEN_FRACTIONS_CODEC.fieldOf("regen_fractions").forGetter(d -> d),
+            TEMPORARY_BONUSES_CODEC.fieldOf("temporary_bonuses").forGetter(d -> d),
+            SOURCE_STAT_BONUSES_CODEC.fieldOf("source_stat_bonuses").forGetter(d -> d),
+            SOURCE_REGEN_BONUSES_CODEC.fieldOf("source_regen_bonuses").forGetter(d -> d),
+            SOURCE_COMBAT_BONUSES_CODEC.fieldOf("source_combat_bonuses").forGetter(d -> d)
+        ).apply(instance, (currentStats, regenFractions, temporaryBonuses, sourceStatBonuses, sourceRegenBonuses, sourceCombatBonuses) -> {
+            PlayerStatsAttachment attachment = new PlayerStatsAttachment();
 
-            // Copy health data
-            data.currentHealth = healthData.currentHealth;
-            data.permanentHealthBonus = healthData.permanentHealthBonus;
-            data.permanentHealthRegenBonus = healthData.permanentHealthRegenBonus;
-            data.healthRegenFraction = healthData.healthRegenFraction;
+            // === MERGE DATA FROM ALL SUB-CODECS === //
 
-            // Copy qi data
-            data.currentQi = qiData.currentQi;
-            data.permanentQiBonus = qiData.permanentQiBonus;
-            data.permanentQiRegenBonus = qiData.permanentQiRegenBonus;
-            data.qiRegenFraction = qiData.qiRegenFraction;
+            // Current stats
+            attachment.currentHealth = currentStats.currentHealth;
+            attachment.currentQi = currentStats.currentQi;
+            attachment.currentBody = currentStats.currentBody;
+            attachment.maxHealth = currentStats.maxHealth;
+            attachment.maxQi = currentStats.maxQi;
+            attachment.maxBody = currentStats.maxBody;
 
-            // Copy body data
-            data.currentBody = bodyData.currentBody;
-            data.permanentBodyBonus = bodyData.permanentBodyBonus;
-            data.permanentBodyRegenBonus = bodyData.permanentBodyRegenBonus;
-            data.bodyRegenFraction = bodyData.bodyRegenFraction;
+            // Regen fractions
+            attachment.healthRegenFraction = regenFractions.healthRegenFraction;
+            attachment.qiRegenFraction = regenFractions.qiRegenFraction;
+            attachment.bodyRegenFraction = regenFractions.bodyRegenFraction;
 
-            // Copy combat data
-            data.permanentAttackDamageBonus = combatData.permanentAttackDamageBonus;
-            data.permanentMovementSpeedBonus = combatData.permanentMovementSpeedBonus;
-            data.permanentJumpHeightBonus = combatData.permanentJumpHeightBonus;
-            data.attackDamageBonus = combatData.attackDamageBonus;
-            data.movementSpeedBonus = combatData.movementSpeedBonus;
-            data.jumpHeightBonus = combatData.jumpHeightBonus;
+            // Temporary bonuses
+            attachment.attackDamageBonus = temporaryBonuses.attackDamageBonus;
+            attachment.movementSpeedBonus = temporaryBonuses.movementSpeedBonus;
+            attachment.jumpHeightBonus = temporaryBonuses.jumpHeightBonus;
 
-            data.recalculateAll();
-            return data;
+            // Source-based stat bonuses
+            attachment.healthBonusBySource.putAll(sourceStatBonuses.healthBonusBySource);
+            attachment.qiBonusBySource.putAll(sourceStatBonuses.qiBonusBySource);
+            attachment.bodyBonusBySource.putAll(sourceStatBonuses.bodyBonusBySource);
+
+            // Source-based regen bonuses
+            attachment.healthRegenBonusBySource.putAll(sourceRegenBonuses.healthRegenBonusBySource);
+            attachment.qiRegenBonusBySource.putAll(sourceRegenBonuses.qiRegenBonusBySource);
+            attachment.bodyRegenBonusBySource.putAll(sourceRegenBonuses.bodyRegenBonusBySource);
+
+            // Source-based combat bonuses
+            attachment.attackDamageBonusBySource.putAll(sourceCombatBonuses.attackDamageBonusBySource);
+            attachment.movementSpeedBonusBySource.putAll(sourceCombatBonuses.movementSpeedBonusBySource);
+            attachment.jumpHeightBonusBySource.putAll(sourceCombatBonuses.jumpHeightBonusBySource);
+
+            // === RECALCULATE LEGACY TOTALS FROM SOURCES === //
+            attachment.recalculateAllBonusesFromSources();
+
+            return attachment;
         })
     );
 
@@ -954,6 +1343,280 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
             return (CompoundTag) CODEC.encodeStart(provider.createSerializationContext(NbtOps.INSTANCE), attachment)
                 .resultOrPartial(error -> ImmortalCultivation.LOGGER.error("Failed to encode PlayerStatsAttachment: {}", error))
                 .orElse(new CompoundTag());
+        }
+    }
+
+    // === SERIALIZATION UPDATES === //
+
+    /**
+     * Serializes this attachment to NBT using source-based bonus tracking.
+     * This method completely replaces legacy serialization.
+     */
+    @Override
+    public CompoundTag serialize() {
+        CompoundTag tag = new CompoundTag();
+
+        try {
+            // === CURRENT STAT VALUES === //
+            tag.putLong("currentHealth", currentHealth);
+            tag.putLong("currentQi", currentQi);
+            tag.putLong("currentBody", currentBody);
+            tag.putLong("maxHealth", maxHealth);
+            tag.putLong("maxQi", maxQi);
+            tag.putLong("maxBody", maxBody);
+
+            // === REGENERATION FRACTIONS === //
+            tag.putDouble("healthRegenFraction", healthRegenFraction);
+            tag.putDouble("qiRegenFraction", qiRegenFraction);
+            tag.putDouble("bodyRegenFraction", bodyRegenFraction);
+
+            // === TEMPORARY BONUSES === //
+            tag.putDouble("attackDamageBonus", attackDamageBonus);
+            tag.putDouble("movementSpeedBonus", movementSpeedBonus);
+            tag.putDouble("jumpHeightBonus", jumpHeightBonus);
+
+            // === SOURCE-BASED STAT BONUSES === //
+            CompoundTag sourceBonusesTag = new CompoundTag();
+            serializeSourceMap(sourceBonusesTag, "health", healthBonusBySource);
+            serializeSourceMap(sourceBonusesTag, "qi", qiBonusBySource);
+            serializeSourceMap(sourceBonusesTag, "body", bodyBonusBySource);
+            if (!sourceBonusesTag.isEmpty()) {
+                tag.put("sourcedStatBonuses", sourceBonusesTag);
+            }
+
+            // === SOURCE-BASED REGEN BONUSES === //
+            CompoundTag sourceRegenTag = new CompoundTag();
+            serializeSourceMapDouble(sourceRegenTag, "health", healthRegenBonusBySource);
+            serializeSourceMapDouble(sourceRegenTag, "qi", qiRegenBonusBySource);
+            serializeSourceMapDouble(sourceRegenTag, "body", bodyRegenBonusBySource);
+            if (!sourceRegenTag.isEmpty()) {
+                tag.put("sourcedRegenBonuses", sourceRegenTag);
+            }
+
+            // === SOURCE-BASED COMBAT BONUSES === //
+            CompoundTag sourceCombatTag = new CompoundTag();
+            serializeSourceMapDouble(sourceCombatTag, "attack", attackDamageBonusBySource);
+            serializeSourceMapDouble(sourceCombatTag, "speed", movementSpeedBonusBySource);
+            serializeSourceMapDouble(sourceCombatTag, "jump", jumpHeightBonusBySource);
+            if (!sourceCombatTag.isEmpty()) {
+                tag.put("sourcedCombatBonuses", sourceCombatTag);
+            }
+
+            // === VERSION FOR FUTURE COMPATIBILITY === //
+            tag.putInt("sourceBonusVersion", 1);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Serialized PlayerStatsAttachment with source-based bonus system");
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error serializing PlayerStatsAttachment: {}", e.getMessage(), e);
+            // Return basic tag to prevent total failure
+            tag = new CompoundTag();
+            tag.putLong("currentHealth", currentHealth);
+            tag.putLong("currentQi", currentQi);
+            tag.putLong("currentBody", currentBody);
+        }
+
+        return tag;
+    }
+
+    /**
+     * Deserializes NBT data into this attachment using source-based bonus tracking.
+     * This method completely replaces legacy deserialization.
+     */
+    @Override
+    public void deserialize(CompoundTag tag) {
+        try {
+            // === CURRENT STAT VALUES === //
+            currentHealth = tag.getLong("currentHealth");
+            currentQi = tag.getLong("currentQi");
+            currentBody = tag.getLong("currentBody");
+            maxHealth = tag.getLong("maxHealth");
+            maxQi = tag.getLong("maxQi");
+            maxBody = tag.getLong("maxBody");
+
+            // === REGENERATION FRACTIONS === //
+            healthRegenFraction = tag.getDouble("healthRegenFraction");
+            qiRegenFraction = tag.getDouble("qiRegenFraction");
+            bodyRegenFraction = tag.getDouble("bodyRegenFraction");
+
+            // === TEMPORARY BONUSES === //
+            attackDamageBonus = tag.getDouble("attackDamageBonus");
+            movementSpeedBonus = tag.getDouble("movementSpeedBonus");
+            jumpHeightBonus = tag.getDouble("jumpHeightBonus");
+
+            // === CLEAR AND LOAD SOURCE-BASED DATA === //
+            clearAllSourceMaps();
+
+            // Load source-based stat bonuses
+            if (tag.contains("sourcedStatBonuses")) {
+                CompoundTag sourceBonusesTag = tag.getCompound("sourcedStatBonuses");
+                deserializeSourceMap(sourceBonusesTag, "health", healthBonusBySource);
+                deserializeSourceMap(sourceBonusesTag, "qi", qiBonusBySource);
+                deserializeSourceMap(sourceBonusesTag, "body", bodyBonusBySource);
+            }
+
+            // Load source-based regen bonuses
+            if (tag.contains("sourcedRegenBonuses")) {
+                CompoundTag sourceRegenTag = tag.getCompound("sourcedRegenBonuses");
+                deserializeSourceMapDouble(sourceRegenTag, "health", healthRegenBonusBySource);
+                deserializeSourceMapDouble(sourceRegenTag, "qi", qiRegenBonusBySource);
+                deserializeSourceMapDouble(sourceRegenTag, "body", bodyRegenBonusBySource);
+            }
+
+            // Load source-based combat bonuses
+            if (tag.contains("sourcedCombatBonuses")) {
+                CompoundTag sourceCombatTag = tag.getCompound("sourcedCombatBonuses");
+                deserializeSourceMapDouble(sourceCombatTag, "attack", attackDamageBonusBySource);
+                deserializeSourceMapDouble(sourceCombatTag, "speed", movementSpeedBonusBySource);
+                deserializeSourceMapDouble(sourceCombatTag, "jump", jumpHeightBonusBySource);
+            }
+
+            // === RECALCULATE TOTALS FROM SOURCES === //
+            recalculateAllBonusesFromSources();
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Deserialized PlayerStatsAttachment with source-based bonus system");
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error deserializing PlayerStatsAttachment: {}", e.getMessage(), e);
+            // Initialize safe defaults on error
+            initializeSafeDefaults();
+        }
+    }
+
+// === SERIALIZATION HELPER METHODS === //
+
+    /**
+     * Serializes a source map with long values to NBT.
+     */
+    private void serializeSourceMap(CompoundTag parentTag, String key, Map<BonusSource, Long> sourceMap) {
+        if (!sourceMap.isEmpty()) {
+            CompoundTag mapTag = new CompoundTag();
+            for (Map.Entry<BonusSource, Long> entry : sourceMap.entrySet()) {
+                if (entry.getValue() != 0) { // Only serialize non-zero values
+                    mapTag.putLong(entry.getKey().name(), entry.getValue());
+                }
+            }
+            if (!mapTag.isEmpty()) {
+                parentTag.put(key, mapTag);
+            }
+        }
+    }
+
+    /**
+     * Serializes a source map with double values to NBT.
+     */
+    private void serializeSourceMapDouble(CompoundTag parentTag, String key, Map<BonusSource, Double> sourceMap) {
+        if (!sourceMap.isEmpty()) {
+            CompoundTag mapTag = new CompoundTag();
+            for (Map.Entry<BonusSource, Double> entry : sourceMap.entrySet()) {
+                if (entry.getValue() != 0.0) { // Only serialize non-zero values
+                    mapTag.putDouble(entry.getKey().name(), entry.getValue());
+                }
+            }
+            if (!mapTag.isEmpty()) {
+                parentTag.put(key, mapTag);
+            }
+        }
+    }
+
+    /**
+     * Deserializes a source map with long values from NBT.
+     */
+    private void deserializeSourceMap(CompoundTag parentTag, String key, Map<BonusSource, Long> sourceMap) {
+        if (parentTag.contains(key)) {
+            CompoundTag mapTag = parentTag.getCompound(key);
+            for (String sourceKey : mapTag.getAllKeys()) {
+                try {
+                    BonusSource source = BonusSource.valueOf(sourceKey);
+                    long value = mapTag.getLong(sourceKey);
+                    if (value != 0) {
+                        sourceMap.put(source, value);
+                    }
+                } catch (IllegalArgumentException e) {
+                    ImmortalCultivation.LOGGER.warn("Unknown bonus source in NBT: {}", sourceKey);
+                }
+            }
+        }
+    }
+
+    /**
+     * Deserializes a source map with double values from NBT.
+     */
+    private void deserializeSourceMapDouble(CompoundTag parentTag, String key, Map<BonusSource, Double> sourceMap) {
+        if (parentTag.contains(key)) {
+            CompoundTag mapTag = parentTag.getCompound(key);
+            for (String sourceKey : mapTag.getAllKeys()) {
+                try {
+                    BonusSource source = BonusSource.valueOf(sourceKey);
+                    double value = mapTag.getDouble(sourceKey);
+                    if (value != 0.0) {
+                        sourceMap.put(source, value);
+                    }
+                } catch (IllegalArgumentException e) {
+                    ImmortalCultivation.LOGGER.warn("Unknown bonus source in NBT: {}", sourceKey);
+                }
+            }
+        }
+    }
+
+// === UTILITY METHODS === //
+
+    /**
+     * Clears all source-based bonus maps.
+     */
+    private void clearAllSourceMaps() {
+        healthBonusBySource.clear();
+        qiBonusBySource.clear();
+        bodyBonusBySource.clear();
+        healthRegenBonusBySource.clear();
+        qiRegenBonusBySource.clear();
+        bodyRegenBonusBySource.clear();
+        attackDamageBonusBySource.clear();
+        movementSpeedBonusBySource.clear();
+        jumpHeightBonusBySource.clear();
+    }
+
+    /**
+     * Initializes safe default values in case of deserialization errors.
+     */
+    private void initializeSafeDefaults() {
+        currentHealth = Math.max(currentHealth, 20L);
+        currentQi = Math.max(currentQi, 0L);
+        currentBody = Math.max(currentBody, 0L);
+        maxHealth = Math.max(maxHealth, 20L);
+        maxQi = Math.max(maxQi, 0L);
+        maxBody = Math.max(maxBody, 0L);
+
+        // Clear all source maps and totals
+        clearAllSourceMaps();
+
+        // Reset legacy fields to match empty source maps
+        permanentHealthBonus = 0;
+        permanentQiBonus = 0;
+        permanentBodyBonus = 0;
+        permanentHealthRegenBonus = 0.0;
+        permanentQiRegenBonus = 0.0;
+        permanentBodyRegenBonus = 0.0;
+        permanentAttackDamageBonus = 0.0;
+        permanentMovementSpeedBonus = 0.0;
+        permanentJumpHeightBonus = 0.0;
+
+        // Reset temporary bonuses
+        attackDamageBonus = 0.0;
+        movementSpeedBonus = 0.0;
+        jumpHeightBonus = 0.0;
+
+        // Reset regen fractions
+        healthRegenFraction = 0.0;
+        qiRegenFraction = 0.0;
+        bodyRegenFraction = 0.0;
+
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Initialized safe defaults after deserialization error");
         }
     }
 }

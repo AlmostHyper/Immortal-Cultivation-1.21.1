@@ -366,8 +366,9 @@ public abstract class CultivationRealm {
      * @param player The player
      * @param cultivationData Player's cultivation data
      * @param type The cultivation type being affected
+     * @param silent If true, suppresses advancement messages
      */
-    public void applyRealmModifiers(Player player, ICultivationData cultivationData, ICultivationData.CultivationType type) {
+    public void applyRealmModifiers(Player player, ICultivationData cultivationData, ICultivationData.CultivationType type, boolean silent) {
         // Override for special realm effects
     }
 

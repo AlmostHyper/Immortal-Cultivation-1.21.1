@@ -468,12 +468,12 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     }
 
     /**
-     * Sets the cultivation realm for the specified cultivation type.
-     * Automatically updates maximum cultivation and triggers recalculation.
+     * Sets the cultivation realm with optional silence for login reapplication.
      * @param type The cultivation type (QI or BODY)
      * @param realm The new cultivation realm
+     * @param silent If true, suppresses advancement messages
      */
-    public void setRealm(CultivationType type, CultivationRealm realm) {
+    public void setRealm(CultivationType type, CultivationRealm realm, boolean silent) {
         if (realm == null) {
             if (debugEnabled()) {
                 debugWarn("Attempted to set null realm for cultivation type: {}", type);
@@ -489,20 +489,24 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
         long newMaxCultivation = realm.getBaseMaxCultivation();
         setMaxCultivation(type, newMaxCultivation);
 
-        // Reset time in current realm
-        timeInCurrentRealm.put(type, 0L);
+        // Reset time in current realm only for actual advancement
+        if (!silent) {
+            timeInCurrentRealm.put(type, 0L);
+        }
 
         markDirty();
 
         if (debugEnabled()) {
-            debugLog("Realm changed for {}: {} {} -> {} (Max Cultivation: {})",
+            debugLog("Realm {} for {}: {} {} -> {} (Max Cultivation: {})",
+                silent ? "reapplied" : "changed",
                 player != null ? player.getName().getString() : "unknown",
                 type, oldRealm != null ? oldRealm.getId() : "NULL",
                 realm.getId(), newMaxCultivation);
         }
 
-        // Notify player of realm advancement if applicable
-        if (player instanceof ServerPlayer serverPlayer && oldRealm != null && !oldRealm.equals(realm)) {
+        // === CONDITIONAL ADVANCEMENT MESSAGES === //
+        // Only notify player of realm advancement for actual advancement, not login reapplication
+        if (!silent && player instanceof ServerPlayer serverPlayer && oldRealm != null && !oldRealm.equals(realm)) {
             Component message = Component.literal("Congratulations! You have advanced to ")
                 .append(Component.literal(realm.getDisplayName()).withStyle(ChatFormatting.GOLD))
                 .append(" in " + type.getDisplayName() + " cultivation!")

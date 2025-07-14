@@ -402,7 +402,7 @@ public class ICModCommandManager {
 
                 // Set the realm
                 CultivationRealm oldRealm = cultivation.getRealm(cultivationType);
-                cultivation.setRealm(cultivationType, realm);
+                cultivation.setRealm(cultivationType, realm, false);
 
                 // Apply CUMULATIVE realm modifiers - calculate all bonuses from mortal to target realm
                 applyCumulativeRealmBonuses(player, cultivationType, realm, cultivation);
@@ -990,8 +990,8 @@ public class ICModCommandManager {
             // Apply each realm's bonuses in sequence (this simulates natural progression)
             for (CultivationRealm realm : progressionPath) {
                 // Set realm temporarily and apply its modifiers
-                cultivation.setRealm(cultivationType, realm);
-                realm.applyRealmModifiers(player, cultivation, cultivationType);
+                cultivation.setRealm(cultivationType, realm, false);
+                realm.applyRealmModifiers(player, cultivation, cultivationType, false);
 
                 if (DEBUG_COMMANDS) {
                     ImmortalCultivation.LOGGER.debug("Applied bonuses for realm: {} (Level {})",

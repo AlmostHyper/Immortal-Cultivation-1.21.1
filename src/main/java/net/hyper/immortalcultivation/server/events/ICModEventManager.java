@@ -4,7 +4,9 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.*;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
+import net.hyper.immortalcultivation.core.cultivation.realms.JsonCultivationRealm;
 import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -26,10 +28,7 @@ import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
@@ -401,23 +400,98 @@ public class ICModEventManager {
     }
 
     /**
-     * Applies current realm modifiers for all cultivation types
+     * Applies current realm modifiers for all cultivation types.
+     * This method clears existing REALM bonuses and reapplies them to prevent
+     * accumulation of bonuses on player login/respawn, while preserving
+     * bonuses from other sources like pills.
      *
      * @param player The player to apply modifiers for
      */
     private static void applyCurrentRealmModifiers(ServerPlayer player) {
-        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-
-        // Apply Qi cultivation modifiers
-        CultivationRealm qiRealm = cultivation.getRealm(ICultivationData.CultivationType.QI);
-        if (qiRealm != null) {
-            qiRealm.applyRealmModifiers(player, cultivation, ICultivationData.CultivationType.QI);
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Silently reapplying current realm modifiers for player: {}",
+                player.getName().getString());
         }
 
-        // Apply Body cultivation modifiers
-        CultivationRealm bodyRealm = cultivation.getRealm(ICultivationData.CultivationType.BODY);
-        if (bodyRealm != null) {
-            bodyRealm.applyRealmModifiers(player, cultivation, ICultivationData.CultivationType.BODY);
+        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+
+        if (cultivation == null || stats == null) {
+            ImmortalCultivation.LOGGER.warn("Missing attachments for player {}: cultivation={}, stats={}",
+                player.getName().getString(), cultivation != null, stats != null);
+            return;
+        }
+
+        // CRITICAL FIX: Clear only REALM bonuses, preserving pill and other bonuses
+        stats.clearBonusesFromSource(BonusSource.REALM);
+
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Cleared REALM bonuses, preserved other sources (pills, equipment, etc.)");
+        }
+
+        // Apply CUMULATIVE realm bonuses for each cultivation type IN SILENT MODE
+        for (ICultivationData.CultivationType type : ICultivationData.CultivationType.values()) {
+            CultivationRealm realm = cultivation.getRealm(type);
+            if (realm != null) {
+                // Apply cumulative bonuses from mortal to current realm SILENTLY
+                applySilentCumulativeRealmBonuses(player, type, realm, cultivation);
+
+                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                    ImmortalCultivation.LOGGER.debug("Silently reapplied cumulative {} realm modifiers up to: {}",
+                        type.getDisplayName(), realm.getDisplayName());
+                }
+            }
+        }
+
+        // Refresh stats to apply changes
+        refreshStats(player);
+
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Silent cumulative realm modifier reapplication complete for player: {}",
+                player.getName().getString());
+        }
+    }
+
+    /**
+     * Example method for pills to add stat bonuses (if you want pills to affect stats directly).
+     * This would go in your pill consumption logic as an alternative or addition to cultivation rate bonuses.
+     *
+     * @param player The player consuming the pill
+     * @param statType The stat type to boost
+     * @param bonusAmount The amount of bonus to add
+     */
+    public static void addPillStatBonus(ServerPlayer player, IStatsData.StatType statType, long bonusAmount) {
+        PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+        if (stats != null && bonusAmount > 0) {
+            long currentPillBonus = stats.getSourcedStatBonus(statType, BonusSource.PILL);
+            stats.setSourcedStatBonus(statType, BonusSource.PILL, currentPillBonus + bonusAmount);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Added pill stat bonus for {}: +{} {} (total from pills: {})",
+                    player.getName().getString(), bonusAmount, statType,
+                    stats.getSourcedStatBonus(statType, BonusSource.PILL));
+            }
+        }
+    }
+
+    /**
+     * Example method for pills to add regeneration bonuses.
+     *
+     * @param player The player consuming the pill
+     * @param statType The stat type to boost regeneration for
+     * @param bonusAmount The regeneration bonus to add
+     */
+    public static void addPillRegenBonus(ServerPlayer player, IStatsData.StatType statType, double bonusAmount) {
+        PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+        if (stats != null && bonusAmount > 0.0) {
+            double currentPillBonus = stats.getSourcedStatRegenBonus(statType, BonusSource.PILL);
+            stats.setSourcedStatRegenBonus(statType, BonusSource.PILL, currentPillBonus + bonusAmount);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Added pill regen bonus for {}: +{} {} regen (total from pills: {})",
+                    player.getName().getString(), bonusAmount, statType,
+                    stats.getSourcedStatRegenBonus(statType, BonusSource.PILL));
+            }
         }
     }
 
@@ -718,6 +792,128 @@ public class ICModEventManager {
             ImmortalCultivation.LOGGER.error("Error applying attribute modifiers for player {}: {}",
                 player.getName().getString(), e.getMessage(), e);
         }
+    }
+
+    /**
+     * Applies cumulative realm bonuses silently by simulating natural progression.
+     * This method applies each realm's bonuses in sequence from mortal to target realm
+     * WITHOUT any advancement messages or notifications.
+     * This is the silent version for login reapplication.
+     *
+     * @param player The player
+     * @param cultivationType The cultivation type being reapplied
+     * @param targetRealm The target realm to reach
+     * @param cultivation The player's cultivation attachment
+     */
+    private static void applySilentCumulativeRealmBonuses(ServerPlayer player, ICultivationData.CultivationType cultivationType,
+                                                          CultivationRealm targetRealm, PlayerCultivationAttachment cultivation) {
+        try {
+            // Get the progression path from mortal to target realm
+            List<CultivationRealm> progressionPath = getRealmProgressionPath(targetRealm);
+
+            if (progressionPath.isEmpty()) {
+                ImmortalCultivation.LOGGER.warn("No progression path found for realm: {}", targetRealm.getId());
+                return;
+            }
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Silently applying cumulative realm bonuses for {} progression to {} ({} realms)",
+                    cultivationType.getDisplayName(), targetRealm.getDisplayName(), progressionPath.size());
+            }
+
+            // Apply each realm's bonuses in sequence SILENTLY (this simulates natural progression)
+            for (CultivationRealm realm : progressionPath) {
+                // Set realm temporarily and apply its modifiers SILENTLY
+                cultivation.setRealm(cultivationType, realm, true);
+
+                // Apply realm modifiers silently
+                if (realm instanceof JsonCultivationRealm jsonRealm) {
+                    jsonRealm.applyRealmModifiers(player, cultivation, cultivationType, true);
+                }
+
+                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                    ImmortalCultivation.LOGGER.debug("Silently applied bonuses for realm: {} (Level {})",
+                        realm.getDisplayName(), realm.getRealmLevel());
+                }
+            }
+
+            // Ensure final realm is set correctly
+            cultivation.setRealm(cultivationType, targetRealm, true);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Silently applied {} realms in progression to reach {}",
+                    progressionPath.size(), targetRealm.getDisplayName());
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying silent cumulative realm bonuses for player {} in realm progression: {}",
+                player.getName().getString(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Gets the complete progression path from mortal realm to the target realm.
+     * This uses the realm level system to include ALL realms that should be traversed,
+     * including different stages and special realms nested between regular realms.
+     *
+     * @param targetRealm The target realm
+     * @return List of realms in progression order (including target)
+     */
+    private static List<CultivationRealm> getRealmProgressionPath(CultivationRealm targetRealm) {
+        List<CultivationRealm> path = new ArrayList<>();
+
+        try {
+            int targetLevel = targetRealm.getRealmLevel();
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Building progression path to realm: {} (Level {})",
+                    targetRealm.getId(), targetLevel);
+            }
+
+            // Get all available realms as a collection
+            Collection<CultivationRealm> allRealms = ICModCultivationRealms.getAllRealms();
+
+            // Create a list of all realms with levels from 1 to target level
+            List<CultivationRealm> candidateRealms = new ArrayList<>();
+            for (CultivationRealm realm : allRealms) {
+                int realmLevel = realm.getRealmLevel();
+                if (realmLevel > 0 && realmLevel <= targetLevel) {
+                    candidateRealms.add(realm);
+                    if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                        ImmortalCultivation.LOGGER.debug("Added candidate realm: {} (Level {})",
+                            realm.getId(), realmLevel);
+                    }
+                }
+            }
+
+            // Sort by realm level to ensure proper progression order
+            candidateRealms.sort((a, b) -> Integer.compare(a.getRealmLevel(), b.getRealmLevel()));
+
+            // Add all realms in order
+            path.addAll(candidateRealms);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Generated complete progression path with {} realms for target: {} (Level {})",
+                    path.size(), targetRealm.getId(), targetLevel);
+
+                // Log the complete path for debugging
+                StringBuilder pathStr = new StringBuilder("Progression path: ");
+                for (int i = 0; i < path.size(); i++) {
+                    CultivationRealm realm = path.get(i);
+                    pathStr.append(realm.getId()).append("(L").append(realm.getRealmLevel()).append(")");
+                    if (i < path.size() - 1) pathStr.append(" -> ");
+                }
+                ImmortalCultivation.LOGGER.debug(pathStr.toString());
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error building progression path for realm {}: {}",
+                targetRealm.getId(), e.getMessage(), e);
+            // Fallback: just add the target realm
+            path.add(targetRealm);
+        }
+
+        return path;
     }
 
     /**

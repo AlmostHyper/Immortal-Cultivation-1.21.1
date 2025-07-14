@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.core.cultivation.realms;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
+import net.hyper.immortalcultivation.common.interfaces.BonusSource;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
@@ -407,16 +408,14 @@ public class JsonCultivationRealm extends CultivationRealm {
     }
 
     /**
-     * Applies realm modifiers to the player when they advance to this realm.
-     * This method adds cumulative permanent bonuses to ALL stats in PlayerStatsAttachment,
-     * including Health, Qi, Body, and combat stats (attack damage, movement speed, jump height).
+     * Applies cumulative permanent bonuses with optional silence.
      *
      * @param player The player advancing to this realm
      * @param cultivationData The player's cultivation data
      * @param type The cultivation type (QI or BODY)
+     * @param silent If true, suppresses advancement messages and logging
      */
-    @Override
-    public void applyRealmModifiers(Player player, ICultivationData cultivationData, ICultivationData.CultivationType type) {
+    public void applyRealmModifiers(Player player, ICultivationData cultivationData, ICultivationData.CultivationType type, boolean silent) {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return;
         }
@@ -428,60 +427,72 @@ public class JsonCultivationRealm extends CultivationRealm {
                 return;
             }
 
-            // ADD the realm bonuses to existing permanent bonuses (cumulative progression)
+            // ADD the realm bonuses using source-based tracking
+            // This preserves pill and other bonuses while adding realm bonuses
 
             // === RESOURCE STATS === //
-            long currentHealthBonus = stats.getPermanentStatBonus(IStatsData.StatType.HEALTH);
-            long currentQiBonus = stats.getPermanentStatBonus(IStatsData.StatType.QI);
-            long currentBodyBonus = stats.getPermanentStatBonus(IStatsData.StatType.BODY);
+            long currentHealthFromRealm = stats.getSourcedStatBonus(IStatsData.StatType.HEALTH, BonusSource.REALM);
+            long currentQiFromRealm = stats.getSourcedStatBonus(IStatsData.StatType.QI, BonusSource.REALM);
+            long currentBodyFromRealm = stats.getSourcedStatBonus(IStatsData.StatType.BODY, BonusSource.REALM);
 
-            double currentHealthRegenBonus = stats.getPermanentStatRegenBonus(IStatsData.StatType.HEALTH);
-            double currentQiRegenBonus = stats.getPermanentStatRegenBonus(IStatsData.StatType.QI);
-            double currentBodyRegenBonus = stats.getPermanentStatRegenBonus(IStatsData.StatType.BODY);
+            double currentHealthRegenFromRealm = stats.getSourcedStatRegenBonus(IStatsData.StatType.HEALTH, BonusSource.REALM);
+            double currentQiRegenFromRealm = stats.getSourcedStatRegenBonus(IStatsData.StatType.QI, BonusSource.REALM);
+            double currentBodyRegenFromRealm = stats.getSourcedStatRegenBonus(IStatsData.StatType.BODY, BonusSource.REALM);
 
             // === COMBAT STATS === //
-            double currentAttackBonus = stats.getPermanentAttackDamageBonus();
-            double currentSpeedBonus = stats.getPermanentMovementSpeedBonus();
-            double currentJumpBonus = stats.getPermanentJumpHeightBonus();
+            double currentAttackFromRealm = stats.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.ATTACK_DAMAGE, BonusSource.REALM);
+            double currentSpeedFromRealm = stats.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.MOVEMENT_SPEED, BonusSource.REALM);
+            double currentJumpFromRealm = stats.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.JUMP_HEIGHT, BonusSource.REALM);
 
-            // Apply new permanent bonuses by adding realm values to existing values
+            // Apply new realm bonuses by adding realm values to existing realm bonuses
+            // (This accumulates across realm advancements while preserving other sources)
 
             // Resource maximums
-            stats.setPermanentStatBonus(IStatsData.StatType.HEALTH, currentHealthBonus + getBaseMaxHealth());
-            stats.setPermanentStatBonus(IStatsData.StatType.QI, currentQiBonus + getBaseMaxQi());
-            stats.setPermanentStatBonus(IStatsData.StatType.BODY, currentBodyBonus + getBaseMaxBody());
+            stats.setSourcedStatBonus(IStatsData.StatType.HEALTH, BonusSource.REALM, currentHealthFromRealm + getBaseMaxHealth());
+            stats.setSourcedStatBonus(IStatsData.StatType.QI, BonusSource.REALM, currentQiFromRealm + getBaseMaxQi());
+            stats.setSourcedStatBonus(IStatsData.StatType.BODY, BonusSource.REALM, currentBodyFromRealm + getBaseMaxBody());
 
             // Resource regeneration rates
-            stats.setPermanentStatRegenBonus(IStatsData.StatType.HEALTH, currentHealthRegenBonus + getBaseHealthRegenRate());
-            stats.setPermanentStatRegenBonus(IStatsData.StatType.QI, currentQiRegenBonus + getBaseQiRegenRate());
-            stats.setPermanentStatRegenBonus(IStatsData.StatType.BODY, currentBodyRegenBonus + getBaseBodyRegenRate());
+            stats.setSourcedStatRegenBonus(IStatsData.StatType.HEALTH, BonusSource.REALM, currentHealthRegenFromRealm + getBaseHealthRegenRate());
+            stats.setSourcedStatRegenBonus(IStatsData.StatType.QI, BonusSource.REALM, currentQiRegenFromRealm + getBaseQiRegenRate());
+            stats.setSourcedStatRegenBonus(IStatsData.StatType.BODY, BonusSource.REALM, currentBodyRegenFromRealm + getBaseBodyRegenRate());
 
             // Combat stats
-            stats.setPermanentAttackDamageBonus(currentAttackBonus + getBaseAttackDamage());
-            stats.setPermanentMovementSpeedBonus(currentSpeedBonus + getBaseMovementSpeed());
-            stats.setPermanentJumpHeightBonus(currentJumpBonus + getBaseJumpHeight());
+            stats.setSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.ATTACK_DAMAGE, BonusSource.REALM, currentAttackFromRealm + getBaseAttackDamage());
+            stats.setSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.MOVEMENT_SPEED, BonusSource.REALM, currentSpeedFromRealm + getBaseMovementSpeed());
+            stats.setSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.JUMP_HEIGHT, BonusSource.REALM, currentJumpFromRealm + getBaseJumpHeight());
 
             // Force refresh all stats to apply the new permanent bonuses immediately
             ICModEventManager.refreshStats(serverPlayer);
 
-            ImmortalCultivation.LOGGER.info("Applied cumulative realm modifiers for {} advancing to {} - " +
-                    "Added H:+{} Q:+{} B:+{} | HR:+{} QR:+{} BR:+{} | ATK:+{}% SPD:+{}% JUMP:+{}% " +
-                    "(New Totals: H:{}/{} Q:{}/{} B:{}/{})",
-                player.getName().getString(),
-                getDisplayName(),
-                getBaseMaxHealth(), getBaseMaxQi(), getBaseMaxBody(),
-                String.format("%.3f", getBaseHealthRegenRate()),
-                String.format("%.3f", getBaseQiRegenRate()),
-                String.format("%.3f", getBaseBodyRegenRate()),
-                String.format("%.1f", getBaseAttackDamage() * 100),
-                String.format("%.1f", getBaseMovementSpeed() * 100),
-                String.format("%.1f", getBaseJumpHeight() * 100),
-                stats.getCurrentStat(IStatsData.StatType.HEALTH),
-                stats.getMaxStat(IStatsData.StatType.HEALTH),
-                stats.getCurrentStat(IStatsData.StatType.QI),
-                stats.getMaxStat(IStatsData.StatType.QI),
-                stats.getCurrentStat(IStatsData.StatType.BODY),
-                stats.getMaxStat(IStatsData.StatType.BODY));
+            // === CONDITIONAL LOGGING AND MESSAGES === //
+            if (!silent) {
+                // Only log and show messages for actual advancement, not login reapplication
+                ImmortalCultivation.LOGGER.info("Applied cumulative realm modifiers for {} advancing to {} - " +
+                        "Added H:+{} Q:+{} B:+{} | HR:+{} QR:+{} BR:+{} | ATK:+{}% SPD:+{}% JUMP:+{}% " +
+                        "(New Totals: H:{}/{} Q:{}/{} B:{}/{})",
+                    player.getName().getString(),
+                    getDisplayName(),
+                    getBaseMaxHealth(), getBaseMaxQi(), getBaseMaxBody(),
+                    String.format("%.3f", getBaseHealthRegenRate()),
+                    String.format("%.3f", getBaseQiRegenRate()),
+                    String.format("%.3f", getBaseBodyRegenRate()),
+                    String.format("%.1f", getBaseAttackDamage() * 100),
+                    String.format("%.1f", getBaseMovementSpeed() * 100),
+                    String.format("%.1f", getBaseJumpHeight() * 100),
+                    stats.getCurrentStat(IStatsData.StatType.HEALTH),
+                    stats.getMaxStat(IStatsData.StatType.HEALTH),
+                    stats.getCurrentStat(IStatsData.StatType.QI),
+                    stats.getMaxStat(IStatsData.StatType.QI),
+                    stats.getCurrentStat(IStatsData.StatType.BODY),
+                    stats.getMaxStat(IStatsData.StatType.BODY));
+            } else {
+                // Silent mode: only debug logging
+                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                    ImmortalCultivation.LOGGER.debug("Silently reapplied realm modifiers for {} to {} (login reapplication)",
+                        player.getName().getString(), getDisplayName());
+                }
+            }
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying realm modifiers for player {} in realm {}",
