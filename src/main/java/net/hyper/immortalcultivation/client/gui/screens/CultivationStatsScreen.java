@@ -312,23 +312,29 @@ public class CultivationStatsScreen extends Screen {
         }
     }
 
+    /**
+     * Renders a lighter background overlay that doesn't dim text as much.
+     * @param guiGraphics The graphics context for rendering
+     * @param mouseX Mouse X position
+     * @param mouseY Mouse Y position
+     * @param partialTick Partial tick for smooth animation
+     */
     @Override
     public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
+        // Much lighter overlay - less dimming effect
+        guiGraphics.fill(0, 0, this.width, this.height, 0x40000000);
     }
 
     /**
-     * Draws the main window background and border.
+     * Draws the main window background and border with improved contrast.
      * @param guiGraphics The graphics context for rendering
      */
     private void drawWindow(GuiGraphics guiGraphics) {
-        // Draw border first (larger rect)
-        guiGraphics.fill(windowX - 1, windowY - 1, windowX + windowWidth + 1, windowY + windowHeight + 1, 0xFF4A4A4A);
+        // Draw border first (larger rect) - slightly lighter border
+        guiGraphics.fill(windowX - 1, windowY - 1, windowX + windowWidth + 1, windowY + windowHeight + 1, 0xFF606060);
 
-        // Change this dark background to something lighter:
-        // OLD: guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF1A1A1A);
-        // NEW: Lighter background
-        guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF3A3A3A);
+        // Much lighter background for better text contrast
+        guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF505050);
     }
 
     /**
@@ -445,7 +451,7 @@ public class CultivationStatsScreen extends Screen {
 
             // Cultivation rate
             double rate = cultivationData.getEffectiveCultivationRate(type);
-            String rateText = String.format("Rate: %.2f/tick", rate);
+            String rateText = String.format("Rate: %.5f/tick", rate);
             drawScaledText(guiGraphics, rateText, windowX + MARGIN + 8, y, 0xFFCCCCCC);
             y += LINE_HEIGHT + SECTION_SPACING;
         }
@@ -470,7 +476,7 @@ public class CultivationStatsScreen extends Screen {
         y += LINE_HEIGHT;
         drawScaledText(guiGraphics, String.format("Maximum Health: %d", maxHealth), windowX + MARGIN + 8, y, HEALTH_COLOR);
         y += LINE_HEIGHT;
-        drawScaledText(guiGraphics, String.format("Health Regeneration: %.2f/tick", healthRegen), windowX + MARGIN + 8, y, 0xFF98FB98);
+        drawScaledText(guiGraphics, String.format("Health Regeneration: %.5f/tick", healthRegen), windowX + MARGIN + 8, y, 0xFF98FB98);
         y += LINE_HEIGHT + 4;
 
         drawProgressBar(guiGraphics, windowX + MARGIN + 8, y, 200, health, maxHealth, HEALTH_COLOR);
@@ -487,7 +493,7 @@ public class CultivationStatsScreen extends Screen {
 
         drawScaledText(guiGraphics, String.format("Qi Energy: %d / %d", currentQiEnergy, maxQiEnergy), windowX + MARGIN + 8, y, QI_COLOR);
         y += LINE_HEIGHT;
-        drawScaledText(guiGraphics, String.format("Qi Regeneration: %.2f/tick", qiEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
+        drawScaledText(guiGraphics, String.format("Qi Regeneration: %.5f/tick", qiEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
         y += LINE_HEIGHT;
 
         drawProgressBar(guiGraphics, windowX + MARGIN + 8, y, 180, currentQiEnergy, maxQiEnergy, QI_COLOR);
@@ -500,7 +506,7 @@ public class CultivationStatsScreen extends Screen {
 
         drawScaledText(guiGraphics, String.format("Body Energy: %d / %d", currentBodyEnergy, maxBodyEnergy), windowX + MARGIN + 8, y, BODY_COLOR);
         y += LINE_HEIGHT;
-        drawScaledText(guiGraphics, String.format("Body Regeneration: %.2f/tick", bodyEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
+        drawScaledText(guiGraphics, String.format("Body Regeneration: %.5f/tick", bodyEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
         y += LINE_HEIGHT;
 
         drawProgressBar(guiGraphics, windowX + MARGIN + 8, y, 180, currentBodyEnergy, maxBodyEnergy, BODY_COLOR);
@@ -623,6 +629,7 @@ public class CultivationStatsScreen extends Screen {
 
     /**
      * Draws a progress bar with current and maximum values.
+     * Fixed to render border first, then background, then progress fill.
      * @param guiGraphics The graphics context for rendering
      * @param x The X position
      * @param y The Y position
@@ -635,23 +642,25 @@ public class CultivationStatsScreen extends Screen {
         double percentage = max > 0 ? (double) current / max : 0.0;
         int fillWidth = (int) (percentage * width);
 
-        // Background
+        // Draw border FIRST (underneath everything)
+        guiGraphics.fill(x - 1, y - 1, x + width + 1, y + PROGRESS_BAR_HEIGHT + 1, BORDER_COLOR);
+
+        // Draw background (inside the border)
         guiGraphics.fill(x, y, x + width, y + PROGRESS_BAR_HEIGHT, 0xFF202020);
 
-        // Progress fill - ensure minimum visibility for any progress
+        // Draw progress fill (on top of background, inside border)
         if (max > 0 && current > 0) {
-            int visibleFill = Math.max(3, fillWidth); // At least 3 pixels if any progress
+            int visibleFill = Math.max(2, fillWidth); // At least 2 pixels if any progress
+            visibleFill = Math.min(visibleFill, width); // Don't exceed the bar width
+
             guiGraphics.fill(x, y, x + visibleFill, y + PROGRESS_BAR_HEIGHT, color);
 
-            // Add a brighter edge for very small progress
-            if (fillWidth < 10) {
+            // Add a brighter edge for very small progress (more subtle)
+            if (fillWidth < 8 && visibleFill > 1) {
                 int brightColor = brightenColor(color);
-                guiGraphics.fill(x, y, x + Math.min(2, visibleFill), y + PROGRESS_BAR_HEIGHT, brightColor);
+                guiGraphics.fill(x + visibleFill - 1, y, x + visibleFill, y + PROGRESS_BAR_HEIGHT, brightColor);
             }
         }
-
-        // Border
-        guiGraphics.fill(x - 1, y - 1, x + width + 1, y + PROGRESS_BAR_HEIGHT + 1, BORDER_COLOR);
     }
 
     // Helper method to brighten colors
