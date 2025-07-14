@@ -412,7 +412,7 @@ public class CultivationStatsScreen extends Screen {
 
         double health = statsData.getCurrentStat(IStatsData.StatType.HEALTH);
         double maxHealth = statsData.getMaxStat(IStatsData.StatType.HEALTH);
-        String healthText = String.format("Health: %.1f / %.1f", health, maxHealth);
+        String healthText = String.format("Health: %s / %s", formatNumber(health), formatNumber(maxHealth));
         drawScaledText(guiGraphics, healthText, windowX + MARGIN, y, HEALTH_COLOR);
         y += LINE_HEIGHT;
 
@@ -491,7 +491,7 @@ public class CultivationStatsScreen extends Screen {
         long maxQiEnergy = statsData.getMaxStat(IStatsData.StatType.QI);
         double qiEnergyRegen = statsData.getStatRegenRate(IStatsData.StatType.QI);
 
-        drawScaledText(guiGraphics, String.format("Qi Energy: %d / %d", currentQiEnergy, maxQiEnergy), windowX + MARGIN + 8, y, QI_COLOR);
+        drawScaledText(guiGraphics, String.format("Qi Energy: %s / %s", formatNumber(currentQiEnergy), formatNumber(maxQiEnergy)), windowX + MARGIN + 8, y, QI_COLOR);
         y += LINE_HEIGHT;
         drawScaledText(guiGraphics, String.format("Qi Regeneration: %.5f/tick", qiEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
         y += LINE_HEIGHT;
@@ -504,7 +504,7 @@ public class CultivationStatsScreen extends Screen {
         long maxBodyEnergy = statsData.getMaxStat(IStatsData.StatType.BODY);
         double bodyEnergyRegen = statsData.getStatRegenRate(IStatsData.StatType.BODY);
 
-        drawScaledText(guiGraphics, String.format("Body Energy: %d / %d", currentBodyEnergy, maxBodyEnergy), windowX + MARGIN + 8, y, BODY_COLOR);
+        drawScaledText(guiGraphics, String.format("Body Energy: %s / %s", formatNumber(currentBodyEnergy), formatNumber(maxBodyEnergy)), windowX + MARGIN + 8, y, BODY_COLOR);
         y += LINE_HEIGHT;
         drawScaledText(guiGraphics, String.format("Body Regeneration: %.5f/tick", bodyEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
         y += LINE_HEIGHT;
@@ -688,15 +688,38 @@ public class CultivationStatsScreen extends Screen {
     }
 
     /**
-     * Formats large numbers with appropriate suffixes.
+     * Formats large numbers with comma separators for better readability.
      * @param number The number to format
-     * @return Formatted number string
+     * @return Formatted number string with comma separators (e.g., "1,234,567")
      */
     private String formatNumber(long number) {
-        if (number < 1000) return String.valueOf(number);
-        if (number < 1000000) return String.format("%.1fK", number / 1000.0);
-        if (number < 1000000000) return String.format("%.1fM", number / 1000000.0);
-        return String.format("%.1fB", number / 1000000000.0);
+        return String.format("%,d", number);
+    }
+
+    /**
+     * Formats large decimal numbers with comma separators for better readability.
+     * @param number The decimal number to format
+     * @param decimalPlaces The number of decimal places to show
+     * @return Formatted number string with comma separators (e.g., "1,234.5")
+     */
+    private String formatNumber(double number, int decimalPlaces) {
+        String format = "%,." + decimalPlaces + "f";
+        return String.format(format, number);
+    }
+
+    /**
+     * Formats decimal numbers with comma separators, automatically choosing precision.
+     * @param number The decimal number to format
+     * @return Formatted number string with appropriate decimal places
+     */
+    private String formatNumber(double number) {
+        if (number == Math.floor(number)) {
+            // If it's a whole number, show no decimals
+            return String.format("%,.0f", number);
+        } else {
+            // Show 1 decimal place for non-whole numbers
+            return String.format("%,.1f", number);
+        }
     }
 
     /**
