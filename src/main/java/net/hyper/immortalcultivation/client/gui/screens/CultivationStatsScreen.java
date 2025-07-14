@@ -1,5 +1,6 @@
 package net.hyper.immortalcultivation.client.gui.screens;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
@@ -16,6 +17,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import org.lwjgl.opengl.GL11;
 
 /**
  * Completely refactored Cultivation Status Screen that properly utilizes the updated attachment system.
@@ -64,21 +66,21 @@ public class CultivationStatsScreen extends Screen {
     private static final int PROGRESS_BAR_HEIGHT = 8;
 
     // === VISUAL CONSTANTS === //
-    private static final int BACKGROUND_COLOR = 0xC0101010;
+    private static final int BACKGROUND_COLOR = 0xFF101010;
     private static final int BORDER_COLOR = 0xFF404040;
     private static final int TAB_ACTIVE_COLOR = 0xFF606060;
     private static final int TAB_INACTIVE_COLOR = 0xFF303030;
     private static final int TAB_BORDER_COLOR = 0xFF505050;
 
     // Cultivation colors
-    private static final int QI_COLOR = 0xFF87CEEB;
-    private static final int BODY_COLOR = 0xFFFF6347;
-    private static final int HEALTH_COLOR = 0xFFFF69B4;
-    private static final int FOCUS_ACTIVE_COLOR = 0xFFFFD700;
-    private static final int READY_COLOR = 0xFF90EE90;
+    private static final int QI_COLOR = 0xFFAADDFF;
+    private static final int BODY_COLOR = 0xFFFF8A65;
+    private static final int HEALTH_COLOR = 0xFFFF8BCC;
+    private static final int SECTION_HEADER_COLOR = 0xFFEEBBEE;
+    private static final int FOCUS_ACTIVE_COLOR = 0xFFFFFF00;
+    private static final int READY_COLOR = 0xFFAAFFAA;
     private static final int NOT_READY_COLOR = 0xFFFFB6C1;
-    private static final int SECTION_HEADER_COLOR = 0xFFDDA0DD;
-    private static final int RACE_COLOR = 0xFFFFD700;
+    private static final int RACE_COLOR = 0xFFFFFF88;
 
     // === SCREEN LAYOUT === //
     private int windowWidth;
@@ -99,6 +101,8 @@ public class CultivationStatsScreen extends Screen {
     private boolean dataLoaded = false;
     private String errorMessage = null;
 
+    private boolean hasLoadedOnce = false;
+
     /**
      * Creates a new RefactoredCultivationStatsScreen instance.
      */
@@ -115,7 +119,12 @@ public class CultivationStatsScreen extends Screen {
     protected void init() {
         super.init();
         calculateScreenLayout();
-        loadPlayerData();
+
+        if (!hasLoadedOnce) {
+            loadPlayerData();
+            hasLoadedOnce = true;
+        }
+
         setupInterface();
 
         if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
@@ -125,28 +134,24 @@ public class CultivationStatsScreen extends Screen {
     }
 
     /**
-     * Calculates responsive screen layout based on available space.
+     * Calculates responsive screen layout without manual GUI scale manipulation.
+     * Works entirely in GUI coordinates as provided by Minecraft.
      */
     private void calculateScreenLayout() {
-        // Calculate window size with proper bounds
+        // Work directly with the GUI coordinates - no manual scaling needed
         windowWidth = Math.min(PREFERRED_WIDTH, width - 40);
         windowHeight = Math.min(PREFERRED_HEIGHT, height - 40);
 
         windowWidth = Math.max(windowWidth, MIN_WIDTH);
         windowHeight = Math.max(windowHeight, MIN_HEIGHT);
 
-        // Center the window properly
-        windowX = (width - windowWidth) / 2;
-        windowY = (height - windowHeight) / 2;
+        // Ensure whole pixel coordinates to prevent blur
+        windowX = Math.round((width - windowWidth) / 2.0f);
+        windowY = Math.round((height - windowHeight) / 2.0f);
 
-        // Calculate content area
+        // Calculate content area with whole pixels
         contentAreaY = windowY + MARGIN + TAB_HEIGHT + 8;
         contentAreaHeight = windowHeight - (MARGIN * 2) - TAB_HEIGHT - BUTTON_HEIGHT - 16;
-
-        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-            ImmortalCultivation.LOGGER.debug("Screen layout calculated - Window: {}x{} at ({}, {}), Content area: {} high",
-                windowWidth, windowHeight, windowX, windowY, contentAreaHeight);
-        }
     }
 
     /**
@@ -224,7 +229,8 @@ public class CultivationStatsScreen extends Screen {
                     Component.literal(tab.getDisplayName()),
                     (button) -> {
                         currentTab = tab;
-                        setupInterface(); // Refresh interface for new tab
+                        // DON'T recreate interface, just switch tab
+                        // setupInterface(); // REMOVE THIS LINE
                     }
                 )
                 .bounds(tabX, windowY + MARGIN, tabWidth, TAB_HEIGHT)
@@ -288,24 +294,27 @@ public class CultivationStatsScreen extends Screen {
      */
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-        // Clear background
-        guiGraphics.fill(0, 0, width, height, 0x80000000);
+        enableSharpRendering();
+        try {
+            this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+            drawWindow(guiGraphics);
+            drawTabHeaders(guiGraphics);
 
-        // Draw main window
-        drawWindow(guiGraphics);
+            if (dataLoaded) {
+                drawTabContent(guiGraphics);
+            } else {
+                drawErrorMessage(guiGraphics);
+            }
 
-        // Draw tab headers
-        drawTabHeaders(guiGraphics);
-
-        // Draw content based on current tab
-        if (dataLoaded) {
-            drawTabContent(guiGraphics);
-        } else {
-            drawErrorMessage(guiGraphics);
+            super.render(guiGraphics, mouseX, mouseY, partialTick);
+        } finally {
+            restoreNormalRendering();
         }
+    }
 
-        // Render widgets (buttons)
-        super.render(guiGraphics, mouseX, mouseY, partialTick);
+    @Override
+    public void renderBackground(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        guiGraphics.fill(0, 0, this.width, this.height, 0x80000000);
     }
 
     /**
@@ -313,12 +322,13 @@ public class CultivationStatsScreen extends Screen {
      * @param guiGraphics The graphics context for rendering
      */
     private void drawWindow(GuiGraphics guiGraphics) {
-        // Main window background
-        guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, BACKGROUND_COLOR);
+        // Draw border first (larger rect)
+        guiGraphics.fill(windowX - 1, windowY - 1, windowX + windowWidth + 1, windowY + windowHeight + 1, 0xFF4A4A4A);
 
-        // Window border
-        guiGraphics.fill(windowX - 1, windowY - 1, windowX + windowWidth + 1, windowY + windowHeight + 1, BORDER_COLOR);
-        guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, BACKGROUND_COLOR);
+        // Change this dark background to something lighter:
+        // OLD: guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF1A1A1A);
+        // NEW: Lighter background
+        guiGraphics.fill(windowX, windowY, windowX + windowWidth, windowY + windowHeight, 0xFF3A3A3A);
     }
 
     /**
@@ -367,7 +377,7 @@ public class CultivationStatsScreen extends Screen {
         // Current focus
         ICultivationData.CultivationType focus = cultivationData.getCurrentFocus();
         String focusText = "Current Focus: " + (focus == ICultivationData.CultivationType.QI ? "Qi Cultivation" : "Body Cultivation");
-        guiGraphics.drawString(font, focusText, windowX + MARGIN, y, FOCUS_ACTIVE_COLOR);
+        drawScaledText(guiGraphics, focusText, windowX + MARGIN, y, FOCUS_ACTIVE_COLOR);
         y += LINE_HEIGHT + 4;
 
         // Cultivation realms
@@ -379,7 +389,7 @@ public class CultivationStatsScreen extends Screen {
             int color = type == ICultivationData.CultivationType.QI ? QI_COLOR : BODY_COLOR;
 
             String realmText = type.name() + " Cultivation: " + (realm != null ? realm.getDisplayName() : "None");
-            guiGraphics.drawString(font, realmText, windowX + MARGIN, y, color);
+            drawScaledText(guiGraphics, realmText, windowX + MARGIN, y, color);
             y += LINE_HEIGHT;
 
             // Progress bar
@@ -397,7 +407,7 @@ public class CultivationStatsScreen extends Screen {
         double health = statsData.getCurrentStat(IStatsData.StatType.HEALTH);
         double maxHealth = statsData.getMaxStat(IStatsData.StatType.HEALTH);
         String healthText = String.format("Health: %.1f / %.1f", health, maxHealth);
-        guiGraphics.drawString(font, healthText, windowX + MARGIN, y, HEALTH_COLOR);
+        drawScaledText(guiGraphics, healthText, windowX + MARGIN, y, HEALTH_COLOR);
         y += LINE_HEIGHT;
 
         drawProgressBar(guiGraphics, windowX + MARGIN, y, 200, (long)health, (long)maxHealth, HEALTH_COLOR);
@@ -419,7 +429,7 @@ public class CultivationStatsScreen extends Screen {
             // Current realm and progress
             CultivationRealm realm = cultivationData.getRealm(type);
             if (realm != null) {
-                guiGraphics.drawString(font, "Realm: " + realm.getDisplayName(), windowX + MARGIN + 8, y, color);
+                drawScaledText(guiGraphics, "Realm: " + realm.getDisplayName(), windowX + MARGIN + 8, y, color);
                 y += LINE_HEIGHT;
             }
 
@@ -427,7 +437,7 @@ public class CultivationStatsScreen extends Screen {
             long current = cultivationData.getCurrentCultivation(type);
             long max = cultivationData.getMaxCultivation(type);
             String progressText = String.format("Progress: %s / %s", formatNumber(current), formatNumber(max));
-            guiGraphics.drawString(font, progressText, windowX + MARGIN + 8, y, 0xFFFFFFFF);
+            drawScaledText(guiGraphics, progressText, windowX + MARGIN + 8, y, 0xFFFFFFFF);
             y += LINE_HEIGHT;
 
             drawProgressBar(guiGraphics, windowX + MARGIN + 8, y, 180, current, max, color);
@@ -436,7 +446,7 @@ public class CultivationStatsScreen extends Screen {
             // Cultivation rate
             double rate = cultivationData.getEffectiveCultivationRate(type);
             String rateText = String.format("Rate: %.2f/tick", rate);
-            guiGraphics.drawString(font, rateText, windowX + MARGIN + 8, y, 0xFFCCCCCC);
+            drawScaledText(guiGraphics, rateText, windowX + MARGIN + 8, y, 0xFFCCCCCC);
             y += LINE_HEIGHT + SECTION_SPACING;
         }
     }
@@ -456,11 +466,11 @@ public class CultivationStatsScreen extends Screen {
         long maxHealth = statsData.getMaxStat(IStatsData.StatType.HEALTH);
         double healthRegen = statsData.getStatRegenRate(IStatsData.StatType.HEALTH);
 
-        guiGraphics.drawString(font, String.format("Current Health: %d", health), windowX + MARGIN + 8, y, HEALTH_COLOR);
+        drawScaledText(guiGraphics, String.format("Current Health: %d", health), windowX + MARGIN + 8, y, HEALTH_COLOR);
         y += LINE_HEIGHT;
-        guiGraphics.drawString(font, String.format("Maximum Health: %d", maxHealth), windowX + MARGIN + 8, y, HEALTH_COLOR);
+        drawScaledText(guiGraphics, String.format("Maximum Health: %d", maxHealth), windowX + MARGIN + 8, y, HEALTH_COLOR);
         y += LINE_HEIGHT;
-        guiGraphics.drawString(font, String.format("Health Regeneration: %.2f/tick", healthRegen), windowX + MARGIN + 8, y, 0xFF98FB98);
+        drawScaledText(guiGraphics, String.format("Health Regeneration: %.2f/tick", healthRegen), windowX + MARGIN + 8, y, 0xFF98FB98);
         y += LINE_HEIGHT + 4;
 
         drawProgressBar(guiGraphics, windowX + MARGIN + 8, y, 200, health, maxHealth, HEALTH_COLOR);
@@ -475,9 +485,9 @@ public class CultivationStatsScreen extends Screen {
         long maxQiEnergy = statsData.getMaxStat(IStatsData.StatType.QI);
         double qiEnergyRegen = statsData.getStatRegenRate(IStatsData.StatType.QI);
 
-        guiGraphics.drawString(font, String.format("Qi Energy: %d / %d", currentQiEnergy, maxQiEnergy), windowX + MARGIN + 8, y, QI_COLOR);
+        drawScaledText(guiGraphics, String.format("Qi Energy: %d / %d", currentQiEnergy, maxQiEnergy), windowX + MARGIN + 8, y, QI_COLOR);
         y += LINE_HEIGHT;
-        guiGraphics.drawString(font, String.format("Qi Regeneration: %.2f/tick", qiEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
+        drawScaledText(guiGraphics, String.format("Qi Regeneration: %.2f/tick", qiEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
         y += LINE_HEIGHT;
 
         drawProgressBar(guiGraphics, windowX + MARGIN + 8, y, 180, currentQiEnergy, maxQiEnergy, QI_COLOR);
@@ -488,9 +498,9 @@ public class CultivationStatsScreen extends Screen {
         long maxBodyEnergy = statsData.getMaxStat(IStatsData.StatType.BODY);
         double bodyEnergyRegen = statsData.getStatRegenRate(IStatsData.StatType.BODY);
 
-        guiGraphics.drawString(font, String.format("Body Energy: %d / %d", currentBodyEnergy, maxBodyEnergy), windowX + MARGIN + 8, y, BODY_COLOR);
+        drawScaledText(guiGraphics, String.format("Body Energy: %d / %d", currentBodyEnergy, maxBodyEnergy), windowX + MARGIN + 8, y, BODY_COLOR);
         y += LINE_HEIGHT;
-        guiGraphics.drawString(font, String.format("Body Regeneration: %.2f/tick", bodyEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
+        drawScaledText(guiGraphics, String.format("Body Regeneration: %.2f/tick", bodyEnergyRegen), windowX + MARGIN + 12, y, 0xFFCCCCCC);
         y += LINE_HEIGHT;
 
         drawProgressBar(guiGraphics, windowX + MARGIN + 8, y, 180, currentBodyEnergy, maxBodyEnergy, BODY_COLOR);
@@ -511,18 +521,18 @@ public class CultivationStatsScreen extends Screen {
 
             if (raceData.hasRaceAssigned()) {
                 RaceType race = raceData.getRaceType();
-                guiGraphics.drawString(font, "Race: " + race.getDisplayName(), windowX + MARGIN + 8, y, RACE_COLOR);
+                drawScaledText(guiGraphics, "Race: " + race.getDisplayName(), windowX + MARGIN + 8, y, RACE_COLOR);
                 y += LINE_HEIGHT;
 
                 double qiMult = raceData.getCultivationMultiplier(ICultivationData.CultivationType.QI);
                 double bodyMult = raceData.getCultivationMultiplier(ICultivationData.CultivationType.BODY);
 
-                guiGraphics.drawString(font, String.format("Qi Multiplier: %.1fx", qiMult), windowX + MARGIN + 8, y, QI_COLOR);
+                drawScaledText(guiGraphics, String.format("Qi Multiplier: %.1fx", qiMult), windowX + MARGIN + 8, y, QI_COLOR);
                 y += LINE_HEIGHT;
-                guiGraphics.drawString(font, String.format("Body Multiplier: %.1fx", bodyMult), windowX + MARGIN + 8, y, BODY_COLOR);
+                drawScaledText(guiGraphics, String.format("Body Multiplier: %.1fx", bodyMult), windowX + MARGIN + 8, y, BODY_COLOR);
                 y += LINE_HEIGHT + SECTION_SPACING;
             } else {
-                guiGraphics.drawString(font, "Race: Not Assigned", windowX + MARGIN + 8, y, 0xFFFF0000);
+                drawScaledText(guiGraphics, "Race: Not Assigned", windowX + MARGIN + 8, y, 0xFFFF0000);
                 y += LINE_HEIGHT + SECTION_SPACING;
             }
         }
@@ -533,27 +543,27 @@ public class CultivationStatsScreen extends Screen {
 
         if (talentsData.isTalentAssigned(PlayerTalentsAttachment.TalentType.SPIRITUAL_ROOT)) {
             SpiritualRootType spiritualRoot = talentsData.getSpiritualRootType();
-            guiGraphics.drawString(font, "Spiritual Root: " + spiritualRoot.getDisplayName(), windowX + MARGIN + 8, y, QI_COLOR);
+            drawScaledText(guiGraphics, "Spiritual Root: " + spiritualRoot.getDisplayName(), windowX + MARGIN + 8, y, QI_COLOR);
             y += LINE_HEIGHT;
 
             double spiritualMult = talentsData.getTalentMultiplier(PlayerTalentsAttachment.TalentType.SPIRITUAL_ROOT);
-            guiGraphics.drawString(font, String.format("Multiplier: %.1fx", spiritualMult), windowX + MARGIN + 12, y, 0xFFCCCCCC);
+            drawScaledText(guiGraphics, String.format("Multiplier: %.1fx", spiritualMult), windowX + MARGIN + 12, y, 0xFFCCCCCC);
             y += LINE_HEIGHT;
         } else {
-            guiGraphics.drawString(font, "Spiritual Root: Not Assigned", windowX + MARGIN + 8, y, 0xFFFF0000);
+            drawScaledText(guiGraphics, "Spiritual Root: Not Assigned", windowX + MARGIN + 8, y, 0xFFFF0000);
             y += LINE_HEIGHT;
         }
 
         if (talentsData.isTalentAssigned(PlayerTalentsAttachment.TalentType.PHYSIQUE)) {
             PhysiqueType physique = talentsData.getPhysiqueType();
-            guiGraphics.drawString(font, "Physique: " + physique.getDisplayName(), windowX + MARGIN + 8, y, BODY_COLOR);
+            drawScaledText(guiGraphics, "Physique: " + physique.getDisplayName(), windowX + MARGIN + 8, y, BODY_COLOR);
             y += LINE_HEIGHT;
 
             double physiqueMult = talentsData.getTalentMultiplier(PlayerTalentsAttachment.TalentType.PHYSIQUE);
-            guiGraphics.drawString(font, String.format("Multiplier: %.1fx", physiqueMult), windowX + MARGIN + 12, y, 0xFFCCCCCC);
+            drawScaledText(guiGraphics, String.format("Multiplier: %.1fx", physiqueMult), windowX + MARGIN + 12, y, 0xFFCCCCCC);
             y += LINE_HEIGHT;
         } else {
-            guiGraphics.drawString(font, "Physique: Not Assigned", windowX + MARGIN + 8, y, 0xFFFF0000);
+            drawScaledText(guiGraphics, "Physique: Not Assigned", windowX + MARGIN + 8, y, 0xFFFF0000);
             y += LINE_HEIGHT;
         }
     }
@@ -566,7 +576,7 @@ public class CultivationStatsScreen extends Screen {
         int y = contentAreaY + MARGIN;
 
         if (breakthroughData == null) {
-            guiGraphics.drawString(font, "Breakthrough data not available", windowX + MARGIN, y, 0xFFFF0000);
+            drawScaledText(guiGraphics, "Breakthrough data not available", windowX + MARGIN, y, 0xFFFF0000);
             return;
         }
 
@@ -593,7 +603,7 @@ public class CultivationStatsScreen extends Screen {
                 statusColor = NOT_READY_COLOR;
             }
 
-            guiGraphics.drawString(font, typeName + " Breakthrough: " + status, windowX + MARGIN + 8, y, statusColor);
+            drawScaledText(guiGraphics, typeName + " Breakthrough: " + status, windowX + MARGIN + 8, y, statusColor);
             y += LINE_HEIGHT + 8;
         }
     }
@@ -608,7 +618,7 @@ public class CultivationStatsScreen extends Screen {
      * @param y The Y position
      */
     private void drawSectionHeader(GuiGraphics guiGraphics, String text, int x, int y) {
-        guiGraphics.drawString(font, text, x, y, SECTION_HEADER_COLOR);
+        drawScaledText(guiGraphics, text, x, y, SECTION_HEADER_COLOR);
     }
 
     /**
@@ -622,18 +632,35 @@ public class CultivationStatsScreen extends Screen {
      * @param color The color of the progress fill
      */
     private void drawProgressBar(GuiGraphics guiGraphics, int x, int y, int width, long current, long max, int color) {
-        // Background
-        guiGraphics.fill(x, y, x + width, y + PROGRESS_BAR_HEIGHT, 0xFF404040);
+        double percentage = max > 0 ? (double) current / max : 0.0;
+        int fillWidth = (int) (percentage * width);
 
-        // Progress fill
-        if (max > 0) {
-            int fillWidth = (int) ((double) current / max * width);
-            guiGraphics.fill(x, y, x + fillWidth, y + PROGRESS_BAR_HEIGHT, color);
+        // Background
+        guiGraphics.fill(x, y, x + width, y + PROGRESS_BAR_HEIGHT, 0xFF202020);
+
+        // Progress fill - ensure minimum visibility for any progress
+        if (max > 0 && current > 0) {
+            int visibleFill = Math.max(3, fillWidth); // At least 3 pixels if any progress
+            guiGraphics.fill(x, y, x + visibleFill, y + PROGRESS_BAR_HEIGHT, color);
+
+            // Add a brighter edge for very small progress
+            if (fillWidth < 10) {
+                int brightColor = brightenColor(color);
+                guiGraphics.fill(x, y, x + Math.min(2, visibleFill), y + PROGRESS_BAR_HEIGHT, brightColor);
+            }
         }
 
         // Border
         guiGraphics.fill(x - 1, y - 1, x + width + 1, y + PROGRESS_BAR_HEIGHT + 1, BORDER_COLOR);
-        guiGraphics.fill(x, y, x + width, y + PROGRESS_BAR_HEIGHT, 0x00000000);
+    }
+
+    // Helper method to brighten colors
+    private int brightenColor(int color) {
+        int alpha = (color >> 24) & 0xFF;
+        int red = Math.min(255, ((color >> 16) & 0xFF) + 40);
+        int green = Math.min(255, ((color >> 8) & 0xFF) + 40);
+        int blue = Math.min(255, (color & 0xFF) + 40);
+        return (alpha << 24) | (red << 16) | (green << 8) | blue;
     }
 
     /**
@@ -643,11 +670,11 @@ public class CultivationStatsScreen extends Screen {
     private void drawErrorMessage(GuiGraphics guiGraphics) {
         int y = contentAreaY + MARGIN;
 
-        guiGraphics.drawString(font, "Error loading cultivation data:", windowX + MARGIN, y, 0xFFFF0000);
+        drawScaledText(guiGraphics, "Error loading cultivation data:", windowX + MARGIN, y, 0xFFFF0000);
         y += LINE_HEIGHT + 4;
 
         if (errorMessage != null) {
-            guiGraphics.drawString(font, errorMessage, windowX + MARGIN, y, 0xFFFFAAAA);
+            drawScaledText(guiGraphics, errorMessage, windowX + MARGIN, y, 0xFFFFAAAA);
         }
     }
 
@@ -695,5 +722,42 @@ public class CultivationStatsScreen extends Screen {
     @Override
     public boolean isPauseScreen() {
         return false; // Don't pause the game - cultivation continues
+    }
+    /**
+     * Renders text with proper scaling to prevent blur
+     * @param guiGraphics The graphics context for rendering
+     * @param text The text to render
+     * @param x The X position
+     * @param y The Y position
+     * @param color The text color
+     */
+    private void drawScaledText(GuiGraphics guiGraphics, String text, int x, int y, int color) {
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(1.0f, 1.0f, 1.0f); // No scaling for now
+
+        guiGraphics.drawString(font, text, x, y, color, false);
+
+        guiGraphics.pose().popPose();
+    }
+
+    private double getGuiScale() {
+        return minecraft.getWindow().getGuiScale();
+    }
+
+    private int alignToPixel(double coordinate) {
+        double scale = getGuiScale();
+        return (int) Math.round(coordinate / scale) * (int) scale;
+    }
+
+    private void enableSharpRendering() {
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
+    }
+
+    private void restoreNormalRendering() {
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
+        GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
     }
 }
