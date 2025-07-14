@@ -392,12 +392,20 @@ public class ICModCommandManager {
                     return 0;
                 }
 
+                // Get stats attachment for bonus calculation
+                PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+                if (stats == null) {
+                    ctx.getSource().sendFailure(Component.literal("Player stats data not found")
+                        .withStyle(ChatFormatting.RED));
+                    return 0;
+                }
+
                 // Set the realm
                 CultivationRealm oldRealm = cultivation.getRealm(cultivationType);
                 cultivation.setRealm(cultivationType, realm);
 
-                // Apply realm modifiers to stats
-                realm.applyRealmModifiers(player, cultivation, cultivationType);
+                // Apply CUMULATIVE realm modifiers - calculate all bonuses from mortal to target realm
+                applyCumulativeRealmBonuses(player, cultivationType, realm, cultivation);
 
                 // Refresh stats to apply changes
                 ICModEventManager.refreshStats(player);
@@ -957,6 +965,142 @@ public class ICModCommandManager {
     public static void setPerformanceMonitoring(boolean enabled) {
         PERFORMANCE_MONITORING = enabled;
         ImmortalCultivation.LOGGER.info("Command performance monitoring {}", enabled ? "enabled" : "disabled");
+    }
+
+    /**
+     * Applies cumulative realm bonuses by simulating natural progression.
+     * This method applies each realm's bonuses in sequence from mortal to target realm.
+     *
+     * @param player The player
+     * @param cultivationType The cultivation type being set
+     * @param targetRealm The target realm to set
+     * @param cultivation The player's cultivation attachment
+     */
+    private void applyCumulativeRealmBonuses(ServerPlayer player, ICultivationData.CultivationType cultivationType,
+                                             CultivationRealm targetRealm, PlayerCultivationAttachment cultivation) {
+        try {
+            // Get the progression path from mortal to target realm
+            List<CultivationRealm> progressionPath = getRealmProgressionPath(targetRealm);
+
+            if (progressionPath.isEmpty()) {
+                ImmortalCultivation.LOGGER.warn("No progression path found for realm: {}", targetRealm.getId());
+                return;
+            }
+
+            // Apply each realm's bonuses in sequence (this simulates natural progression)
+            for (CultivationRealm realm : progressionPath) {
+                // Set realm temporarily and apply its modifiers
+                cultivation.setRealm(cultivationType, realm);
+                realm.applyRealmModifiers(player, cultivation, cultivationType);
+
+                if (DEBUG_COMMANDS) {
+                    ImmortalCultivation.LOGGER.debug("Applied bonuses for realm: {} (Level {})",
+                        realm.getDisplayName(), realm.getRealmLevel());
+                }
+            }
+
+            if (DEBUG_COMMANDS) {
+                ImmortalCultivation.LOGGER.info("Applied {} realms in progression to reach {}",
+                    progressionPath.size(), targetRealm.getDisplayName());
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error applying cumulative realm bonuses: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Gets the complete progression path from mortal realm to the target realm.
+     * This uses the realm level system to include ALL realms that should be traversed,
+     * including different stages and special realms nested between regular realms.
+     *
+     * @param targetRealm The target realm
+     * @return List of realms in progression order (including target)
+     */
+    private List<CultivationRealm> getRealmProgressionPath(CultivationRealm targetRealm) {
+        List<CultivationRealm> path = new ArrayList<>();
+
+        try {
+            int targetLevel = targetRealm.getRealmLevel();
+
+            if (DEBUG_COMMANDS) {
+                ImmortalCultivation.LOGGER.debug("Building progression path to realm: {} (Level {})",
+                    targetRealm.getId(), targetLevel);
+            }
+
+            // Get all available realms as a collection
+            Collection<CultivationRealm> allRealms = ICModCultivationRealms.getAllRealms();
+
+            // Create a list of all realms with levels from 1 to target level
+            List<CultivationRealm> candidateRealms = new ArrayList<>();
+            for (CultivationRealm realm : allRealms) {
+                int realmLevel = realm.getRealmLevel();
+                if (realmLevel > 0 && realmLevel <= targetLevel) {
+                    candidateRealms.add(realm);
+                    if (DEBUG_COMMANDS) {
+                        ImmortalCultivation.LOGGER.debug("Added candidate realm: {} (Level {})",
+                            realm.getId(), realmLevel);
+                    }
+                }
+            }
+
+            // Sort by realm level to ensure proper progression order
+            candidateRealms.sort((a, b) -> Integer.compare(a.getRealmLevel(), b.getRealmLevel()));
+
+            // Add all realms in order
+            path.addAll(candidateRealms);
+
+            if (DEBUG_COMMANDS) {
+                ImmortalCultivation.LOGGER.info("Generated complete progression path with {} realms for target: {} (Level {})",
+                    path.size(), targetRealm.getId(), targetLevel);
+
+                // Log the complete path for debugging
+                StringBuilder pathStr = new StringBuilder("Progression path: ");
+                for (int i = 0; i < path.size(); i++) {
+                    CultivationRealm realm = path.get(i);
+                    pathStr.append(realm.getId()).append("(L").append(realm.getRealmLevel()).append(")");
+                    if (i < path.size() - 1) pathStr.append(" -> ");
+                }
+                ImmortalCultivation.LOGGER.debug(pathStr.toString());
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error building progression path for realm {}: {}",
+                targetRealm.getId(), e.getMessage(), e);
+            // Fallback: just add the target realm
+            path.add(targetRealm);
+        }
+
+        return path;
+    }
+
+    /**
+     * Clears existing bonuses that would come from cultivation realms.
+     * This prevents double-applying bonuses when setting realms via command.
+     *
+     * @param stats The player stats attachment
+     * @param cultivationType The cultivation type being reset
+     */
+    private void clearCultivationTypeBonuses(PlayerStatsAttachment stats, ICultivationData.CultivationType cultivationType) {
+        // Note: This is a simplified approach. In a more sophisticated system,
+        // you might track which bonuses came from which sources.
+        // For now, we'll reset to mortal base values and re-apply everything.
+
+        // Reset to mortal base values (this assumes mortal realm provides no bonuses)
+        // You might need to adjust this based on your specific mortal realm implementation
+        stats.setPermanentStatBonus(IStatsData.StatType.HEALTH, 0);
+        stats.setPermanentStatBonus(IStatsData.StatType.QI, 0);
+        stats.setPermanentStatBonus(IStatsData.StatType.BODY, 0);
+        stats.setPermanentStatRegenBonus(IStatsData.StatType.HEALTH, 0.0);
+        stats.setPermanentStatRegenBonus(IStatsData.StatType.QI, 0.0);
+        stats.setPermanentStatRegenBonus(IStatsData.StatType.BODY, 0.0);
+        stats.setPermanentAttackDamageBonus(0.0);
+        stats.setPermanentMovementSpeedBonus(0.0);
+        stats.setPermanentJumpHeightBonus(0.0);
+
+        if (DEBUG_COMMANDS) {
+            ImmortalCultivation.LOGGER.debug("Cleared existing bonuses for cultivation type: {}", cultivationType);
+        }
     }
 
     // === INTERNAL COMMAND HANDLER INTERFACE === //
