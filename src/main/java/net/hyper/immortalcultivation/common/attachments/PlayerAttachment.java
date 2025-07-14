@@ -39,7 +39,7 @@ public abstract class PlayerAttachment<T extends PlayerAttachment<T>> implements
 
     // === DEBUG FIELDS === //
 
-    protected transient boolean debugEnabled = true;
+    protected transient boolean debugEnabled = false;
     private transient final Map<String, Long> performanceTimers = new ConcurrentHashMap<>();
     private transient long lastSyncTime = 0L;
     private transient long syncCount = 0L;
