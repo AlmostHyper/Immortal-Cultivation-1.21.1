@@ -14,7 +14,7 @@ import net.neoforged.neoforge.client.event.InputEvent;
 import org.lwjgl.glfw.GLFW;
 
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID, value = Dist.CLIENT)
-public class ICModKeyInputEvent {
+public class KeyInputEvent {
 
     @SubscribeEvent
     public static void onKeyInput(InputEvent.Key event) {

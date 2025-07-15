@@ -51,7 +51,7 @@ import java.util.function.Supplier;
  * - Performance-optimized with caching and rate limiting
  */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
-public class ICModEventManager {
+public class EventManager {
 
     // === ATTACHMENT MANAGEMENT === //
 

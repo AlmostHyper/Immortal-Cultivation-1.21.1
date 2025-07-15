@@ -15,7 +15,7 @@ import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
-import net.hyper.immortalcultivation.server.events.ICModEventManager;
+import net.hyper.immortalcultivation.server.events.EventManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -408,7 +408,7 @@ public class ICModCommandManager {
                 applyCumulativeRealmBonuses(player, cultivationType, realm, cultivation);
 
                 // Refresh stats to apply changes
-                ICModEventManager.refreshStats(player);
+                EventManager.refreshStats(player);
 
                 // Send success message
                 Component successMessage = Component.literal("Successfully set ")
