@@ -840,6 +840,32 @@ public class ICModEventManager {
                 }
             }
 
+            // Apply step height modifier (add this after the jump height section)
+            AttributeInstance stepHeight = player.getAttribute(Attributes.STEP_HEIGHT);
+            if (stepHeight != null) {
+                double totalJumpBonus = statsAttachment.getPermanentJumpHeightBonus() +
+                    statsAttachment.getJumpHeightBonus();
+
+                // Scale step height with jump bonus (typically smaller multiplier than jump)
+                double stepHeightBonus = totalJumpBonus * 0.5; // 50% of jump bonus for step height
+
+                // Remove existing cultivation step height modifier
+                ResourceLocation cultivationStepModifierId = ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, "cultivation_step_bonus");
+                stepHeight.removeModifier(cultivationStepModifierId);
+
+                if (stepHeightBonus != 0.0) {
+                    stepHeight.addPermanentModifier(new AttributeModifier(
+                        cultivationStepModifierId,
+                        stepHeightBonus,
+                        AttributeModifier.Operation.ADD_MULTIPLIED_BASE));
+
+                    if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                        ImmortalCultivation.LOGGER.debug("Applied step height modifier: {} for player {}",
+                            stepHeightBonus, player.getName().getString());
+                    }
+                }
+            }
+
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error applying attribute modifiers for player {}: {}",
                 player.getName().getString(), e.getMessage(), e);
