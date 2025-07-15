@@ -100,7 +100,7 @@ public class ICModEventManager {
     }
 
     /**
-     * Handles player respawn events
+     * Handles player respawn events - reapplies realm modifiers and restores stats to full
      *
      * @param event Player respawn event
      */
@@ -112,8 +112,28 @@ public class ICModEventManager {
             // Clear immunity tracking on respawn
             clearPlayerImmunity(player.getUUID());
 
-            // Reapply realm modifiers
+            // FIRST: Reapply realm modifiers to set up proper max stats
             applyCurrentRealmModifiers(player);
+
+            // SECOND: Get player stats attachment AFTER realm modifiers are applied
+            PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            if (statsAttachment != null) {
+                // Restore all stats to their proper maximum values
+                restoreStatsToFull(player, statsAttachment);
+
+                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                    ImmortalCultivation.LOGGER.debug("Restored stats to full for {}: H:{}/{} Q:{}/{} B:{}/{}",
+                        player.getName().getString(),
+                        statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH),
+                        statsAttachment.getMaxStat(IStatsData.StatType.HEALTH),
+                        statsAttachment.getCurrentStat(IStatsData.StatType.QI),
+                        statsAttachment.getMaxStat(IStatsData.StatType.QI),
+                        statsAttachment.getCurrentStat(IStatsData.StatType.BODY),
+                        statsAttachment.getMaxStat(IStatsData.StatType.BODY));
+                }
+            }
+
+            // THIRD: Synchronize all player data
             synchronizeAllPlayerData(player);
         }
     }
@@ -623,17 +643,49 @@ public class ICModEventManager {
     }
 
     /**
-     * Updates vanilla health display to match custom health
+     * Updates vanilla health display to match custom health and handles death when appropriate
      *
      * @param player The player
-     * @param resourceAttachment The resource attachment
+     * @param statsAttachment The stats attachment
      */
-    private static void updateVanillaHealthDisplay(Player player, PlayerStatsAttachment resourceAttachment) {
-        float percentage = (float) resourceAttachment.getCurrentStat(IStatsData.StatType.HEALTH) / resourceAttachment.getMaxStat(IStatsData.StatType.HEALTH);
-        float vanillaHealth = percentage * player.getMaxHealth();
-        player.setHealth(Math.max(0.5f, vanillaHealth)); // Minimum 0.5 to prevent death
+    private static void updateVanillaHealthDisplay(Player player, PlayerStatsAttachment statsAttachment) {
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Updating vanilla health for {}: customHealth={}/{}",
+                player.getName().getString(),
+                statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH),
+                statsAttachment.getMaxStat(IStatsData.StatType.HEALTH));
+        }
 
-        lastKnownVanillaHealth.put(player.getUUID(), player.getHealth());
+        long currentCustomHealth = statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH);
+        long maxCustomHealth = statsAttachment.getMaxStat(IStatsData.StatType.HEALTH);
+
+        // Check if player should die
+        if (currentCustomHealth <= 0) {
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Player {} custom health reached 0, triggering death",
+                    player.getName().getString());
+            }
+
+            // Set vanilla health to 0 to trigger death
+            player.setHealth(0.0f);
+            lastKnownVanillaHealth.put(player.getUUID(), 0.0f);
+            return;
+        }
+
+        // Calculate health percentage and update vanilla display
+        float percentage = (float) currentCustomHealth / maxCustomHealth;
+        float vanillaHealth = percentage * player.getMaxHealth();
+
+        // Ensure minimum of 0.1f when alive (but allow 0.0f for death)
+        float adjustedHealth = Math.max(0.1f, vanillaHealth);
+
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Setting vanilla health to {} (percentage: {}, vanillaHealth: {})",
+                adjustedHealth, percentage, vanillaHealth);
+        }
+
+        player.setHealth(adjustedHealth);
+        lastKnownVanillaHealth.put(player.getUUID(), adjustedHealth);
     }
 
     /**
@@ -914,6 +966,59 @@ public class ICModEventManager {
         }
 
         return path;
+    }
+
+    /**
+     * Restores all player stats (Health, Qi, Body) to their maximum values
+     * Used during respawn to give players a fresh start
+     *
+     * @param player The player whose stats should be restored
+     * @param statsAttachment The player's stats attachment
+     */
+    private static void restoreStatsToFull(ServerPlayer player, PlayerStatsAttachment statsAttachment) {
+        try {
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("Restoring stats to full for {}: Before - H:{}/{} Q:{}/{} B:{}/{}",
+                    player.getName().getString(),
+                    statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH),
+                    statsAttachment.getMaxStat(IStatsData.StatType.HEALTH),
+                    statsAttachment.getCurrentStat(IStatsData.StatType.QI),
+                    statsAttachment.getMaxStat(IStatsData.StatType.QI),
+                    statsAttachment.getCurrentStat(IStatsData.StatType.BODY),
+                    statsAttachment.getMaxStat(IStatsData.StatType.BODY));
+            }
+
+            // Restore Health to maximum using the correct method name
+            long maxHealth = statsAttachment.getMaxStat(IStatsData.StatType.HEALTH);
+            statsAttachment.setCurrentStat(IStatsData.StatType.HEALTH, maxHealth);
+
+            // Restore Qi to maximum
+            long maxQi = statsAttachment.getMaxStat(IStatsData.StatType.QI);
+            statsAttachment.setCurrentStat(IStatsData.StatType.QI, maxQi);
+
+            // Restore Body to maximum
+            long maxBody = statsAttachment.getMaxStat(IStatsData.StatType.BODY);
+            statsAttachment.setCurrentStat(IStatsData.StatType.BODY, maxBody);
+
+            // Update vanilla health display to match restored custom health
+            updateVanillaHealthDisplay(player, statsAttachment);
+
+            // Mark for synchronization
+            statsAttachment.markDirty();
+
+            ImmortalCultivation.LOGGER.info("Successfully restored all stats to full for player: {} - H:{}/{} Q:{}/{} B:{}/{}",
+                player.getName().getString(),
+                statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH),
+                statsAttachment.getMaxStat(IStatsData.StatType.HEALTH),
+                statsAttachment.getCurrentStat(IStatsData.StatType.QI),
+                statsAttachment.getMaxStat(IStatsData.StatType.QI),
+                statsAttachment.getCurrentStat(IStatsData.StatType.BODY),
+                statsAttachment.getMaxStat(IStatsData.StatType.BODY));
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error restoring stats to full for player {}: {}",
+                player.getName().getString(), e.getMessage(), e);
+        }
     }
 
     /**
