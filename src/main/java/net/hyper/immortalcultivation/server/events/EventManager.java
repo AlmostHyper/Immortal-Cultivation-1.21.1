@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.server.events;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.server.events.server.CombatEventHandler;
+import net.hyper.immortalcultivation.server.events.server.EquipmentEventHandler;
 import net.hyper.immortalcultivation.server.events.server.PlayerLifecycleEventHandler;
 import net.hyper.immortalcultivation.server.events.client.GUIEvent;
 import net.neoforged.bus.api.IEventBus;
@@ -140,6 +141,9 @@ public class EventManager {
             // Register Player Lifecycle Handler
             registerHandler("PlayerLifecycleEventHandler", new PlayerLifecycleEventHandler());
 
+            // Register Equipment Event Handler
+            registerHandler("EquipmentEventHandler", new EquipmentEventHandler());
+
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
                 ImmortalCultivation.LOGGER.debug("[EventManager] Server-side handlers registered successfully");
             }
@@ -157,7 +161,11 @@ public class EventManager {
     private void trackClientHandlers() {
         try {
             // Track client-side handlers (these auto-register via annotations)
-            trackHandler("GUIEvent", "Client-side (auto-registered)");
+            trackHandler("GUIEvent", "Client-side (auto-registered via @EventBusSubscriber)");
+            trackHandler("TooltipEventHandler", "Client-side (auto-registered via @EventBusSubscriber)");
+
+            // Track command handler (auto-registers for command events)
+            trackHandler("CommandManager", "Auto-registered (via @EventBusSubscriber for commands)");
 
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
                 ImmortalCultivation.LOGGER.debug("[EventManager] Client-side handlers tracked successfully");
