@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEvent;
+import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -67,7 +67,7 @@ public record PlayerStatsSyncPacket(CompoundTag statsData) implements ISyncPacke
                 attachment.applySync(this.statsData);
 
                 // Fire an update event to notify other systems of the change
-                NeoForge.EVENT_BUS.post(new AttachmentUpdateEvent(player, ICModAttachmentTypes.PLAYER_STATS.get()));
+                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, ICModAttachmentTypes.PLAYER_STATS.get()));
             }
         }
     }

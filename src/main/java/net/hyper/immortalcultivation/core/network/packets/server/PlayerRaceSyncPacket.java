@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 import net.hyper.immortalcultivation.common.attachments.PlayerRaceAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEvent;
+import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -32,7 +32,7 @@ public record PlayerRaceSyncPacket(CompoundTag raceData) implements ISyncPacket 
             if (attachment != null) {
                 attachment.applySync(this.raceData);
 
-                NeoForge.EVENT_BUS.post(new AttachmentUpdateEvent(player, ICModAttachmentTypes.PLAYER_RACE.get()));
+                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, ICModAttachmentTypes.PLAYER_RACE.get()));
             }
         }
     }

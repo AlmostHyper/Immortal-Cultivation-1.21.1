@@ -6,11 +6,11 @@ import net.neoforged.bus.api.Event;
 import net.neoforged.neoforge.attachment.AttachmentType;
 
 
-public class AttachmentUpdateEvent extends Event {
+public class AttachmentUpdateEventHandler extends Event {
     private final Player player;
     private final AttachmentType<?> attachmentType;
 
-    public AttachmentUpdateEvent(Player player, AttachmentType<?> attachmentType) {
+    public AttachmentUpdateEventHandler(Player player, AttachmentType<?> attachmentType) {
         this.player = player;
         this.attachmentType = attachmentType;
     }
