@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.server.events.server;
+package net.hyper.immortalcultivation.server.events.client;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
