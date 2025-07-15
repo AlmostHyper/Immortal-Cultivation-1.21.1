@@ -1,4 +1,4 @@
 package net.hyper.immortalcultivation.server.events.server;
 
-public class HealingEvent {
+public class TooltipEventHandler {
 }

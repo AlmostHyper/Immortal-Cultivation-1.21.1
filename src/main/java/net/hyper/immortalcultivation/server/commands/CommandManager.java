@@ -52,10 +52,10 @@ import java.util.function.BiFunction;
  * - Performance optimization through caching and monitoring
  */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
-public class ICModCommandManager {
+public class CommandManager {
 
     // === SINGLETON INSTANCE === //
-    public static final ICModCommandManager INSTANCE = new ICModCommandManager();
+    public static final CommandManager INSTANCE = new CommandManager();
 
     // === CONFIGURATION CONSTANTS === //
     private static final String COMMAND_PREFIX = "ic";
@@ -113,7 +113,7 @@ public class ICModCommandManager {
     /**
      * Private constructor for singleton pattern
      */
-    private ICModCommandManager() {
+    private CommandManager() {
         if (DEBUG_COMMANDS) {
             ImmortalCultivation.LOGGER.info("ICModCommandManager instance created");
         }

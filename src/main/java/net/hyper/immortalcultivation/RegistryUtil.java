@@ -1,4 +1,4 @@
 package net.hyper.immortalcultivation;
 
-public class ICModRegistry {
+public class RegistryUtil {
 }
