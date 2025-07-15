@@ -5,6 +5,7 @@ import net.hyper.immortalcultivation.common.config.ImmortalCultivationConfig;
 import net.hyper.immortalcultivation.core.network.ICModNetworkManager;
 import net.hyper.immortalcultivation.common.registry.*;
 import net.hyper.immortalcultivation.client.gui.screens.PillFurnaceScreen;
+import net.hyper.immortalcultivation.server.events.EventManager;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -51,6 +52,7 @@ public class ImmortalCultivation
         LOGGER.info("Registering Handlers...");
 
         NeoForge.EVENT_BUS.register(ICModNetworkManager.class);
+        EventManager.initialize();
 
         LOGGER.info("Handlers registered successfully!");
 
