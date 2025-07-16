@@ -103,7 +103,7 @@ public class QiHUDScreen {
 
     // Performance optimization fields
     private static int updateCounter = 0;
-    private static final int UPDATE_FREQUENCY = 8; // Update every 8 ticks for smooth performance
+    private static final int UPDATE_FREQUENCY = 20; // Update every 8 ticks for smooth performance
 
     // Cached display strings to reduce string allocation overhead
     private static String cachedQiCultivationText = "";
