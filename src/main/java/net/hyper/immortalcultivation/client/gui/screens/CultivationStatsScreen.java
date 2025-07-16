@@ -9,7 +9,7 @@ import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.client.Minecraft;
@@ -168,12 +168,12 @@ public class CultivationStatsScreen extends Screen {
 
         try {
             // Load all attachments using the registry
-            cultivationData = minecraft.player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            statsData = minecraft.player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
-            talentsData = minecraft.player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            raceData = minecraft.player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
-            breakthroughData = minecraft.player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
-            pillData = minecraft.player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+            cultivationData = minecraft.player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+            statsData = minecraft.player.getData(AttachmentRegistry.PLAYER_STATS.get());
+            talentsData = minecraft.player.getData(AttachmentRegistry.PLAYER_TALENTS.get());
+            raceData = minecraft.player.getData(AttachmentRegistry.PLAYER_RACE.get());
+            breakthroughData = minecraft.player.getData(AttachmentRegistry.PLAYER_BREAKTHROUGH.get());
+            pillData = minecraft.player.getData(AttachmentRegistry.PLAYER_PILL_CONSUMPTION.get());
 
             // Verify critical attachments
             if (cultivationData == null || statsData == null || talentsData == null) {

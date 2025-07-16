@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -28,11 +28,11 @@ public record PlayerTalentsSyncPacket(CompoundTag talentData) implements ISyncPa
     @Override
     public void handleOnClient(Player player) {
         if (player != null) {
-            PlayerTalentsAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerTalentsAttachment attachment = player.getData(AttachmentRegistry.PLAYER_TALENTS.get());
             if (attachment != null) {
                 attachment.applySync(this.talentData);
 
-                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, ICModAttachmentTypes.PLAYER_TALENTS.get()));
+                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, AttachmentRegistry.PLAYER_TALENTS.get()));
             }
         }
     }

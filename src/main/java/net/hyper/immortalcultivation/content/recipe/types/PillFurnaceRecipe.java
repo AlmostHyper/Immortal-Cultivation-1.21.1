@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.content.recipe.types;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-import net.hyper.immortalcultivation.common.registry.ICModRecipes;
+import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.NonNullList;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -96,12 +96,12 @@ public record PillFurnaceRecipe(
 
     @Override
     public RecipeSerializer<?> getSerializer() {
-        return ICModRecipes.PILL_SERIALIZER.get();
+        return RecipeRegistry.PILL_SERIALIZER.get();
     }
 
     @Override
     public RecipeType<?> getType() {
-        return ICModRecipes.PILL_FURNACE_TYPE.get();
+        return RecipeRegistry.PILL_FURNACE_TYPE.get();
     }
 
     // Recipe Serializer Implementation

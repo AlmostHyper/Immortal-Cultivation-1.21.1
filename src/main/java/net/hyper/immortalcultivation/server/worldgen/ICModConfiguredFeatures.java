@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.server.worldgen;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.registry.ICModBlocks;
+import net.hyper.immortalcultivation.content.block.BlockRegistry;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.data.worldgen.BootstrapContext;
 import net.minecraft.resources.ResourceKey;
@@ -37,50 +37,50 @@ public class ICModConfiguredFeatures {
         RuleTest endReplaceables = new BlockMatchTest(Blocks.END_STONE);
 
         List<OreConfiguration.TargetBlockState> overworldLowQualitySpiritStoneOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get().defaultBlockState()),
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(stoneReplaceables, BlockRegistry.LOW_QUALITY_SPIRIT_STONE_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.LOW_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldMediumQualitySpiritStoneOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get().defaultBlockState()),
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(stoneReplaceables, BlockRegistry.MEDIUM_QUALITY_SPIRIT_STONE_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.MEDIUM_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldHighQualitySpiritStoneOres = List.of(
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.HIGH_QUALITY_SPIRIT_STONE_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldTopQualitySpiritStoneOres = List.of(
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.TOP_QUALITY_SPIRIT_STONE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.TOP_QUALITY_SPIRIT_STONE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldEarthOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.EARTH_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(stoneReplaceables, BlockRegistry.EARTH_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.EARTH_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldFireOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.FIRE_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(stoneReplaceables, BlockRegistry.FIRE_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.FIRE_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldMetalOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.METAL_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(stoneReplaceables, BlockRegistry.METAL_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.METAL_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldWaterOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.WATER_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(stoneReplaceables, BlockRegistry.WATER_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.WATER_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldWoodOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.WOOD_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
-            OreConfiguration.target(deepslateReplaceables, ICModBlocks.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(stoneReplaceables, BlockRegistry.WOOD_ASPECTED_ORE_BLOCK.get().defaultBlockState()),
+            OreConfiguration.target(deepslateReplaceables, BlockRegistry.WOOD_ASPECTED_DEEPSLATE_ORE_BLOCK.get().defaultBlockState())
         );
 
         List<OreConfiguration.TargetBlockState> overworldSkyIronOres = List.of(
-            OreConfiguration.target(stoneReplaceables, ICModBlocks.SKY_IRON_ORE_BLOCK.get().defaultBlockState())
+            OreConfiguration.target(stoneReplaceables, BlockRegistry.SKY_IRON_ORE_BLOCK.get().defaultBlockState())
 
         );
 

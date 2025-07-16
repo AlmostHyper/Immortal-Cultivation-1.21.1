@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.client.gui.menus;
 
 import net.hyper.immortalcultivation.content.block.entities.PillFurnaceBlockEntity;
-import net.hyper.immortalcultivation.common.registry.ICModMenuTypes;
+import net.hyper.immortalcultivation.client.gui.MenuRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -60,7 +60,7 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
 
     // Constructor for server-side (called from BlockEntity)
     public PillFurnaceMenu(int containerId, Inventory playerInventory, PillFurnaceBlockEntity blockEntity, ContainerData data) {
-        super(ICModMenuTypes.PILL_FURNACE_MENU.get(), containerId);
+        super(MenuRegistry.PILL_FURNACE_MENU.get(), containerId);
         checkContainerSize(playerInventory, PillFurnaceBlockEntity.SLOT_COUNT);
         this.blockEntity = blockEntity;
         this.level = playerInventory.player.level();
@@ -80,7 +80,7 @@ public class PillFurnaceMenu extends AbstractContainerMenu {
 
     // Constructor for client-side (called from network)
     public PillFurnaceMenu(int containerId, Inventory playerInventory, FriendlyByteBuf extraData) {
-        super(ICModMenuTypes.PILL_FURNACE_MENU.get(), containerId);
+        super(MenuRegistry.PILL_FURNACE_MENU.get(), containerId);
 
         this.level = playerInventory.player.level();
 

@@ -4,7 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.BonusSource;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.attributes.AttributeInstance;
@@ -86,7 +86,7 @@ public class AttributeModifierUtils {
         }
 
         try {
-            PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            PlayerStatsAttachment statsAttachment = player.getData(AttachmentRegistry.PLAYER_STATS.get());
             if (statsAttachment == null) {
                 ImmortalCultivation.LOGGER.warn("[AttributeModifierUtils] Cannot refresh attributes: PlayerStatsAttachment not found for player {}",
                     player.getName().getString());
@@ -137,7 +137,7 @@ public class AttributeModifierUtils {
         }
 
         try {
-            PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
             if (stats != null) {
                 long currentPillBonus = stats.getSourcedStatBonus(statType, BonusSource.PILL);
                 stats.setSourcedStatBonus(statType, BonusSource.PILL, currentPillBonus + bonusAmount);
@@ -430,7 +430,7 @@ public class AttributeModifierUtils {
         debugInfo.append("Player: ").append(player.getName().getString()).append("\n");
 
         try {
-            PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
             if (stats == null) {
                 debugInfo.append("ERROR: No PlayerStatsAttachment found!\n");
                 return debugInfo.toString();

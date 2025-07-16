@@ -3,8 +3,8 @@ package net.hyper.immortalcultivation.server.events.utils;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.*;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.minecraft.server.level.ServerPlayer;
@@ -46,12 +46,12 @@ public class PlayerEventUtils {
 
     // === ATTACHMENT MANAGEMENT === //
     private static final List<Supplier<? extends AttachmentType<?>>> MANAGED_ATTACHMENTS = List.of(
-        ICModAttachmentTypes.PLAYER_CULTIVATION,
-        ICModAttachmentTypes.PLAYER_STATS,
-        ICModAttachmentTypes.PLAYER_BREAKTHROUGH,
-        ICModAttachmentTypes.PLAYER_TALENTS,
-        ICModAttachmentTypes.PLAYER_RACE,
-        ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION
+        AttachmentRegistry.PLAYER_CULTIVATION,
+        AttachmentRegistry.PLAYER_STATS,
+        AttachmentRegistry.PLAYER_BREAKTHROUGH,
+        AttachmentRegistry.PLAYER_TALENTS,
+        AttachmentRegistry.PLAYER_RACE,
+        AttachmentRegistry.PLAYER_PILL_CONSUMPTION
     );
 
     // === TRACKING MAPS === //
@@ -280,8 +280,8 @@ public class PlayerEventUtils {
                     player.getName().getString());
             }
 
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+            PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
 
             if (cultivation == null || stats == null) {
                 ImmortalCultivation.LOGGER.warn("[PlayerEventUtils] Missing attachments for player {}: cultivation={}, stats={}",
@@ -392,7 +392,7 @@ public class PlayerEventUtils {
 
         try {
             // Get all realms for this cultivation type from the registry
-            Collection<CultivationRealm> allRealms = ICModCultivationRealms.getAllRealms();
+            Collection<CultivationRealm> allRealms = CultivationRealmRegistry.getAllRealms();
 
             // Sort by realm level and filter up to target realm
             allRealms.stream()

@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.server.events.server;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.server.events.utils.PlayerEventUtils;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.EventPriority;
@@ -175,7 +175,7 @@ public class PlayerLifecycleEventHandler {
             PlayerEventUtils.applyCurrentRealmModifiers(player);
 
             // Get stats attachment and restore to full
-            PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            PlayerStatsAttachment statsAttachment = player.getData(AttachmentRegistry.PLAYER_STATS.get());
             if (statsAttachment != null) {
                 PlayerEventUtils.restoreStatsToFull(player, statsAttachment);
             } else {
@@ -431,12 +431,12 @@ public class PlayerLifecycleEventHandler {
     public static boolean validatePlayerAttachments(ServerPlayer player) {
         try {
             // Check all critical attachments
-            boolean hasStats = player.hasData(ICModAttachmentTypes.PLAYER_STATS.get());
-            boolean hasCultivation = player.hasData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            boolean hasTalents = player.hasData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            boolean hasRace = player.hasData(ICModAttachmentTypes.PLAYER_RACE.get());
-            boolean hasBreakthrough = player.hasData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
-            boolean hasPillConsumption = player.hasData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get());
+            boolean hasStats = player.hasData(AttachmentRegistry.PLAYER_STATS.get());
+            boolean hasCultivation = player.hasData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+            boolean hasTalents = player.hasData(AttachmentRegistry.PLAYER_TALENTS.get());
+            boolean hasRace = player.hasData(AttachmentRegistry.PLAYER_RACE.get());
+            boolean hasBreakthrough = player.hasData(AttachmentRegistry.PLAYER_BREAKTHROUGH.get());
+            boolean hasPillConsumption = player.hasData(AttachmentRegistry.PLAYER_PILL_CONSUMPTION.get());
 
             boolean allValid = hasStats && hasCultivation && hasTalents && hasRace && hasBreakthrough && hasPillConsumption;
 

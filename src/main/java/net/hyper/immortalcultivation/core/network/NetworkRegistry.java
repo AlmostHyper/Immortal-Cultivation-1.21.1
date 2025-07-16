@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.core.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.network.packets.client.*;
 import net.hyper.immortalcultivation.core.network.packets.server.*;
@@ -142,7 +142,7 @@ public class NetworkRegistry {
         }
 
         private static void handleRaceSelection(ServerPlayer player, UnifiedActionRequestPacket packet) {
-            var raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+            var raceAttachment = player.getData(AttachmentRegistry.PLAYER_RACE.get());
             raceAttachment.setPlayer(player);
 
             if (raceAttachment.hasRaceAssigned()) {
@@ -155,7 +155,7 @@ public class NetworkRegistry {
                     var raceType = RaceType.valueOf(raceId.toUpperCase());
                     raceAttachment.assignRace(raceType);
                     player.sendSystemMessage(Component.literal("You are now a " + raceType.getDisplayName() + "!").withStyle(ChatFormatting.GOLD));
-                    NetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
+                    NetworkManager.INSTANCE.scheduleSync(player, AttachmentRegistry.PLAYER_RACE::get, true);
                 } catch (IllegalArgumentException e) {
                     player.sendSystemMessage(Component.literal("Invalid race selected.").withStyle(ChatFormatting.RED));
                     ImmortalCultivation.LOGGER.warn("Player {} tried to select invalid race: {}", player.getName().getString(), raceId);
@@ -167,7 +167,7 @@ public class NetworkRegistry {
         }
 
         private static void handleFocusToggle(ServerPlayer player) {
-            var cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            var cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
             cultivation.setPlayer(player);
 
             boolean success = cultivation.toggleFocus();
@@ -176,7 +176,7 @@ public class NetworkRegistry {
                 player.sendSystemMessage(Component.literal("✨ Cultivation focus shifted to ").append(Component.literal(newFocus.getDisplayName() + " Cultivation").withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD)).append("!").withStyle(ChatFormatting.GREEN));
                 player.sendSystemMessage(Component.literal("» ").append(Component.literal("2x").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)).append(" cultivation speed | ").append(Component.literal("1.5x").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD)).append(" energy regeneration").withStyle(ChatFormatting.GRAY));
                 player.level().playSound(null, player.blockPosition(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0f, 1.5f);
-                NetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, false);
+                NetworkManager.INSTANCE.scheduleSync(player, AttachmentRegistry.PLAYER_CULTIVATION::get, false);
             } else {
                 long remainingTicks = cultivation.getFocusChangeCooldownRemaining();
                 long remainingMinutes = remainingTicks / 1200;

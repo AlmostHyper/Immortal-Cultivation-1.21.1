@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -61,13 +61,13 @@ public record PlayerCultivationSyncPacket(CompoundTag cultivationData) implement
     @Override
     public void handleOnClient(Player player) {
         if (player != null) {
-            PlayerCultivationAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+            PlayerCultivationAttachment attachment = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
             if (attachment != null) {
                 // Apply the synchronized data to the client-side attachment
                 attachment.applySync(this.cultivationData);
 
                 // Fire an update event to notify other systems of the change
-                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, ICModAttachmentTypes.PLAYER_CULTIVATION.get()));
+                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, AttachmentRegistry.PLAYER_CULTIVATION.get()));
             }
         }
     }

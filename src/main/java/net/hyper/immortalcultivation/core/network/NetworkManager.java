@@ -5,7 +5,7 @@ import net.hyper.immortalcultivation.common.attachments.*;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -183,11 +183,11 @@ public class NetworkManager {
 
         try {
             // Process all ITickable attachments
-            player.getExistingData(ICModAttachmentTypes.PLAYER_CULTIVATION.get())
+            player.getExistingData(AttachmentRegistry.PLAYER_CULTIVATION.get())
                 .ifPresent(ITickable::tick);
-            player.getExistingData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get())
+            player.getExistingData(AttachmentRegistry.PLAYER_BREAKTHROUGH.get())
                 .ifPresent(ITickable::tick);
-            player.getExistingData(ICModAttachmentTypes.PLAYER_STATS.get())
+            player.getExistingData(AttachmentRegistry.PLAYER_STATS.get())
                 .ifPresent(ITickable::tick);
 
             if (DEBUG_TICK) {
@@ -365,12 +365,12 @@ public class NetworkManager {
 
         try {
             // Check all ISyncable attachments for dirty state
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get()), "PlayerCultivation");
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()), "PlayerBreakthrough");
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_STATS.get()), "PlayerStats");
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_RACE.get()), "PlayerRace");
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get()), "PlayerTalents");
-            checkAndSendSyncPacket(player, player.getData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION.get()), "PlayerPillConsumption");
+            checkAndSendSyncPacket(player, player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get()), "PlayerCultivation");
+            checkAndSendSyncPacket(player, player.getData(AttachmentRegistry.PLAYER_BREAKTHROUGH.get()), "PlayerBreakthrough");
+            checkAndSendSyncPacket(player, player.getData(AttachmentRegistry.PLAYER_STATS.get()), "PlayerStats");
+            checkAndSendSyncPacket(player, player.getData(AttachmentRegistry.PLAYER_RACE.get()), "PlayerRace");
+            checkAndSendSyncPacket(player, player.getData(AttachmentRegistry.PLAYER_TALENTS.get()), "PlayerTalents");
+            checkAndSendSyncPacket(player, player.getData(AttachmentRegistry.PLAYER_PILL_CONSUMPTION.get()), "PlayerPillConsumption");
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error during sync check for player {}: {}",
                 player.getName().getString(), e.getMessage());
@@ -620,12 +620,12 @@ public class NetworkManager {
             player.getName().getString());
 
         // Schedule full sync for all attachments with emergency priority
-        scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, true, EMERGENCY_SYNC_PRIORITY);
-        scheduleSync(player, ICModAttachmentTypes.PLAYER_TALENTS::get, true, EMERGENCY_SYNC_PRIORITY);
-        scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true, EMERGENCY_SYNC_PRIORITY);
-        scheduleSync(player, ICModAttachmentTypes.PLAYER_STATS::get, true, EMERGENCY_SYNC_PRIORITY);
-        scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true, EMERGENCY_SYNC_PRIORITY);
-        scheduleSync(player, ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION::get, true, EMERGENCY_SYNC_PRIORITY);
+        scheduleSync(player, AttachmentRegistry.PLAYER_CULTIVATION::get, true, EMERGENCY_SYNC_PRIORITY);
+        scheduleSync(player, AttachmentRegistry.PLAYER_TALENTS::get, true, EMERGENCY_SYNC_PRIORITY);
+        scheduleSync(player, AttachmentRegistry.PLAYER_RACE::get, true, EMERGENCY_SYNC_PRIORITY);
+        scheduleSync(player, AttachmentRegistry.PLAYER_STATS::get, true, EMERGENCY_SYNC_PRIORITY);
+        scheduleSync(player, AttachmentRegistry.PLAYER_BREAKTHROUGH::get, true, EMERGENCY_SYNC_PRIORITY);
+        scheduleSync(player, AttachmentRegistry.PLAYER_PILL_CONSUMPTION::get, true, EMERGENCY_SYNC_PRIORITY);
     }
 
     /**

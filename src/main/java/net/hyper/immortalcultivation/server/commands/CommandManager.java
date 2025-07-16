@@ -12,10 +12,9 @@ import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachm
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
-import net.hyper.immortalcultivation.server.events.EventManager;
 import net.hyper.immortalcultivation.server.events.utils.AttributeModifierUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
@@ -99,7 +98,7 @@ public class CommandManager {
         (context, builder) -> {
             try {
                 return SharedSuggestionProvider.suggest(
-                    Arrays.stream(ICModCultivationRealms.getRealmIds()).sequential()
+                    Arrays.stream(CultivationRealmRegistry.getRealmIds()).sequential()
                         .map(id -> "\"" + id + "\""), // Quote realm IDs that might contain spaces
                     builder);
             } catch (Exception e) {
@@ -378,7 +377,7 @@ public class CommandManager {
                 }
 
                 // Get the realm
-                CultivationRealm realm = ICModCultivationRealms.get(realmId);
+                CultivationRealm realm = CultivationRealmRegistry.get(realmId);
                 if (realm == null) {
                     ctx.getSource().sendFailure(Component.literal("Unknown realm: " + realmId)
                         .withStyle(ChatFormatting.RED));
@@ -386,7 +385,7 @@ public class CommandManager {
                 }
 
                 // Get cultivation attachment
-                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                 if (cultivation == null) {
                     ctx.getSource().sendFailure(Component.literal("Player cultivation data not found")
                         .withStyle(ChatFormatting.RED));
@@ -394,7 +393,7 @@ public class CommandManager {
                 }
 
                 // Get stats attachment for bonus calculation
-                PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+                PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
                 if (stats == null) {
                     ctx.getSource().sendFailure(Component.literal("Player stats data not found")
                         .withStyle(ChatFormatting.RED));
@@ -477,7 +476,7 @@ public class CommandManager {
                     // Handle cultivation stat
                     ICultivationData.CultivationType cultivationType = (ICultivationData.CultivationType) parsed[0];
 
-                    PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                    PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                     if (cultivation == null) {
                         ctx.getSource().sendFailure(Component.literal("Player cultivation data not found")
                             .withStyle(ChatFormatting.RED));
@@ -516,7 +515,7 @@ public class CommandManager {
                     // Handle regular stat (existing code)
                     IStatsData.StatType statType = (IStatsData.StatType) parsed[0];
 
-                    PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+                    PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
                     if (stats == null) {
                         ctx.getSource().sendFailure(Component.literal("Player stats data not found")
                             .withStyle(ChatFormatting.RED));
@@ -585,7 +584,7 @@ public class CommandManager {
             }
 
             try {
-                PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                 if (cultivation == null) {
                     ctx.getSource().sendFailure(Component.literal("Player cultivation data not found")
                         .withStyle(ChatFormatting.RED));
@@ -665,7 +664,7 @@ public class CommandManager {
             }
 
             try {
-                PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+                PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
                 if (stats == null) {
                     ctx.getSource().sendFailure(Component.literal("Player stats data not found")
                         .withStyle(ChatFormatting.RED));
@@ -698,7 +697,7 @@ public class CommandManager {
                         // Handle cultivation stat
                         ICultivationData.CultivationType cultivationType = (ICultivationData.CultivationType) parsed[0];
 
-                        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                        PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                         if (cultivation == null) {
                             ctx.getSource().sendFailure(Component.literal("Player cultivation data not found")
                                 .withStyle(ChatFormatting.RED));
@@ -750,7 +749,7 @@ public class CommandManager {
                     }
 
                     // Show cultivation stats
-                    PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+                    PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
                         for (ICultivationData.CultivationType cultivationType : ICultivationData.CultivationType.values()) {
                             long current = cultivation.getCurrentCultivation(cultivationType);
@@ -1023,7 +1022,7 @@ public class CommandManager {
             }
 
             // Get all available realms as a collection
-            Collection<CultivationRealm> allRealms = ICModCultivationRealms.getAllRealms();
+            Collection<CultivationRealm> allRealms = CultivationRealmRegistry.getAllRealms();
 
             // Create a list of all realms with levels from 1 to target level
             List<CultivationRealm> candidateRealms = new ArrayList<>();

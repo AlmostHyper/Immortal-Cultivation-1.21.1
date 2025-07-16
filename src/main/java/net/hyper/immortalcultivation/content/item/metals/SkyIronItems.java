@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.content.item.metals;
 
 import net.hyper.immortalcultivation.content.item.tools.ICModToolTiers;
-import net.hyper.immortalcultivation.common.registry.ICModArmorMaterials;
+import net.hyper.immortalcultivation.content.item.ArmorMaterialsRegistry;
 import net.minecraft.world.item.*;
 
 import java.util.function.Supplier;
@@ -41,19 +41,19 @@ public class SkyIronItems {
     }
 
     public static Supplier<ArmorItem> SKY_IRON_HELMET() {
-        return () -> new ArmorItem(ICModArmorMaterials.SKY_IRON, ArmorItem.Type.HELMET,
+        return () -> new ArmorItem(ArmorMaterialsRegistry.SKY_IRON, ArmorItem.Type.HELMET,
             new Item.Properties().rarity(Rarity.RARE).durability(ArmorItem.Type.HELMET.getDurability(35)));
     }
     public static Supplier<ArmorItem> SKY_IRON_CHESTPLATE() {
-        return () -> new ArmorItem(ICModArmorMaterials.SKY_IRON, ArmorItem.Type.CHESTPLATE,
+        return () -> new ArmorItem(ArmorMaterialsRegistry.SKY_IRON, ArmorItem.Type.CHESTPLATE,
             new Item.Properties().rarity(Rarity.RARE).durability(ArmorItem.Type.CHESTPLATE.getDurability(35)));
     }
     public static Supplier<ArmorItem> SKY_IRON_LEGGINGS() {
-        return () -> new ArmorItem(ICModArmorMaterials.SKY_IRON, ArmorItem.Type.LEGGINGS,
+        return () -> new ArmorItem(ArmorMaterialsRegistry.SKY_IRON, ArmorItem.Type.LEGGINGS,
             new Item.Properties().rarity(Rarity.RARE).durability(ArmorItem.Type.LEGGINGS.getDurability(35)));
     }
     public static Supplier<ArmorItem> SKY_IRON_BOOTS() {
-        return () -> new ArmorItem(ICModArmorMaterials.SKY_IRON, ArmorItem.Type.BOOTS,
+        return () -> new ArmorItem(ArmorMaterialsRegistry.SKY_IRON, ArmorItem.Type.BOOTS,
             new Item.Properties().rarity(Rarity.RARE).durability(ArmorItem.Type.BOOTS.getDurability(35)));
     }
 }

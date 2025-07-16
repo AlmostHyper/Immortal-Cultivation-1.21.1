@@ -1,9 +1,12 @@
 package net.hyper.immortalcultivation.content.block.entities;
 
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.content.block.BlockEntityRegistry;
+import net.hyper.immortalcultivation.content.item.ItemRegistry;
+import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipe;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipeInput;
-import net.hyper.immortalcultivation.common.registry.*;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.client.gui.menus.PillFurnaceMenu;
 import net.hyper.immortalcultivation.content.block.crafting.PillFurnaceBlock;
@@ -180,7 +183,7 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
     protected NonNullList<ItemStack> items = NonNullList.withSize(SLOT_COUNT, ItemStack.EMPTY);
 
     public PillFurnaceBlockEntity(BlockPos pos, BlockState blockState) {
-        super(ICModBlockEntities.PILL_FURNACE_BLOCK_ENTITY.get(), pos, blockState);
+        super(BlockEntityRegistry.PILL_FURNACE_BLOCK_ENTITY.get(), pos, blockState);
     }
 
     public IItemHandler getItemHandler(@Nullable Direction side) {
@@ -557,7 +560,7 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         Player player = level.getPlayerByUUID(lastPlayerUUID);
         if (player == null) return 1.0;
 
-        PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
         if (cultivation == null) return 1.0;
 
         // Higher realms give better modifiers
@@ -572,13 +575,13 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         if (spiritStone.isEmpty()) return 1.0;
 
         Item item = spiritStone.getItem();
-        if (item == ICModItems.TOP_QUALITY_SPIRIT_STONE.get()) {
+        if (item == ItemRegistry.TOP_QUALITY_SPIRIT_STONE.get()) {
             return 2.0; // 100% bonus
-        } else if (item == ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()) {
+        } else if (item == ItemRegistry.HIGH_QUALITY_SPIRIT_STONE.get()) {
             return 1.5; // 50% bonus
-        } else if (item == ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()) {
+        } else if (item == ItemRegistry.MEDIUM_QUALITY_SPIRIT_STONE.get()) {
             return 1.25; // 25% bonus
-        } else if (item == ICModItems.LOW_QUALITY_SPIRIT_STONE.get()) {
+        } else if (item == ItemRegistry.LOW_QUALITY_SPIRIT_STONE.get()) {
             return 1.1; // 10% bonus
         }
 
@@ -637,9 +640,9 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         ItemStack spiritStone = itemHandler.getStackInSlot(SPIRIT_STONE_SLOT);
         if (!spiritStone.isEmpty()) {
             Item item = spiritStone.getItem();
-            if (item == ICModItems.TOP_QUALITY_SPIRIT_STONE.get()) {
+            if (item == ItemRegistry.TOP_QUALITY_SPIRIT_STONE.get()) {
                 baseSpeed += 2;
-            } else if (item == ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()) {
+            } else if (item == ItemRegistry.HIGH_QUALITY_SPIRIT_STONE.get()) {
                 baseSpeed += 1;
             }
         }
@@ -658,7 +661,7 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
 
         RecipeManager recipeManager = level.getRecipeManager();
         Optional<RecipeHolder<PillFurnaceRecipe>> recipe = recipeManager
-            .getRecipeFor(ICModRecipes.PILL_FURNACE_TYPE.get(), recipeInput, level);
+            .getRecipeFor(RecipeRegistry.PILL_FURNACE_TYPE.get(), recipeInput, level);
 
         return recipe.map(RecipeHolder::value).orElse(null);
     }
@@ -682,13 +685,13 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
             case "minecraft:lava_bucket" -> 20000;
             default -> {
                 Item item = fuel.getItem();
-                if (item == ICModItems.LOW_QUALITY_SPIRIT_STONE.get()) {
+                if (item == ItemRegistry.LOW_QUALITY_SPIRIT_STONE.get()) {
                     yield 3200;
-                } else if (item == ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get()) {
+                } else if (item == ItemRegistry.MEDIUM_QUALITY_SPIRIT_STONE.get()) {
                     yield 6400;
-                } else if (item == ICModItems.HIGH_QUALITY_SPIRIT_STONE.get()) {
+                } else if (item == ItemRegistry.HIGH_QUALITY_SPIRIT_STONE.get()) {
                     yield 12800;
-                } else if (item == ICModItems.TOP_QUALITY_SPIRIT_STONE.get()) {
+                } else if (item == ItemRegistry.TOP_QUALITY_SPIRIT_STONE.get()) {
                     yield 25600;
                 }
                 yield 0;
@@ -711,10 +714,10 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
     private boolean isValidSpiritStone(ItemStack stack) {
         if (stack.isEmpty()) return true; // Empty is valid for slot acceptance
         Item item = stack.getItem();
-        return item == ICModItems.LOW_QUALITY_SPIRIT_STONE.get() ||
-            item == ICModItems.MEDIUM_QUALITY_SPIRIT_STONE.get() ||
-            item == ICModItems.HIGH_QUALITY_SPIRIT_STONE.get() ||
-            item == ICModItems.TOP_QUALITY_SPIRIT_STONE.get();
+        return item == ItemRegistry.LOW_QUALITY_SPIRIT_STONE.get() ||
+            item == ItemRegistry.MEDIUM_QUALITY_SPIRIT_STONE.get() ||
+            item == ItemRegistry.HIGH_QUALITY_SPIRIT_STONE.get() ||
+            item == ItemRegistry.TOP_QUALITY_SPIRIT_STONE.get();
     }
 
     // Furnace tier system

@@ -3,7 +3,7 @@ package net.hyper.immortalcultivation.server.events.client;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.client.gui.screens.CultivationBreakthroughScreen;
 import net.hyper.immortalcultivation.client.gui.screens.CultivationStatsScreen;
-import net.hyper.immortalcultivation.common.registry.ICModKeyBinds;
+import net.hyper.immortalcultivation.client.KeybindRegistry;
 import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.client.Minecraft;
@@ -28,11 +28,11 @@ public class KeyInputEvent {
             return;
         }
 
-        if (ICModKeyBinds.CULTIVATION_STATS_KEY.consumeClick()) {
+        if (KeybindRegistry.CULTIVATION_STATS_KEY.consumeClick()) {
             mc.setScreen(new CultivationStatsScreen());
-        } else if (ICModKeyBinds.BREAKTHROUGH_SCREEN_KEY.consumeClick()) {
+        } else if (KeybindRegistry.BREAKTHROUGH_SCREEN_KEY.consumeClick()) {
             mc.setScreen(new CultivationBreakthroughScreen());
-        } else if (ICModKeyBinds.CULTIVATION_FOCUS_TOGGLE_KEY.consumeClick()) {
+        } else if (KeybindRegistry.CULTIVATION_FOCUS_TOGGLE_KEY.consumeClick()) {
             NetworkRegistry.sendToServer(UnifiedActionRequestPacket.createFocusToggle());
         }
     }

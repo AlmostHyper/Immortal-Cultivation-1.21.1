@@ -2,8 +2,7 @@ package net.hyper.immortalcultivation.server.events.server;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
-import net.hyper.immortalcultivation.common.interfaces.IStatsData;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.server.events.data.CombatEventData;
 import net.hyper.immortalcultivation.server.events.utils.CombatCalculationUtils;
 import net.hyper.immortalcultivation.server.events.utils.CombatEventUtils;
@@ -177,7 +176,7 @@ public class CombatEventHandler {
     @Nullable
     private PlayerStatsAttachment getPlayerStatsAttachment(ServerPlayer player) {
         try {
-            PlayerStatsAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_STATS);
+            PlayerStatsAttachment attachment = player.getData(AttachmentRegistry.PLAYER_STATS);
             if (attachment == null) {
                 ImmortalCultivation.LOGGER.warn("[{}] Player {} has no stats attachment",
                     HANDLER_NAME, player.getName().getString());

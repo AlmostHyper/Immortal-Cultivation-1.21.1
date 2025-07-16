@@ -1,9 +1,16 @@
 package net.hyper.immortalcultivation;
 
+import net.hyper.immortalcultivation.client.gui.CreativeTabsRegistry;
+import net.hyper.immortalcultivation.client.gui.MenuRegistry;
 import net.hyper.immortalcultivation.client.gui.screens.QiHUDScreen;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.common.config.ImmortalCultivationConfig;
+import net.hyper.immortalcultivation.content.block.BlockEntityRegistry;
+import net.hyper.immortalcultivation.content.block.BlockRegistry;
+import net.hyper.immortalcultivation.content.item.ArmorMaterialsRegistry;
+import net.hyper.immortalcultivation.content.item.ItemRegistry;
+import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
 import net.hyper.immortalcultivation.core.network.NetworkManager;
-import net.hyper.immortalcultivation.common.registry.*;
 import net.hyper.immortalcultivation.client.gui.screens.PillFurnaceScreen;
 import net.hyper.immortalcultivation.server.events.EventManager;
 import org.slf4j.Logger;
@@ -37,17 +44,17 @@ public class ImmortalCultivation
         NeoForge.EVENT_BUS.register(this);
 
 
-        ICModBlocks.register(modEventBus);
-        ICModItems.register(modEventBus);
+        BlockRegistry.register(modEventBus);
+        ItemRegistry.register(modEventBus);
 
-        ICModBlockEntities.register(modEventBus);
+        BlockEntityRegistry.register(modEventBus);
 
-        ICModTabs.register(modEventBus);
-        ICModArmorMaterials.register(modEventBus);
+        CreativeTabsRegistry.register(modEventBus);
+        ArmorMaterialsRegistry.register(modEventBus);
 
-        ICModAttachmentTypes.register(modEventBus);
-        ICModMenuTypes.register(modEventBus);
-        ICModRecipes.register(modEventBus);
+        AttachmentRegistry.register(modEventBus);
+        MenuRegistry.register(modEventBus);
+        RecipeRegistry.register(modEventBus);
 
         LOGGER.info("Registering Handlers...");
 
@@ -88,7 +95,7 @@ public class ImmortalCultivation
         public static void onRegisterMenuScreens(RegisterMenuScreensEvent event) {
             LOGGER.info("Registering menu screens...");
 
-            event.register(ICModMenuTypes.PILL_FURNACE_MENU.get(), PillFurnaceScreen::new);
+            event.register(MenuRegistry.PILL_FURNACE_MENU.get(), PillFurnaceScreen::new);
 
             LOGGER.info("Menu screens registered successfully!");
         }

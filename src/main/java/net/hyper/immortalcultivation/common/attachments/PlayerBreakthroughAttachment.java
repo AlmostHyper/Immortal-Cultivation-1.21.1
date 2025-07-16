@@ -3,11 +3,8 @@ package net.hyper.immortalcultivation.common.attachments;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
-import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.common.interfaces.ITickable;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerBreakthroughSyncPacket;
 import net.hyper.immortalcultivation.server.events.utils.PlayerEventUtils;
@@ -22,7 +19,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * Player breakthrough attachment that manages cultivation breakthrough attempts, success rates,
@@ -476,7 +472,7 @@ public class PlayerBreakthroughAttachment extends PlayerAttachment<PlayerBreakth
      */
     private PlayerCultivationAttachment getCultivationAttachment() {
         if (player == null) return null;
-        return player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        return player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
     }
 
     /**
@@ -492,7 +488,7 @@ public class PlayerBreakthroughAttachment extends PlayerAttachment<PlayerBreakth
             return 0.0;
         }
 
-        PlayerTalentsAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        PlayerTalentsAttachment talents = player.getData(AttachmentRegistry.PLAYER_TALENTS.get());
         if (talents == null) {
             if (debugEnabled()) {
                 debugLog("Cannot calculate talent bonus: PlayerTalentsAttachment not found for player {}",

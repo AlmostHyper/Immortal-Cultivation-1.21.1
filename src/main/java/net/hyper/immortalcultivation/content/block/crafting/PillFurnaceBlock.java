@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.content.block.crafting;
 
 import com.mojang.serialization.MapCodec;
 import net.hyper.immortalcultivation.content.block.entities.PillFurnaceBlockEntity;
-import net.hyper.immortalcultivation.common.registry.ICModBlockEntities;
+import net.hyper.immortalcultivation.content.block.BlockEntityRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Containers;
@@ -81,7 +81,7 @@ public class PillFurnaceBlock extends BaseEntityBlock {
 
     @Override
     public @Nullable <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        return level.isClientSide ? null : createTickerHelper(blockEntityType, ICModBlockEntities.PILL_FURNACE_BLOCK_ENTITY.get(), PillFurnaceBlockEntity::tick);
+        return level.isClientSide ? null : createTickerHelper(blockEntityType, BlockEntityRegistry.PILL_FURNACE_BLOCK_ENTITY.get(), PillFurnaceBlockEntity::tick);
     }
 
     @Override

@@ -4,8 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.*;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
+import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerCultivationSyncPacket;
 import net.minecraft.ChatFormatting;
@@ -98,7 +97,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
      * Sets up both QI and BODY cultivation paths with appropriate starting states.
      */
     private void initializeDefaults() {
-        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
+        CultivationRealm mortalRealm = CultivationRealmRegistry.get(DEFAULT_MORTAL_REALM_ID);
 
         for (CultivationType type : CultivationType.values()) {
             // Realm initialization
@@ -472,7 +471,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
      * @return The current cultivation realm
      */
     public CultivationRealm getRealm(CultivationType type) {
-        return currentRealms.getOrDefault(type, ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID));
+        return currentRealms.getOrDefault(type, CultivationRealmRegistry.get(DEFAULT_MORTAL_REALM_ID));
     }
 
     /**
@@ -596,7 +595,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
         if (player == null) return;
 
         // Get the player's stats attachment to apply permanent bonuses
-        PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+        PlayerStatsAttachment statsAttachment = player.getData(AttachmentRegistry.PLAYER_STATS.get());
         if (statsAttachment == null) {
             if (debugEnabled()) {
                 debugWarn("Could not apply milestone bonuses: PlayerStatsAttachment not found");
@@ -1182,7 +1181,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     public void recalculateMilestoneBonuses(CultivationType type) {
         if (player == null) return;
 
-        PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+        PlayerStatsAttachment statsAttachment = player.getData(AttachmentRegistry.PLAYER_STATS.get());
         if (statsAttachment == null) return;
 
         long currentCultivation = getCurrentCultivation(type);
@@ -1296,7 +1295,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
         accumulationRate.put(type, DEFAULT_ACCUMULATION_RATE);
 
         // Reset to mortal realm
-        CultivationRealm mortalRealm = ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID);
+        CultivationRealm mortalRealm = CultivationRealmRegistry.get(DEFAULT_MORTAL_REALM_ID);
         currentRealms.put(type, mortalRealm);
         previousRealms.put(type, mortalRealm);
         maxCultivation.put(type, DEFAULT_MAX_CULTIVATION);
@@ -1346,7 +1345,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
             return 1.0;
         }
 
-        PlayerRaceAttachment raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        PlayerRaceAttachment raceAttachment = player.getData(AttachmentRegistry.PLAYER_RACE.get());
         if (raceAttachment == null || !raceAttachment.hasRaceAssigned()) {
             if (debugEnabled()) {
                 debugLog("No race assigned or race attachment missing for player {}",
@@ -1371,7 +1370,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
             return 1.0;
         }
 
-        PlayerTalentsAttachment talentsAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        PlayerTalentsAttachment talentsAttachment = player.getData(AttachmentRegistry.PLAYER_TALENTS.get());
         if (talentsAttachment == null) {
             if (debugEnabled()) {
                 debugLog("PlayerTalentsAttachment not found for player {}",
@@ -1498,12 +1497,12 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
                     Optional.of(d.previousRealms.get(CultivationType.BODY).getId()) : Optional.empty())
         ).apply(instance, (qiRealm, bodyRealm, qiPrevious, bodyPrevious) -> {
             PlayerCultivationAttachment data = new PlayerCultivationAttachment();
-            data.currentRealms.put(CultivationType.QI, ICModCultivationRealms.get(qiRealm));
-            data.currentRealms.put(CultivationType.BODY, ICModCultivationRealms.get(bodyRealm));
+            data.currentRealms.put(CultivationType.QI, CultivationRealmRegistry.get(qiRealm));
+            data.currentRealms.put(CultivationType.BODY, CultivationRealmRegistry.get(bodyRealm));
             data.previousRealms.put(CultivationType.QI,
-                qiPrevious.map(ICModCultivationRealms::get).orElse(ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID)));
+                qiPrevious.map(CultivationRealmRegistry::get).orElse(CultivationRealmRegistry.get(DEFAULT_MORTAL_REALM_ID)));
             data.previousRealms.put(CultivationType.BODY,
-                bodyPrevious.map(ICModCultivationRealms::get).orElse(ICModCultivationRealms.get(DEFAULT_MORTAL_REALM_ID)));
+                bodyPrevious.map(CultivationRealmRegistry::get).orElse(CultivationRealmRegistry.get(DEFAULT_MORTAL_REALM_ID)));
             return data;
         })
     );

@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.server.events.server;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.server.events.utils.EquipmentEventUtils;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -173,7 +173,7 @@ public class EquipmentEventHandler {
     @Nullable
     private static PlayerStatsAttachment getPlayerStatsAttachment(ServerPlayer player) {
         try {
-            return player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            return player.getData(AttachmentRegistry.PLAYER_STATS.get());
         } catch (Exception e) {
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
                 ImmortalCultivation.LOGGER.debug("[{}] Failed to get stats attachment for player {}: {}",

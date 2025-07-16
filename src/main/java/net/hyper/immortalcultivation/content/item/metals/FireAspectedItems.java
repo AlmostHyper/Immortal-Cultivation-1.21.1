@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.content.item.metals;
 
 import net.hyper.immortalcultivation.content.item.tools.ICModToolTiers;
-import net.hyper.immortalcultivation.common.registry.ICModArmorMaterials;
+import net.hyper.immortalcultivation.content.item.ArmorMaterialsRegistry;
 import net.minecraft.world.item.*;
 
 import java.util.function.Supplier;
@@ -41,19 +41,19 @@ public class FireAspectedItems {
     }
 
     public static Supplier<ArmorItem> FIRE_ASPECTED_HELMET() {
-        return () -> new ArmorItem(ICModArmorMaterials.FIRE_ASPECTED, ArmorItem.Type.HELMET,
+        return () -> new ArmorItem(ArmorMaterialsRegistry.FIRE_ASPECTED, ArmorItem.Type.HELMET,
             new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.HELMET.getDurability(35)));
     }
     public static Supplier<ArmorItem> FIRE_ASPECTED_CHESTPLATE() {
-        return () -> new ArmorItem(ICModArmorMaterials.FIRE_ASPECTED, ArmorItem.Type.CHESTPLATE,
+        return () -> new ArmorItem(ArmorMaterialsRegistry.FIRE_ASPECTED, ArmorItem.Type.CHESTPLATE,
             new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.CHESTPLATE.getDurability(35)));
     }
     public static Supplier<ArmorItem> FIRE_ASPECTED_LEGGINGS() {
-        return () -> new ArmorItem(ICModArmorMaterials.FIRE_ASPECTED, ArmorItem.Type.LEGGINGS,
+        return () -> new ArmorItem(ArmorMaterialsRegistry.FIRE_ASPECTED, ArmorItem.Type.LEGGINGS,
             new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.LEGGINGS.getDurability(35)));
     }
     public static Supplier<ArmorItem> FIRE_ASPECTED_BOOTS() {
-        return () -> new ArmorItem(ICModArmorMaterials.FIRE_ASPECTED, ArmorItem.Type.BOOTS,
+        return () -> new ArmorItem(ArmorMaterialsRegistry.FIRE_ASPECTED, ArmorItem.Type.BOOTS,
             new Item.Properties().rarity(Rarity.UNCOMMON).durability(ArmorItem.Type.BOOTS.getDurability(35)));
     }
 }

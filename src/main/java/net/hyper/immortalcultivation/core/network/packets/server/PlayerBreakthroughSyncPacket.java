@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 
 import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
@@ -28,11 +28,11 @@ public record PlayerBreakthroughSyncPacket(CompoundTag breakthroughData) impleme
     @Override
     public void handleOnClient(Player player) {
         if (player != null) {
-            PlayerBreakthroughAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
+            PlayerBreakthroughAttachment attachment = player.getData(AttachmentRegistry.PLAYER_BREAKTHROUGH.get());
             if (attachment != null) {
                 attachment.applySync(this.breakthroughData);
 
-                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get()));
+                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, AttachmentRegistry.PLAYER_BREAKTHROUGH.get()));
             }
         }
     }

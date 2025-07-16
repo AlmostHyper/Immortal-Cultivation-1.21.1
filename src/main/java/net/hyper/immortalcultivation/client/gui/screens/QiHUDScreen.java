@@ -6,7 +6,7 @@ import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -195,9 +195,9 @@ public class QiHUDScreen {
     private static CultivationDataSnapshot gatherCultivationData(LocalPlayer player) {
         try {
             // Get unified attachments using the generic PlayerAttachment methods
-            PlayerCultivationAttachment cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
-            PlayerTalentsAttachment talents = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+            PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+            PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
+            PlayerTalentsAttachment talents = player.getData(AttachmentRegistry.PLAYER_TALENTS.get());
 
             // Verify we have all critical data
             if (cultivation == null || stats == null || talents == null) {

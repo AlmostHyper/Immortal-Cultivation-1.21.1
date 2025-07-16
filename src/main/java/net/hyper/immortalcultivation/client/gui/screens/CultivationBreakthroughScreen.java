@@ -6,7 +6,7 @@ import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachm
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.ChatFormatting;
@@ -325,10 +325,10 @@ public class CultivationBreakthroughScreen extends Screen {
 
         try {
             // Load attachments using refactored system
-            PlayerCultivationAttachment cultivation = minecraft.player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
-            PlayerStatsAttachment stats = minecraft.player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
-            PlayerTalentsAttachment talents = minecraft.player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
-            PlayerBreakthroughAttachment breakthrough = minecraft.player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
+            PlayerCultivationAttachment cultivation = minecraft.player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+            PlayerStatsAttachment stats = minecraft.player.getData(AttachmentRegistry.PLAYER_STATS.get());
+            PlayerTalentsAttachment talents = minecraft.player.getData(AttachmentRegistry.PLAYER_TALENTS.get());
+            PlayerBreakthroughAttachment breakthrough = minecraft.player.getData(AttachmentRegistry.PLAYER_BREAKTHROUGH.get());
 
             // Set player references for proper functionality
             cultivation.setPlayer(minecraft.player);

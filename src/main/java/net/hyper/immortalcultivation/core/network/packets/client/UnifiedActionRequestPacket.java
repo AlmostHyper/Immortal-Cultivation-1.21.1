@@ -4,7 +4,7 @@ import io.netty.buffer.ByteBuf;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.network.NetworkManager;
 import net.hyper.immortalcultivation.core.network.helpers.BreakthroughFeedbackHelper;
@@ -127,16 +127,16 @@ public record UnifiedActionRequestPacket(
     private static void processBreakthroughRequest(ServerPlayer player, UnifiedActionRequestPacket packet) {
         if (packet.cultivationType.isEmpty() || packet.breakthroughType.isEmpty()) return;
 
-        var breakthrough = player.getData(ICModAttachmentTypes.PLAYER_BREAKTHROUGH.get());
+        var breakthrough = player.getData(AttachmentRegistry.PLAYER_BREAKTHROUGH.get());
         breakthrough.setPlayer(player);
         var result = breakthrough.attemptTypedBreakthrough(packet.cultivationType.get(), packet.breakthroughType.get());
 
         BreakthroughFeedbackHelper.sendBreakthroughFeedback(player, result, packet.breakthroughType.get());
-        NetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true);
+        NetworkManager.INSTANCE.scheduleSync(player, AttachmentRegistry.PLAYER_BREAKTHROUGH::get, true);
     }
 
     private static void processFocusToggle(ServerPlayer player) {
-        var cultivation = player.getData(ICModAttachmentTypes.PLAYER_CULTIVATION.get());
+        var cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
         cultivation.setPlayer(player);
         
         // This logic is preserved from the old CultivationFocusTogglePacket
@@ -155,13 +155,13 @@ public record UnifiedActionRequestPacket(
         }
         
         // This action only affects cultivation data, so a targeted sync is efficient.
-        NetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, false);
+        NetworkManager.INSTANCE.scheduleSync(player, AttachmentRegistry.PLAYER_CULTIVATION::get, false);
     }
 
     private static void processRaceSelection(ServerPlayer player, UnifiedActionRequestPacket packet) {
         if (packet.stringParam.isEmpty()) return;
         
-        var raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        var raceAttachment = player.getData(AttachmentRegistry.PLAYER_RACE.get());
         if (raceAttachment.hasRaceAssigned()) {
             player.sendSystemMessage(Component.literal("You have already chosen a path.").withStyle(ChatFormatting.RED));
             return;
@@ -172,7 +172,7 @@ public record UnifiedActionRequestPacket(
             raceAttachment.assignRace(raceType);  // Remove the 'player' parameter
             player.sendSystemMessage(Component.literal("You are now a " + raceType.getDisplayName() + "!").withStyle(ChatFormatting.GOLD));
             // A full sync is appropriate after a major change like race selection.
-            NetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
+            NetworkManager.INSTANCE.scheduleSync(player, AttachmentRegistry.PLAYER_RACE::get, true);
         } catch (IllegalArgumentException e) {
             player.sendSystemMessage(Component.literal("Invalid race selected.").withStyle(ChatFormatting.RED));
             ImmortalCultivation.LOGGER.warn("Player {} tried to select invalid race: {}", player.getName().getString(), packet.stringParam().get());

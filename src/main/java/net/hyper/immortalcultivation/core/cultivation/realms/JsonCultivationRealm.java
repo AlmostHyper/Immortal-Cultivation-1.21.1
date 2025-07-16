@@ -5,12 +5,9 @@ import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.BonusSource;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
-import net.hyper.immortalcultivation.server.events.EventManager;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.server.events.utils.AttributeModifierUtils;
-import net.hyper.immortalcultivation.server.events.utils.CombatCalculationUtils;
-import net.hyper.immortalcultivation.server.events.utils.CombatEventUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
@@ -134,7 +131,7 @@ public class JsonCultivationRealm extends CultivationRealm {
     public List<CultivationRealm> getPreviousCultivationRealms() {
         List<CultivationRealm> realms = new ArrayList<>();
         for (String realmId : data.previousRealms()) {
-            CultivationRealm realm = ICModCultivationRealms.get(realmId);
+            CultivationRealm realm = CultivationRealmRegistry.get(realmId);
             if (realm != null) {
                 realms.add(realm);
             }
@@ -146,7 +143,7 @@ public class JsonCultivationRealm extends CultivationRealm {
     public List<CultivationRealm> getNextCultivationRealms() {
         List<CultivationRealm> realms = new ArrayList<>();
         for (String realmId : data.nextRealms()) {
-            CultivationRealm realm = ICModCultivationRealms.get(realmId);
+            CultivationRealm realm = CultivationRealmRegistry.get(realmId);
             if (realm != null) {
                 realms.add(realm);
             }
@@ -424,7 +421,7 @@ public class JsonCultivationRealm extends CultivationRealm {
         }
 
         try {
-            PlayerStatsAttachment stats = serverPlayer.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+            PlayerStatsAttachment stats = serverPlayer.getData(AttachmentRegistry.PLAYER_STATS.get());
             if (stats == null) {
                 ImmortalCultivation.LOGGER.warn("No stats attachment found for player {}", player.getName().getString());
                 return;

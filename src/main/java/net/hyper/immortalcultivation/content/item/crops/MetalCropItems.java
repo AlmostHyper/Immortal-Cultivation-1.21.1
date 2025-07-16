@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.content.item.crops;
 
-import net.hyper.immortalcultivation.common.registry.ICModBlocks;
+import net.hyper.immortalcultivation.content.block.BlockRegistry;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Rarity;
 
@@ -10,7 +10,7 @@ public class MetalCropItems {
 
     public static Supplier<Item> WHITE_METAL_ROOTS() {
         return () -> new ICModCropItem(
-            ICModBlocks.WHITE_METAL_ROOTS_CROP_BLOCK,
+            BlockRegistry.WHITE_METAL_ROOTS_CROP_BLOCK,
             new Item.Properties()
                 .stacksTo(64)
                 .rarity(Rarity.COMMON)

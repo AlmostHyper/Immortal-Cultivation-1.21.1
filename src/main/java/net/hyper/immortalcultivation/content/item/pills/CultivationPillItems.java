@@ -3,8 +3,7 @@ package net.hyper.immortalcultivation.content.item.pills;
 import net.hyper.immortalcultivation.common.attachments.PlayerPillConsumptionAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.content.block.entities.PillFurnaceBlockEntity;
-import net.hyper.immortalcultivation.content.item.BaseConsumableItem;
-import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
@@ -157,8 +156,8 @@ public class CultivationPillItems {
         protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
             if (!(entity instanceof Player player) || level.isClientSide()) return;
 
-            player.getExistingData(ICModAttachmentTypes.PLAYER_CULTIVATION).ifPresent(cultivation ->
-                player.getExistingData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION).ifPresent(pillAttachment -> {
+            player.getExistingData(AttachmentRegistry.PLAYER_CULTIVATION).ifPresent(cultivation ->
+                player.getExistingData(AttachmentRegistry.PLAYER_PILL_CONSUMPTION).ifPresent(pillAttachment -> {
                     PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
                     double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, this.baseRate);
 
@@ -192,7 +191,7 @@ public class CultivationPillItems {
 
             Player player = getPlayerFromContext(context);
             if (player != null) {
-                player.getExistingData(ICModAttachmentTypes.PLAYER_PILL_CONSUMPTION).ifPresent(pillAttachment -> {
+                player.getExistingData(AttachmentRegistry.PLAYER_PILL_CONSUMPTION).ifPresent(pillAttachment -> {
                     // Call methods directly on the attachment
                     double effectiveness = pillAttachment.getNextConsumptionEffectiveness(this, rarity);
                     int count = pillAttachment.getConsumptionCount(this, rarity);
