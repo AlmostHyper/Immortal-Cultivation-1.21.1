@@ -74,7 +74,7 @@ public class EquipmentEventHandler {
      * @param event The equipment change event to process
      */
     @SubscribeEvent(priority = EventPriority.NORMAL)
-    public static void onEquipmentChange(LivingEquipmentChangeEvent event) {
+    public void onEquipmentChange(LivingEquipmentChangeEvent event) {
         if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
             ImmortalCultivation.LOGGER.debug("[{}] Processing equipment change for entity: {}",
                 HANDLER_NAME, event.getEntity().getClass().getSimpleName());

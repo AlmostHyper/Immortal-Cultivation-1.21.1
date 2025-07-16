@@ -66,7 +66,7 @@ public class PlayerLifecycleEventHandler {
      * @param event Player login event
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+    public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
@@ -125,7 +125,7 @@ public class PlayerLifecycleEventHandler {
      * @param event Player logout event
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
+    public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
@@ -159,7 +159,7 @@ public class PlayerLifecycleEventHandler {
      * @param event Player respawn event
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
-    public static void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
+    public void onPlayerRespawn(PlayerEvent.PlayerRespawnEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
@@ -211,7 +211,7 @@ public class PlayerLifecycleEventHandler {
      * @param event Player dimension change event
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
-    public static void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
+    public void onPlayerChangeDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
@@ -238,7 +238,7 @@ public class PlayerLifecycleEventHandler {
      * @param event Player clone event
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onPlayerClone(PlayerEvent.Clone event) {
+    public void onPlayerClone(PlayerEvent.Clone event) {
         if (!(event.getEntity() instanceof ServerPlayer newPlayer) ||
             !(event.getOriginal() instanceof ServerPlayer oldPlayer)) {
             return;

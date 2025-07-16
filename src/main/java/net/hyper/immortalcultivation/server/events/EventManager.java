@@ -32,7 +32,6 @@ import java.util.Map;
  * - Singleton Pattern: Single point of event management
  * - Registry Pattern: Maintains handler registration state
  */
-@EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
 public class EventManager {
 
     // === SINGLETON INSTANCE === //

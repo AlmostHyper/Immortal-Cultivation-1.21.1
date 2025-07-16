@@ -73,7 +73,7 @@ public class CombatEventHandler {
      * @param event The incoming damage event to process
      */
     @SubscribeEvent(priority = EventPriority.HIGH)
-    public static void onIncomingDamage(LivingIncomingDamageEvent event) {
+    public void onIncomingDamage(LivingIncomingDamageEvent event) {
         if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
             ImmortalCultivation.LOGGER.debug("[{}] Processing damage event for entity: {}",
                 HANDLER_NAME, event.getEntity().getClass().getSimpleName());

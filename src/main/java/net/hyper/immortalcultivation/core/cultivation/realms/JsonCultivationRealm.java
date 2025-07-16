@@ -8,6 +8,9 @@ import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.server.events.EventManager;
+import net.hyper.immortalcultivation.server.events.utils.AttributeModifierUtils;
+import net.hyper.immortalcultivation.server.events.utils.CombatCalculationUtils;
+import net.hyper.immortalcultivation.server.events.utils.CombatEventUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleType;
@@ -463,7 +466,7 @@ public class JsonCultivationRealm extends CultivationRealm {
             stats.setSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.JUMP_HEIGHT, BonusSource.REALM, currentJumpFromRealm + getBaseJumpHeight());
 
             // Force refresh all stats to apply the new permanent bonuses immediately
-            EventManager.refreshStats(serverPlayer);
+            AttributeModifierUtils.refreshPlayerAttributes(serverPlayer);
 
             // === CONDITIONAL LOGGING AND MESSAGES === //
             if (!silent) {
