@@ -12,7 +12,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -23,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * system to provide authentic Xianxia combat mechanics while maintaining compatibility
  * with vanilla Minecraft and other mods.
  *
+ * Refactored to be stateless and work with CombatEventData for data management.
+ *
  * Key Responsibilities:
  * - Convert vanilla damage/healing to custom cultivation values
  * - Calculate immunity durations and manage immunity tracking
@@ -32,6 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * Architecture:
  * - Util Pattern: Contains shared business logic for combat operations
+ * - Stateless design - no internal data storage
  * - Integrates with CombatEventHandler through public static methods
  * - Uses generic methods for different damage/healing types
  * - Follows DRY principles for combat calculations
@@ -39,14 +41,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CombatCalculationUtils {
 
     // === CONSTANTS === //
+    private static final String UTILS_NAME = "CombatCalculationUtils";
     private static final long BASE_IMMUNITY_DURATION_MS = 500L;
     private static final long MAX_IMMUNITY_SCALING_MS = 1000L;
     private static final double IMMUNITY_DAMAGE_SCALING = 10.0;
     private static final int DEFAULT_HURT_TIME = 10;
     private static final double DEFAULT_KNOCKBACK_STRENGTH = 0.4;
+    private static final double DEFAULT_DAMAGE_CONVERSION_RATE = 10.0; // 1 vanilla damage = 10 cultivation damage
 
-    // === TRACKING MAPS === //
-    private static final Map<UUID, Map<String, Long>> playerImmunityMap = new ConcurrentHashMap<>();
+    // === CACHING === //
     private static final Map<String, DamageType> damageTypeCache = new ConcurrentHashMap<>();
 
     // === CONVERSION METHODS === //
@@ -56,100 +59,62 @@ public class CombatCalculationUtils {
      * This method provides the bridge between vanilla Minecraft damage and the cultivation
      * system, maintaining compatibility while allowing for cultivation-specific mechanics.
      *
-     * @param vanillaDamage The original vanilla damage amount
-     * @param player The player taking damage (used for cultivation-specific scaling)
-     * @return Custom damage amount for the cultivation system
+     * @param vanillaDamage The vanilla damage amount
+     * @return The equivalent cultivation damage
      */
-    public static long convertToCustomDamage(float vanillaDamage, Player player) {
-        if (vanillaDamage <= 0.0f) {
-            return 0L;
-        }
-
+    public static long convertVanillaToCultivationDamage(float vanillaDamage) {
         try {
-            // Get cultivation data for potential scaling
-            PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
-
-            // Currently using 1:1 conversion for vanilla/mod compatibility
-            // This can be expanded later for cultivation-specific scaling
-            long customDamage = Math.round(vanillaDamage);
-
-            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[CombatCalculationUtils] Converted damage for {}: {} vanilla -> {} custom",
-                    player.getName().getString(), vanillaDamage, customDamage);
+            if (vanillaDamage <= 0.0f) {
+                return 0L;
             }
 
-            return customDamage;
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error converting damage for player {}: {}",
-                player.getName().getString(), e.getMessage(), e);
-            return Math.round(vanillaDamage); // Fallback to simple conversion
-        }
-    }
-
-    /**
-     * Converts vanilla healing to custom cultivation healing using configurable scaling.
-     * This method handles healing effects from potions, regeneration, and other sources.
-     *
-     * @param vanillaHealing The original vanilla healing amount
-     * @param player The player being healed (used for cultivation-specific scaling)
-     * @return Custom healing amount for the cultivation system
-     */
-    public static long convertToCustomHealing(float vanillaHealing, Player player) {
-        if (vanillaHealing <= 0.0f) {
-            return 0L;
-        }
-
-        try {
-            // Get cultivation data for potential scaling
-            PlayerStatsAttachment stats = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
-
-            // Simple 1:1 conversion - removed the problematic *100 multiplier
-            long customHealing = Math.round(vanillaHealing);
+            // Convert with scaling factor
+            long cultivationDamage = Math.round(vanillaDamage * DEFAULT_DAMAGE_CONVERSION_RATE);
 
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[CombatCalculationUtils] Converted healing for {}: {} vanilla -> {} custom",
-                    player.getName().getString(), vanillaHealing, customHealing);
+                ImmortalCultivation.LOGGER.debug("[{}] Converted {} vanilla damage to {} cultivation damage",
+                    UTILS_NAME, vanillaDamage, cultivationDamage);
             }
 
-            return customHealing;
+            return cultivationDamage;
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error converting healing for player {}: {}",
-                player.getName().getString(), e.getMessage(), e);
-            return Math.round(vanillaHealing); // Fallback to simple conversion
+            ImmortalCultivation.LOGGER.error("[{}] Error converting vanilla damage: {}", UTILS_NAME, e.getMessage(), e);
+            return 0L;
         }
     }
 
     /**
-     * Generic method to convert between damage/healing types based on operation type.
-     * This follows the same pattern as the AttributeModifierUtils for handling different types.
+     * Converts cultivation damage back to vanilla damage for display or compatibility.
      *
-     * @param <T> The input type (Float for vanilla, Long for custom)
-     * @param <R> The return type (Long for custom, Float for vanilla)
-     * @param value The value to convert
-     * @param player The player for context
-     * @param conversionType The type of conversion to perform
-     * @return The converted value
+     * @param cultivationDamage The cultivation damage amount
+     * @return The equivalent vanilla damage
      */
-    public static <T extends Number, R extends Number> R convertValue(T value, Player player, ConversionType conversionType) {
+    public static float convertCultivationToVanillaDamage(long cultivationDamage) {
         try {
-            return switch (conversionType) {
-                case VANILLA_TO_CUSTOM_DAMAGE -> (R) Long.valueOf(convertToCustomDamage(value.floatValue(), player));
-                case VANILLA_TO_CUSTOM_HEALING -> (R) Long.valueOf(convertToCustomHealing(value.floatValue(), player));
-                case CUSTOM_TO_VANILLA_DAMAGE -> (R) Float.valueOf(value.longValue()); // Simple reverse conversion
-                case CUSTOM_TO_VANILLA_HEALING -> (R) Float.valueOf(value.longValue()); // Simple reverse conversion
-            };
+            if (cultivationDamage <= 0L) {
+                return 0.0f;
+            }
+
+            float vanillaDamage = (float) cultivationDamage / (float) DEFAULT_DAMAGE_CONVERSION_RATE;
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Converted {} cultivation damage to {} vanilla damage",
+                    UTILS_NAME, cultivationDamage, vanillaDamage);
+            }
+
+            return vanillaDamage;
+
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error in generic conversion: {}", e.getMessage(), e);
-            return (R) value; // Fallback to original value
+            ImmortalCultivation.LOGGER.error("[{}] Error converting cultivation damage: {}", UTILS_NAME, e.getMessage(), e);
+            return 0.0f;
         }
     }
 
-    // === IMMUNITY MANAGEMENT === //
+    // === IMMUNITY CALCULATION === //
 
     /**
-     * Calculates immunity duration based on damage amount and damage type.
+     * Calculates immunity duration based on damage taken and damage source type.
      * Higher damage amounts result in longer immunity periods to prevent rapid death.
      *
      * @param damage The damage amount taken
@@ -168,14 +133,15 @@ public class CombatCalculationUtils {
             long totalDuration = (long)((baseDuration + damageScaling) * typeMultiplier);
 
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[CombatCalculationUtils] Calculated immunity duration: {}ms (damage: {}, type: {})",
-                    totalDuration, damage, damageSource.type().msgId());
+                ImmortalCultivation.LOGGER.debug("[{}] Calculated immunity duration: {}ms (damage: {}, type: {})",
+                    UTILS_NAME, totalDuration, damage,
+                    damageSource != null ? damageSource.type().msgId() : "unknown");
             }
 
             return totalDuration;
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error calculating immunity duration: {}", e.getMessage(), e);
+            ImmortalCultivation.LOGGER.error("[{}] Error calculating immunity duration: {}", UTILS_NAME, e.getMessage(), e);
             return BASE_IMMUNITY_DURATION_MS; // Fallback to base duration
         }
     }
@@ -190,94 +156,14 @@ public class CombatCalculationUtils {
         return calculateImmunityDuration(damage, null);
     }
 
-    /**
-     * Sets immunity for a player against a specific damage source.
-     * This prevents rapid consecutive damage from the same source.
-     *
-     * @param playerId The player's UUID
-     * @param sourceKey The unique damage source key
-     * @param durationMs The immunity duration in milliseconds
-     */
-    public static void setPlayerImmunity(UUID playerId, String sourceKey, long durationMs) {
-        try {
-            playerImmunityMap.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
-                .put(sourceKey, System.currentTimeMillis() + durationMs);
-
-            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[CombatCalculationUtils] Set immunity for player {} against {}: {}ms",
-                    playerId, sourceKey, durationMs);
-            }
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error setting player immunity: {}", e.getMessage(), e);
-        }
-    }
+    // === DAMAGE SOURCE IDENTIFICATION === //
 
     /**
-     * Checks if a player is immune to a specific damage source.
-     *
-     * @param playerId The player's UUID
-     * @param sourceKey The unique damage source key
-     * @return true if the player is currently immune to this damage source
-     */
-    public static boolean isPlayerImmune(UUID playerId, String sourceKey) {
-        try {
-            Map<String, Long> playerImmunities = playerImmunityMap.get(playerId);
-            if (playerImmunities == null) {
-                return false;
-            }
-
-            Long immunityEnd = playerImmunities.get(sourceKey);
-            if (immunityEnd == null) {
-                return false;
-            }
-
-            boolean isImmune = System.currentTimeMillis() < immunityEnd;
-
-            // Clean up expired immunity
-            if (!isImmune) {
-                playerImmunities.remove(sourceKey);
-                if (playerImmunities.isEmpty()) {
-                    playerImmunityMap.remove(playerId);
-                }
-            }
-
-            return isImmune;
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error checking player immunity: {}", e.getMessage(), e);
-            return false; // Assume not immune on error
-        }
-    }
-
-    /**
-     * Clears all immunity for a specific player.
-     * Used during respawn or other state resets.
-     *
-     * @param playerId The player's UUID
-     */
-    public static void clearPlayerImmunity(UUID playerId) {
-        try {
-            Map<String, Long> removed = playerImmunityMap.remove(playerId);
-
-            if (removed != null && ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[CombatCalculationUtils] Cleared {} immunity entries for player {}",
-                    removed.size(), playerId);
-            }
-
-        } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error clearing player immunity: {}", e.getMessage(), e);
-        }
-    }
-
-    // === DAMAGE SOURCE UTILITIES === //
-
-    /**
-     * Generates a unique key for a damage source to track immunity separately per source.
-     * This allows players to be immune to one enemy while still taking damage from others.
+     * Generates a unique key for a damage source for immunity tracking.
+     * This ensures different damage sources can have separate immunity timers.
      *
      * @param damageSource The damage source to generate a key for
-     * @return A unique string identifier for this damage source
+     * @return A unique string key for the damage source
      */
     public static String generateDamageSourceKey(DamageSource damageSource) {
         try {
@@ -285,122 +171,127 @@ public class CombatCalculationUtils {
                 return "unknown_damage";
             }
 
-            String baseKey = damageSource.type().msgId();
+            StringBuilder keyBuilder = new StringBuilder();
 
-            // Include entity UUID for entity-based damage sources
+            // Add damage type
+            keyBuilder.append(damageSource.type().msgId());
+
+            // Add source entity if present
             Entity sourceEntity = damageSource.getEntity();
             if (sourceEntity != null) {
-                return baseKey + "_" + sourceEntity.getUUID();
+                keyBuilder.append("_entity_").append(sourceEntity.getUUID());
             }
 
-            // Include direct entity UUID for direct damage
+            // Add direct entity if different from source
             Entity directEntity = damageSource.getDirectEntity();
-            if (directEntity != null) {
-                return baseKey + "_direct_" + directEntity.getUUID();
+            if (directEntity != null && directEntity != sourceEntity) {
+                keyBuilder.append("_direct_").append(directEntity.getUUID());
             }
 
-            return baseKey;
+            String key = keyBuilder.toString();
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Generated damage source key: {}", UTILS_NAME, key);
+            }
+
+            return key;
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error generating damage source key: {}", e.getMessage(), e);
-            return "error_damage_" + System.currentTimeMillis(); // Unique fallback
+            ImmortalCultivation.LOGGER.error("[{}] Error generating damage source key: {}", UTILS_NAME, e.getMessage(), e);
+            return "error_damage_" + System.currentTimeMillis();
         }
     }
 
     // === FEEDBACK EFFECTS === //
 
     /**
-     * Applies damage feedback effects including hurt animation, knockback, and client sync.
-     * This provides visual and mechanical feedback for custom damage system.
+     * Applies damage feedback effects including hurt time, knockback, and visual effects.
      *
-     * @param player The player taking damage
-     * @param damage The actual damage amount dealt
-     * @param remainingHealth The player's remaining health after damage
+     * @param player The player receiving damage feedback
      * @param damageSource The source of the damage
+     * @param damage The amount of damage for scaling effects
      */
-    public static void applyDamageFeedback(Player player, long damage, long remainingHealth, DamageSource damageSource) {
+    public static void applyDamageFeedback(ServerPlayer player, DamageSource damageSource, long damage) {
         try {
-            // Apply hurt animation
+            // Set hurt time for visual feedback
             player.hurtTime = DEFAULT_HURT_TIME;
             player.hurtDuration = DEFAULT_HURT_TIME;
 
-            // Apply knockback if appropriate
-            applyDamageKnockback(player, damageSource);
-
-            // Send feedback packet to client for visual effects
-            if (player instanceof ServerPlayer serverPlayer) {
-                sendDamageFeedbackToClient(serverPlayer, damage, damageSource);
+            // Apply knockback if damage source has an entity
+            Entity sourceEntity = damageSource.getEntity();
+            if (sourceEntity != null) {
+                applyKnockback(player, sourceEntity, damage);
             }
 
+            // Send damage feedback packet to client
+            sendDamageFeedbackPacket(player, damage);
+
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[CombatCalculationUtils] Applied damage feedback for {}: {} damage, {} health remaining",
-                    player.getName().getString(), damage, remainingHealth);
+                ImmortalCultivation.LOGGER.debug("[{}] Applied damage feedback for player {} (damage: {})",
+                    UTILS_NAME, player.getName().getString(), damage);
             }
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error applying damage feedback for player {}: {}",
-                player.getName().getString(), e.getMessage(), e);
+            ImmortalCultivation.LOGGER.error("[{}] Error applying damage feedback: {}", UTILS_NAME, e.getMessage(), e);
         }
     }
 
     /**
-     * Applies knockback effects based on damage source and amount.
+     * Applies knockback effect based on damage amount and source location.
      *
      * @param player The player to apply knockback to
-     * @param damageSource The source of damage
+     * @param sourceEntity The entity causing the knockback
+     * @param damage The damage amount for scaling knockback strength
      */
-    private static void applyDamageKnockback(Player player, DamageSource damageSource) {
+    private static void applyKnockback(ServerPlayer player, Entity sourceEntity, long damage) {
         try {
-            Entity sourceEntity = damageSource.getEntity();
-            if (sourceEntity == null) {
-                return;
-            }
-
-            // Calculate knockback direction
             Vec3 playerPos = player.position();
             Vec3 sourcePos = sourceEntity.position();
-            Vec3 knockbackDirection = playerPos.subtract(sourcePos).normalize();
+            Vec3 direction = playerPos.subtract(sourcePos).normalize();
 
-            // Apply knockback
-            Vec3 knockback = knockbackDirection.scale(DEFAULT_KNOCKBACK_STRENGTH);
+            // Scale knockback based on damage (with reasonable limits)
+            double knockbackStrength = Math.min(DEFAULT_KNOCKBACK_STRENGTH * (1.0 + damage / 100.0), 2.0);
+
+            Vec3 knockback = direction.scale(knockbackStrength);
             player.setDeltaMovement(player.getDeltaMovement().add(knockback));
 
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[CombatCalculationUtils] Applied knockback to {}: {}",
-                    player.getName().getString(), knockback);
+                ImmortalCultivation.LOGGER.debug("[{}] Applied knockback {} to player {}",
+                    UTILS_NAME, knockbackStrength, player.getName().getString());
             }
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error applying knockback: {}", e.getMessage(), e);
+            ImmortalCultivation.LOGGER.error("[{}] Error applying knockback: {}", UTILS_NAME, e.getMessage(), e);
         }
     }
 
     /**
-     * Sends damage feedback information to the client for visual effects.
+     * Sends damage feedback packet to client for visual/audio effects.
      *
-     * @param player The server player to send the packet to
+     * @param player The player to send feedback to
      * @param damage The damage amount
-     * @param damageSource The damage source
      */
-    private static void sendDamageFeedbackToClient(ServerPlayer player, long damage, DamageSource damageSource) {
+    private static void sendDamageFeedbackPacket(ServerPlayer player, long damage) {
         try {
-            String sourceId = generateDamageSourceKey(damageSource);
-            DamageFeedbackSyncPacket packet = DamageFeedbackSyncPacket.create(damage, sourceId);
+            DamageFeedbackSyncPacket packet = new DamageFeedbackSyncPacket(
+                convertCultivationToVanillaDamage(damage),
+                "unknown_damage"
+            );
             NetworkRegistry.sendToPlayer(packet, player);
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error sending damage feedback packet: {}", e.getMessage(), e);
+            ImmortalCultivation.LOGGER.error("[{}] Error sending damage feedback packet: {}", UTILS_NAME, e.getMessage(), e);
         }
     }
 
     // === UTILITY METHODS === //
 
     /**
-     * Gets a damage type multiplier for immunity calculation.
-     * This can be expanded to provide different immunity durations for different damage types.
+     * Gets the damage type multiplier for immunity calculation.
+     * This allows different damage types to have different immunity characteristics.
      *
-     * @param damageSource The damage source
-     * @return A multiplier for immunity duration (1.0 = default)
+     * @param damageSource The damage source (can be null)
+     * @return The multiplier for this damage type
      */
     private static double getDamageTypeMultiplier(DamageSource damageSource) {
         if (damageSource == null) {
@@ -408,63 +299,59 @@ public class CombatCalculationUtils {
         }
 
         try {
-            String damageTypeId = damageSource.type().msgId();
-            DamageType cachedType = damageTypeCache.computeIfAbsent(damageTypeId, key ->
-                DamageType.fromDamageSource(damageSource));
+            String damageType = damageSource.type().msgId();
 
-            return cachedType.getImmunityMultiplier();
+            // Cache damage type information for performance
+            DamageType typeInfo = damageTypeCache.computeIfAbsent(damageType, key -> {
+                return analyzeDamageType(damageSource);
+            });
+
+            return typeInfo.immunityMultiplier;
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error getting damage type multiplier: {}", e.getMessage(), e);
-            return 1.0;
+            ImmortalCultivation.LOGGER.error("[{}] Error getting damage type multiplier: {}", UTILS_NAME, e.getMessage(), e);
+            return 1.0; // Default multiplier
         }
     }
 
-    // === ENUMS AND INNER CLASSES === //
-
     /**
-     * Enum for different conversion types in the generic conversion method.
+     * Analyzes a damage source to determine its characteristics.
+     *
+     * @param damageSource The damage source to analyze
+     * @return DamageType information
      */
-    public enum ConversionType {
-        VANILLA_TO_CUSTOM_DAMAGE,
-        VANILLA_TO_CUSTOM_HEALING,
-        CUSTOM_TO_VANILLA_DAMAGE,
-        CUSTOM_TO_VANILLA_HEALING
-    }
+    private static DamageType analyzeDamageType(DamageSource damageSource) {
+        try {
+            String typeId = damageSource.type().msgId();
 
-    /**
-     * Inner class representing different damage types and their properties.
-     */
-    private static class DamageType {
-        private final String id;
-        private final double immunityMultiplier;
-
-        private DamageType(String id, double immunityMultiplier) {
-            this.id = id;
-            this.immunityMultiplier = immunityMultiplier;
-        }
-
-        public static DamageType fromDamageSource(DamageSource damageSource) {
-            String id = damageSource.type().msgId();
-
-            // Define different immunity multipliers for different damage types
-            double multiplier = switch (id) {
-                case "arrow", "trident" -> 0.8; // Projectiles have shorter immunity
-                case "explosion", "fireball" -> 1.5; // Explosions have longer immunity
-                case "magic", "thorns" -> 1.2; // Magic damage has slightly longer immunity
-                case "fall", "flyIntoWall" -> 0.6; // Environmental damage has shorter immunity
-                default -> 1.0; // Default multiplier
+            // Define multipliers based on damage type
+            double multiplier = switch (typeId.toLowerCase()) {
+                case "fall", "drown", "starve" -> 0.5; // Shorter immunity for environmental damage
+                case "explosion", "lightning_bolt" -> 2.0; // Longer immunity for high-impact damage
+                case "magic", "indirect_magic" -> 1.5; // Moderate immunity for magical damage
+                default -> 1.0; // Standard immunity for most damage types
             };
 
-            return new DamageType(id, multiplier);
-        }
+            return new DamageType(typeId, multiplier);
 
-        public double getImmunityMultiplier() {
-            return immunityMultiplier;
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("[{}] Error analyzing damage type: {}", UTILS_NAME, e.getMessage(), e);
+            return new DamageType("unknown", 1.0);
         }
+    }
 
-        public String getId() {
-            return id;
+    // === INNER CLASSES === //
+
+    /**
+     * Data class for damage type information
+     */
+    private static class DamageType {
+        public final String id;
+        public final double immunityMultiplier;
+
+        public DamageType(String id, double immunityMultiplier) {
+            this.id = id;
+            this.immunityMultiplier = immunityMultiplier;
         }
     }
 }

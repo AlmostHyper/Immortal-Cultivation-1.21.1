@@ -85,20 +85,26 @@ public class CombatEventData {
     // === IMMUNITY MANAGEMENT === //
 
     /**
-     * Sets immunity for a player against a specific damage source
+     * Alias for hasPlayerImmunity to maintain compatibility with refactored utils
      *
      * @param playerId The player's UUID
      * @param damageSourceKey The damage source identifier
-     * @param immunityEndTime The timestamp when immunity expires
+     * @return True if the player is currently immune
      */
-    public void setPlayerImmunity(UUID playerId, String damageSourceKey, long immunityEndTime) {
-        playerImmunityMap.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
-            .put(damageSourceKey, immunityEndTime);
+    public boolean isPlayerImmune(UUID playerId, String damageSourceKey) {
+        return hasPlayerImmunity(playerId, damageSourceKey);
+    }
 
-        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-            ImmortalCultivation.LOGGER.debug("[{}] Set immunity for player {} against {} until {}",
-                MANAGER_NAME, playerId, damageSourceKey, immunityEndTime);
-        }
+    /**
+     * Sets immunity for a player against a specific damage source using duration.
+     * Overloaded method to accept duration in milliseconds from current time.
+     *
+     * @param playerId The player's UUID
+     * @param damageSourceKey The damage source identifier
+     * @param durationMs The immunity duration in milliseconds from now
+     */
+    public void setPlayerImmunity(UUID playerId, String damageSourceKey, long durationMs) {
+        setPlayerImmunity(playerId, damageSourceKey, System.currentTimeMillis() + durationMs);
     }
 
     /**

@@ -3,13 +3,11 @@ package net.hyper.immortalcultivation.server.events.utils;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
+import net.hyper.immortalcultivation.server.events.data.CombatEventData;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
 
-import java.util.Iterator;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Combat Event Utilities for the Immortal Cultivation Mod
@@ -17,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Contains business logic for combat-related event processing, following DRY principles
  * and maintaining separation of concerns. This utility class handles the core combat
  * mechanics while leaving event subscription to handler classes.
+ *
+ * Refactored to work with CombatEventData for centralized data management.
  *
  * Key Features:
  * - Damage processing with cultivation system integration
@@ -27,38 +27,36 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * Architecture:
  * - Static utility methods for stateless operations
+ * - Integration with CombatEventData for data management
  * - Integration with CombatCalculationUtils for mathematical operations
- * - Thread-safe operations for server environments
+ * - Thread-safe operations through data manager
  * - Comprehensive error handling and logging
  */
 public class CombatEventUtils {
 
     // === CONSTANTS === //
-
     private static final String UTILS_NAME = "CombatEventUtils";
-    private static final long IMMUNITY_EXPIRED_THRESHOLD = 1000L; // 1 second buffer for cleanup
 
     // === CORE DAMAGE PROCESSING === //
 
     /**
      * Processes incoming damage for a player through the cultivation system.
      * Handles damage conversion, application, immunity setting, and feedback.
+     * Now uses CombatEventData for centralized data management.
      *
      * @param player The server player taking damage
      * @param statsAttachment The player's stats attachment
      * @param vanillaDamage The original vanilla damage amount
      * @param damageSource The source of the damage
      * @param sourceKey The unique key for this damage source
-     * @param immunityMap The immunity tracking map
-     * @param healthMap The vanilla health tracking map
+     * @param combatData The combat data manager
      */
     public static void processDamage(ServerPlayer player,
                                      PlayerStatsAttachment statsAttachment,
                                      float vanillaDamage,
                                      DamageSource damageSource,
                                      String sourceKey,
-                                     Map<UUID, Map<String, Long>> immunityMap,
-                                     Map<UUID, Float> healthMap) {
+                                     CombatEventData combatData) {
 
         if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
             ImmortalCultivation.LOGGER.debug("[{}] Processing {} vanilla damage for player: {}",
@@ -66,46 +64,44 @@ public class CombatEventUtils {
         }
 
         try {
-            // Convert vanilla damage to custom cultivation damage
-            long customDamage = CombatCalculationUtils.convertToCustomDamage(vanillaDamage, player);
+            UUID playerId = player.getUUID();
 
-            if (customDamage <= 0) {
-                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                    ImmortalCultivation.LOGGER.debug("[{}] No damage to apply after conversion for player: {}",
-                        UTILS_NAME, player.getName().getString());
-                }
-                return;
+            // Convert vanilla damage to custom cultivation damage
+            long customDamage = CombatCalculationUtils.convertVanillaToCultivationDamage(vanillaDamage);
+
+            // Get current stats data for health management
+            long currentHealth = statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Current health: {}, Custom damage: {}",
+                    UTILS_NAME, currentHealth, customDamage);
             }
 
-            // Apply damage to health stat
-            long healthBefore = statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH);
-            long actualDamage = statsAttachment.consumeStat(IStatsData.StatType.HEALTH, customDamage);
-            long healthAfter = statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH);
+            // Store vanilla health for protection system compatibility
+            combatData.updateLastKnownVanillaHealth(playerId, player.getHealth());
 
-            if (actualDamage > 0) {
-                // Set immunity to prevent damage spam
-                long immunityDuration = CombatCalculationUtils.calculateImmunityDuration(actualDamage);
-                setPlayerImmunity(player.getUUID(), sourceKey, immunityDuration, immunityMap);
+            // Apply damage through cultivation system
+            long finalDamage = Math.min(customDamage, currentHealth);
+            long newHealth = Math.max(0, currentHealth - finalDamage);
 
-                // Update vanilla health display for compatibility
-                updateVanillaHealthDisplay(player, statsAttachment, healthMap);
+            // Update cultivation health
+            statsAttachment.setCurrentStat(IStatsData.StatType.HEALTH, newHealth);
 
-                // Apply damage feedback effects
-                applyDamageFeedback(player, actualDamage, healthAfter, damageSource);
+            // Calculate immunity duration based on damage taken
+            long immunityDuration = CombatCalculationUtils.calculateImmunityDuration(finalDamage, damageSource);
 
-                // Mark attachment for sync
-                statsAttachment.markDirty();
+            // Set immunity using data manager (duration-based method)
+            combatData.setPlayerImmunity(playerId, sourceKey, immunityDuration);
 
-                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                    ImmortalCultivation.LOGGER.debug("[{}] Applied {} damage to {} (vanilla: {}, before: {}, after: {})",
-                        UTILS_NAME, actualDamage, player.getName().getString(), vanillaDamage,
-                        healthBefore, healthAfter);
-                }
-            } else {
-                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                    ImmortalCultivation.LOGGER.debug("[{}] No actual damage applied to player: {} (health protected or at minimum)",
-                        UTILS_NAME, player.getName().getString());
-                }
+            // Apply damage feedback effects
+            applyDamageFeedback(player, damageSource, finalDamage, newHealth <= 0);
+
+            // Update vanilla health display for compatibility
+            updateVanillaHealthDisplay(player, statsAttachment);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Applied {} damage to player {}, new health: {}, immunity: {}ms",
+                    UTILS_NAME, finalDamage, player.getName().getString(), newHealth, immunityDuration);
             }
 
         } catch (Exception e) {
@@ -117,176 +113,164 @@ public class CombatEventUtils {
     // === IMMUNITY MANAGEMENT === //
 
     /**
-     * Checks if a player is immune to damage from a specific source.
+     * Checks if a player is immune to a specific damage source using data manager.
      *
      * @param playerId The player's UUID
      * @param sourceKey The damage source key
-     * @param immunityMap The immunity tracking map
+     * @param combatData The combat data manager
      * @return True if the player is immune, false otherwise
      */
-    public static boolean isPlayerImmune(UUID playerId, String sourceKey, Map<UUID, Map<String, Long>> immunityMap) {
-        Map<String, Long> playerImmunities = immunityMap.get(playerId);
-        if (playerImmunities == null) {
-            return false;
-        }
+    public static boolean isPlayerImmune(UUID playerId, String sourceKey, CombatEventData combatData) {
+        try {
+            boolean immune = combatData.isPlayerImmune(playerId, sourceKey);
 
-        Long immunityEnd = playerImmunities.get(sourceKey);
-        if (immunityEnd == null) {
-            return false;
-        }
-
-        long currentTime = System.currentTimeMillis();
-        if (currentTime > immunityEnd) {
-            playerImmunities.remove(sourceKey);
-            // Clean up empty player entries
-            if (playerImmunities.isEmpty()) {
-                immunityMap.remove(playerId);
+            if (immune && ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Player {} is immune to damage source: {}",
+                    UTILS_NAME, playerId, sourceKey);
             }
-            return false;
-        }
 
-        return true;
+            return immune;
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("[{}] Error checking immunity for player {}: {}",
+                UTILS_NAME, playerId, e.getMessage(), e);
+            return false; // Default to not immune on error
+        }
     }
 
     /**
-     * Sets immunity for a player against a specific damage source.
+     * Sets immunity for a player against a specific damage source using data manager.
      *
      * @param playerId The player's UUID
      * @param sourceKey The damage source key
      * @param durationMs The immunity duration in milliseconds
-     * @param immunityMap The immunity tracking map
+     * @param combatData The combat data manager
      */
     public static void setPlayerImmunity(UUID playerId, String sourceKey, long durationMs,
-                                         Map<UUID, Map<String, Long>> immunityMap) {
+                                         CombatEventData combatData) {
         if (durationMs <= 0) {
             return;
         }
 
-        long immunityEnd = System.currentTimeMillis() + durationMs;
-        immunityMap.computeIfAbsent(playerId, k -> new ConcurrentHashMap<>())
-            .put(sourceKey, immunityEnd);
-
-        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-            ImmortalCultivation.LOGGER.debug("[{}] Set immunity for player {} against {} for {}ms",
-                UTILS_NAME, playerId, sourceKey, durationMs);
-        }
-    }
-
-    /**
-     * Clears all immunity entries for a specific player.
-     *
-     * @param playerId The player's UUID
-     * @param immunityMap The immunity tracking map
-     */
-    public static void clearPlayerImmunity(UUID playerId, Map<UUID, Map<String, Long>> immunityMap) {
-        if (immunityMap.remove(playerId) != null) {
-            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[{}] Cleared all immunity for player: {}", UTILS_NAME, playerId);
-            }
-        }
-    }
-
-    /**
-     * Cleans up expired immunity entries to prevent memory leaks.
-     *
-     * @param immunityMap The immunity tracking map to clean
-     */
-    public static void cleanupExpiredImmunities(Map<UUID, Map<String, Long>> immunityMap) {
-        long currentTime = System.currentTimeMillis();
-        int removedEntries = 0;
-        int removedPlayers = 0;
-
-        Iterator<Map.Entry<UUID, Map<String, Long>>> playerIterator = immunityMap.entrySet().iterator();
-        while (playerIterator.hasNext()) {
-            Map.Entry<UUID, Map<String, Long>> playerEntry = playerIterator.next();
-            Map<String, Long> playerImmunities = playerEntry.getValue();
-
-            Iterator<Map.Entry<String, Long>> immunityIterator = playerImmunities.entrySet().iterator();
-            while (immunityIterator.hasNext()) {
-                Map.Entry<String, Long> immunityEntry = immunityIterator.next();
-                if (currentTime > immunityEntry.getValue() + IMMUNITY_EXPIRED_THRESHOLD) {
-                    immunityIterator.remove();
-                    removedEntries++;
-                }
-            }
-
-            if (playerImmunities.isEmpty()) {
-                playerIterator.remove();
-                removedPlayers++;
-            }
-        }
-
-        if (ImmortalCultivation.LOGGER.isDebugEnabled() && (removedEntries > 0 || removedPlayers > 0)) {
-            ImmortalCultivation.LOGGER.debug("[{}] Cleanup removed {} immunity entries and {} empty player records",
-                UTILS_NAME, removedEntries, removedPlayers);
-        }
-    }
-
-    // === HEALTH DISPLAY MANAGEMENT === //
-
-    /**
-     * Updates the vanilla health display to reflect cultivation health changes.
-     * Maintains compatibility with vanilla health bars and other mods.
-     *
-     * @param player The server player
-     * @param statsAttachment The player's stats attachment
-     * @param healthMap The vanilla health tracking map
-     */
-    public static void updateVanillaHealthDisplay(ServerPlayer player,
-                                                  PlayerStatsAttachment statsAttachment,
-                                                  Map<UUID, Float> healthMap) {
         try {
-            long currentHealth = statsAttachment.getCurrentStat(IStatsData.StatType.HEALTH);
-            long maxHealth = statsAttachment.getMaxStat(IStatsData.StatType.HEALTH);
+            combatData.setPlayerImmunity(playerId, sourceKey, durationMs);
 
-            // Calculate proportional vanilla health (0-20 scale)
-            float vanillaMaxHealth = player.getMaxHealth();
-            float proportionalHealth = maxHealth > 0 ?
-                (float) currentHealth / maxHealth * vanillaMaxHealth : 0.0f;
-
-            // Ensure health is within bounds
-            proportionalHealth = Math.max(0.0f, Math.min(proportionalHealth, vanillaMaxHealth));
-
-            // Update player's vanilla health
-            player.setHealth(proportionalHealth);
-
-            // Track the change
-            Float previousHealth = healthMap.put(player.getUUID(), proportionalHealth);
-
-            if (ImmortalCultivation.LOGGER.isDebugEnabled() &&
-                (previousHealth == null || Math.abs(previousHealth - proportionalHealth) > 0.1f)) {
-                ImmortalCultivation.LOGGER.debug("[{}] Updated vanilla health for {}: {} -> {} (cultivation: {}/{})",
-                    UTILS_NAME, player.getName().getString(),
-                    previousHealth != null ? previousHealth : "null", proportionalHealth,
-                    currentHealth, maxHealth);
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Set immunity for player {} against {} for {}ms",
+                    UTILS_NAME, playerId, sourceKey, durationMs);
             }
 
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[{}] Error updating vanilla health display for player {}: {}",
+            ImmortalCultivation.LOGGER.error("[{}] Error setting immunity for player {}: {}",
+                UTILS_NAME, playerId, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Clears all immunity entries for a specific player using data manager.
+     *
+     * @param playerId The player's UUID
+     * @param combatData The combat data manager
+     */
+    public static void clearPlayerImmunity(UUID playerId, CombatEventData combatData) {
+        try {
+            combatData.clearPlayerImmunity(playerId);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Cleared all immunity for player: {}", UTILS_NAME, playerId);
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("[{}] Error clearing immunity for player {}: {}",
+                UTILS_NAME, playerId, e.getMessage(), e);
+        }
+    }
+
+    // === HEALTH MANAGEMENT === //
+
+    /**
+     * Updates the vanilla health display to reflect cultivation health changes.
+     * Maintains compatibility with vanilla systems while using cultivation health.
+     *
+     * @param player The server player
+     * @param statsData The player's stats data
+     */
+    public static void updateVanillaHealthDisplay(ServerPlayer player, IStatsData statsData) {
+        try {
+            long currentHealth = statsData.getCurrentStat(IStatsData.StatType.HEALTH);
+            long maxHealth = statsData.getMaxStat(IStatsData.StatType.HEALTH);
+
+            // Calculate display health as percentage of max health
+            float displayHealth = maxHealth > 0 ?
+                (float) currentHealth / maxHealth * player.getMaxHealth() : 0.0f;
+
+            // Clamp to valid range
+            displayHealth = Math.max(0.0f, Math.min(displayHealth, player.getMaxHealth()));
+
+            // Update vanilla health for display purposes
+            player.setHealth(displayHealth);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Updated vanilla health display for player {} to {} (cultivation: {}/{})",
+                    UTILS_NAME, player.getName().getString(), displayHealth, currentHealth, maxHealth);
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("[{}] Error updating health display for player {}: {}",
                 UTILS_NAME, player.getName().getString(), e.getMessage(), e);
         }
     }
 
-    // === DAMAGE FEEDBACK === //
+    /**
+     * Synchronizes vanilla health with cultivation health for protection systems.
+     *
+     * @param player The server player
+     * @param combatData The combat data manager
+     */
+    public static void synchronizeVanillaHealth(ServerPlayer player, CombatEventData combatData) {
+        try {
+            Float lastKnownHealth = combatData.getLastKnownVanillaHealth(player.getUUID());
+
+            if (lastKnownHealth != null && Math.abs(player.getHealth() - lastKnownHealth) > 0.1f) {
+                // Vanilla health changed externally (e.g., other mods), update our tracking
+                combatData.updateLastKnownVanillaHealth(player.getUUID(), player.getHealth());
+
+                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                    ImmortalCultivation.LOGGER.debug("[{}] Synchronized vanilla health change for player {} from {} to {}",
+                        UTILS_NAME, player.getName().getString(), lastKnownHealth, player.getHealth());
+                }
+            }
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("[{}] Error synchronizing vanilla health for player {}: {}",
+                UTILS_NAME, player.getName().getString(), e.getMessage(), e);
+        }
+    }
+
+    // === FEEDBACK EFFECTS === //
 
     /**
-     * Delegates damage feedback to the existing CombatCalculationUtils implementation.
-     * Maintains separation of concerns while utilizing existing tested functionality.
+     * Applies damage feedback effects including visual, audio, and physical feedback.
      *
-     * @param player The player taking damage
+     * @param player The server player taking damage
+     * @param damageSource The source of damage
      * @param damage The amount of damage taken
-     * @param remainingHealth The player's remaining health (used as maxHealth for scaling)
-     * @param damageSource The source of the damage
+     * @param isKilling Whether this damage is lethal
      */
-    public static void applyDamageFeedback(ServerPlayer player, long damage, long remainingHealth,
-                                           DamageSource damageSource) {
+    private static void applyDamageFeedback(ServerPlayer player, DamageSource damageSource,
+                                            long damage, boolean isKilling) {
         try {
-            // Delegate to existing implementation in CombatCalculationUtils
-            CombatCalculationUtils.applyDamageFeedback(player, damage, remainingHealth, damageSource);
+            // Apply hurt time and visual feedback
+            CombatCalculationUtils.applyDamageFeedback(player, damageSource, damage);
+
+            // Handle death if needed
+            if (isKilling) {
+                handleCultivationDeath(player, damageSource);
+            }
 
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[{}] Applied damage feedback for player: {} (damage: {})",
-                    UTILS_NAME, player.getName().getString(), damage);
+                ImmortalCultivation.LOGGER.debug("[{}] Applied damage feedback for player {} (damage: {}, killing: {})",
+                    UTILS_NAME, player.getName().getString(), damage, isKilling);
             }
 
         } catch (Exception e) {
@@ -295,68 +279,28 @@ public class CombatEventUtils {
         }
     }
 
-    // === UTILITY METHODS === //
-
     /**
-     * Generic method to safely apply stat modifications with error handling.
+     * Handles player death through the cultivation system.
      *
-     * @param <T> The stat type
-     * @param statsAttachment The stats attachment to modify
-     * @param statType The type of stat to modify
-     * @param operation The operation to perform
-     * @param operationName The name of the operation for logging
-     * @return True if the operation was successful, false otherwise
+     * @param player The dying player
+     * @param damageSource The cause of death
      */
-    public static <T extends Enum<T>> boolean safeStatOperation(PlayerStatsAttachment statsAttachment,
-                                                                IStatsData.StatType statType,
-                                                                java.util.function.Function<IStatsData.StatType, Long> operation,
-                                                                String operationName) {
+    private static void handleCultivationDeath(ServerPlayer player, DamageSource damageSource) {
         try {
-            Long result = operation.apply(statType);
-            return result != null && result >= 0;
+            // Trigger cultivation-specific death handling
+            // This could include soul preservation, reincarnation mechanics, etc.
+
+            // For now, use vanilla death mechanics with cultivation context
+            player.hurt(damageSource, Float.MAX_VALUE);
+
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Handled cultivation death for player {} from source: {}",
+                    UTILS_NAME, player.getName().getString(), damageSource.type().msgId());
+            }
+
         } catch (Exception e) {
-            ImmortalCultivation.LOGGER.error("[{}] Error during {} operation for stat {}: {}",
-                UTILS_NAME, operationName, statType, e.getMessage(), e);
-            return false;
+            ImmortalCultivation.LOGGER.error("[{}] Error handling cultivation death for player {}: {}",
+                UTILS_NAME, player.getName().getString(), e.getMessage(), e);
         }
-    }
-
-    /**
-     * Validates that all required parameters for damage processing are present and valid.
-     *
-     * @param player The player (must not be null)
-     * @param statsAttachment The stats attachment (must not be null)
-     * @param vanillaDamage The damage amount (must be positive)
-     * @param damageSource The damage source (must not be null)
-     * @return True if all parameters are valid, false otherwise
-     */
-    public static boolean validateDamageParameters(ServerPlayer player,
-                                                   PlayerStatsAttachment statsAttachment,
-                                                   float vanillaDamage,
-                                                   DamageSource damageSource) {
-        if (player == null) {
-            ImmortalCultivation.LOGGER.warn("[{}] Null player provided for damage processing", UTILS_NAME);
-            return false;
-        }
-
-        if (statsAttachment == null) {
-            ImmortalCultivation.LOGGER.warn("[{}] Null stats attachment for player: {}",
-                UTILS_NAME, player.getName().getString());
-            return false;
-        }
-
-        if (vanillaDamage < 0) {
-            ImmortalCultivation.LOGGER.warn("[{}] Negative damage amount for player {}: {}",
-                UTILS_NAME, player.getName().getString(), vanillaDamage);
-            return false;
-        }
-
-        if (damageSource == null) {
-            ImmortalCultivation.LOGGER.warn("[{}] Null damage source for player: {}",
-                UTILS_NAME, player.getName().getString());
-            return false;
-        }
-
-        return true;
     }
 }

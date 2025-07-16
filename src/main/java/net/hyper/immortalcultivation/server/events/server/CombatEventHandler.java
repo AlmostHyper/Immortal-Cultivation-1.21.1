@@ -4,6 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
+import net.hyper.immortalcultivation.server.events.data.CombatEventData;
 import net.hyper.immortalcultivation.server.events.utils.CombatCalculationUtils;
 import net.hyper.immortalcultivation.server.events.utils.CombatEventUtils;
 import net.minecraft.server.level.ServerPlayer;
@@ -14,30 +15,50 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
 
 import javax.annotation.Nullable;
-import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Combat Event Handler for the Immortal Cultivation Mod
  *
  * Handles combat-related events following SOLID principles and DRY methodology.
  * Delegates business logic to utility classes while maintaining clean event handling.
+ * Now uses CombatEventData for centralized data management.
  *
  * Key Features:
  * - Incoming damage processing with custom cultivation damage system
  * - Damage immunity tracking for sophisticated multi-entity combat
  * - Integration with PlayerStatsAttachment for health management
- * - Performance optimized with concurrent data structures
+ * - Performance optimized through centralized data management
  * - Comprehensive debug logging for combat system monitoring
  *
  * Architecture:
  * - Handler manages event subscriptions and validation
+ * - CombatEventData provides centralized data storage and management
  * - CombatEventUtils handles business logic and calculations
  * - CombatCalculationUtils provides mathematical operations
- * - Maintains thread safety through concurrent collections
+ * - Maintains thread safety through data manager
  */
 public class CombatEventHandler {
+
+    // === CONSTANTS === //
+    private static final String HANDLER_NAME = "CombatEventHandler";
+
+    // === DATA MANAGEMENT === //
+    private final CombatEventData combatData;
+
+    // === CONSTRUCTOR === //
+
+    /**
+     * Constructor for CombatEventHandler
+     * Initializes with CombatEventData instance for centralized data management
+     */
+    public CombatEventHandler() {
+        this.combatData = CombatEventData.getInstance();
+
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("[{}] Handler initialized with data manager", HANDLER_NAME);
+        }
+    }
 
     // === EVENT HANDLERS === //
 
@@ -72,9 +93,9 @@ public class CombatEventHandler {
         }
 
         try {
-            // Check immunity using utility class
+            // Check immunity using data manager and utility class
             String sourceKey = CombatCalculationUtils.generateDamageSourceKey(damageSource);
-            if (CombatEventUtils.isPlayerImmune(playerId, sourceKey, playerImmunityMap)) {
+            if (combatData.isPlayerImmune(playerId, sourceKey)) {
                 event.setCanceled(true);
                 if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
                     ImmortalCultivation.LOGGER.debug("[{}] Player {} is immune to damage from source: {}",
@@ -93,52 +114,54 @@ public class CombatEventHandler {
                 return;
             }
 
-            // Cancel vanilla damage processing
+            // Cancel vanilla damage and process through cultivation system
             event.setCanceled(true);
 
-            // Process damage through utility class
+            // Process damage through utility with data manager
             CombatEventUtils.processDamage(
                 serverPlayer,
                 statsAttachment,
                 vanillaDamage,
                 damageSource,
                 sourceKey,
-                playerImmunityMap,
-                lastKnownVanillaHealth
+                combatData
             );
-
-            // Perform periodic cleanup
-            performPeriodicCleanup();
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("[{}] Error processing damage for player {}: {}",
                 HANDLER_NAME, player.getName().getString(), e.getMessage(), e);
-            // Don't cancel the event on error to maintain vanilla fallback
+
+            // Don't cancel the event if processing fails to prevent player invincibility
+            // Let vanilla damage processing continue as fallback
         }
     }
 
     // === VALIDATION METHODS === //
 
     /**
-     * Validates the damage event and extracts the player if applicable.
+     * Validates the damage event and extracts the player if valid
      *
      * @param event The damage event to validate
      * @return The player if valid, null otherwise
      */
     @Nullable
-    private static Player validateAndExtractPlayer(LivingIncomingDamageEvent event) {
-        // Check if the entity is a player
+    private Player validateAndExtractPlayer(LivingIncomingDamageEvent event) {
+        // Check if entity is a player
         if (!(event.getEntity() instanceof Player player)) {
             return null;
         }
 
-        // Check if we're on the server side
-        if (player.level().isClientSide()) {
+        // Check if this is a server-side player
+        if (!(player instanceof ServerPlayer)) {
             return null;
         }
 
-        // Ensure it's a ServerPlayer for proper handling
-        if (!(player instanceof ServerPlayer)) {
+        // Check for valid damage amount
+        if (event.getAmount() <= 0.0f) {
+            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                ImmortalCultivation.LOGGER.debug("[{}] Ignoring zero or negative damage for player: {}",
+                    HANDLER_NAME, player.getName().getString());
+            }
             return null;
         }
 
@@ -146,48 +169,51 @@ public class CombatEventHandler {
     }
 
     /**
-     * Safely retrieves the PlayerStatsAttachment from a server player.
+     * Gets the PlayerStatsAttachment for a player with error handling
      *
-     * @param player The server player to get attachment from
-     * @return The stats attachment or null if not available
+     * @param player The server player
+     * @return The PlayerStatsAttachment or null if not found
      */
     @Nullable
-    private static PlayerStatsAttachment getPlayerStatsAttachment(ServerPlayer player) {
+    private PlayerStatsAttachment getPlayerStatsAttachment(ServerPlayer player) {
         try {
-            return player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
-        } catch (Exception e) {
-            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[{}] Failed to get stats attachment for player {}: {}",
-                    HANDLER_NAME, player.getName().getString(), e.getMessage());
+            PlayerStatsAttachment attachment = player.getData(ICModAttachmentTypes.PLAYER_STATS);
+            if (attachment == null) {
+                ImmortalCultivation.LOGGER.warn("[{}] Player {} has no stats attachment",
+                    HANDLER_NAME, player.getName().getString());
+                return null;
             }
+
+            return attachment;
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("[{}] Error getting stats attachment for player {}: {}",
+                HANDLER_NAME, player.getName().getString(), e.getMessage(), e);
             return null;
         }
     }
 
-    // === GENERIC UTILITY METHODS === //
+    // === UTILITY METHODS === //
 
     /**
-     * Generic method to safely get attachment data from any player.
-     * Provides type safety and error handling for attachment retrieval.
+     * Gets the combat data manager instance for external access if needed
      *
-     * @param <T> The attachment type
-     * @param player The player to get attachment from
-     * @param attachmentSupplier Supplier for the attachment type
-     * @param attachmentName Name for logging purposes
-     * @return The attachment or null if not available
+     * @return The CombatEventData instance
      */
-    @Nullable
-    public static <T> T getPlayerAttachment(ServerPlayer player,
-                                            java.util.function.Supplier<net.neoforged.neoforge.attachment.AttachmentType<T>> attachmentSupplier,
-                                            String attachmentName) {
+    public CombatEventData getCombatData() {
+        return combatData;
+    }
+
+    /**
+     * Performs data cleanup if needed
+     * Can be called externally for maintenance operations
+     */
+    public void performMaintenanceCleanup() {
         try {
-            return player.getData(attachmentSupplier.get());
+            combatData.performCleanupIfNeeded();
         } catch (Exception e) {
-            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[{}] Failed to get {} attachment for player {}: {}",
-                    HANDLER_NAME, attachmentName, player.getName().getString(), e.getMessage());
-            }
-            return null;
+            ImmortalCultivation.LOGGER.error("[{}] Error during maintenance cleanup: {}",
+                HANDLER_NAME, e.getMessage(), e);
         }
     }
 }
