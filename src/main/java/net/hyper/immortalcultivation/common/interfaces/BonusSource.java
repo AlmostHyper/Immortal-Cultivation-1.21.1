@@ -51,7 +51,13 @@ public enum BonusSource {
      * Temporary bonuses from effects, buffs, or environmental factors.
      * These bonuses are explicitly temporary and managed separately.
      */
-    TEMPORARY("Temporary", true);
+    TEMPORARY("Temporary", true),
+
+    /**
+     * Bonuses from cultivation milestones (every 1000 cultivation points).
+     * These bonuses are permanent and calculated based on total cultivation progress.
+     */
+    MILESTONES("Milestones", false);
 
     private final String displayName;
     private final boolean recalculatedOnLogin;

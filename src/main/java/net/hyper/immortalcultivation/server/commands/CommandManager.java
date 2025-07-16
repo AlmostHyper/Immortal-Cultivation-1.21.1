@@ -487,38 +487,31 @@ public class CommandManager {
                     // Validate value against maximum
                     long maxValue = cultivation.getMaxCultivation(cultivationType);
                     if (value > maxValue) {
-                        ctx.getSource().sendFailure(Component.literal("Value " + value + " exceeds maximum " + cultivationType.getDisplayName() + " cultivation (" + maxValue + ")")
+                        ctx.getSource().sendFailure(Component.literal("Value " + value + " exceeds maximum " + maxValue)
                             .withStyle(ChatFormatting.RED));
                         return 0;
                     }
 
-                    // Set the cultivation stat
+                    // Store old value for milestone calculation
                     long oldValue = cultivation.getCurrentCultivation(cultivationType);
+
+                    // Set the new cultivation value (this will trigger milestone processing)
                     cultivation.setCurrentCultivation(cultivationType, value);
 
-                    // Send success message
-                    Component successMessage = Component.literal("Successfully set ")
-                        .withStyle(ChatFormatting.GREEN)
-                        .append(Component.literal(cultivationType.getDisplayName() + " Cultivation")
-                            .withStyle(ChatFormatting.YELLOW))
-                        .append(Component.literal(" from ")
-                            .withStyle(ChatFormatting.GREEN))
-                        .append(Component.literal(String.valueOf(oldValue))
-                            .withStyle(ChatFormatting.GRAY))
-                        .append(Component.literal(" to ")
-                            .withStyle(ChatFormatting.GREEN))
-                        .append(Component.literal(String.valueOf(value))
-                            .withStyle(ChatFormatting.GOLD))
-                        .append(Component.literal("/" + maxValue)
-                            .withStyle(ChatFormatting.GRAY));
+                    // FIXED: Ensure milestones are properly recalculated after set command
+                    // This prevents double-application and ensures consistency
+                    cultivation.recalculateMilestoneBonuses(cultivationType);
 
-                    ctx.getSource().sendSuccess(() -> successMessage, false);
+                    ctx.getSource().sendSuccess(() -> Component.literal("Set " + cultivationType.getDisplayName() +
+                            " cultivation to " + value + " (was " + oldValue + ")")
+                        .withStyle(ChatFormatting.GREEN), false);
 
-                    if (DEBUG_COMMANDS) {
-                        ImmortalCultivation.LOGGER.info("Player {} cultivation stat changed: {} {} -> {}",
-                            player.getName().getString(), cultivationType, oldValue, value);
+                    if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                        ImmortalCultivation.LOGGER.debug("Set {} cultivation for {}: {} -> {} (max: {})",
+                            cultivationType, player.getName().getString(), oldValue, value, maxValue);
                     }
 
+                    return 1;
                 } else {
                     // Handle regular stat (existing code)
                     IStatsData.StatType statType = (IStatsData.StatType) parsed[0];

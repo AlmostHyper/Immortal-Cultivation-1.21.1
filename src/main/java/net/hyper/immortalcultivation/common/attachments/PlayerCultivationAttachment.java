@@ -276,8 +276,9 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     }
 
     /**
-     * Sets the current cultivation for the specified cultivation type with validation.
-     * Automatically triggers dirty marking and milestone checking.
+     * Enhanced setCurrentCultivation method that properly handles milestone recalculation
+     * for both normal progression and set commands.
+     *
      * @param type The cultivation type (QI or BODY)
      * @param value The new cultivation value
      */
@@ -291,19 +292,26 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
 
         if (oldValue != newValue) {
             // Update fractional progress
-            double newFraction = maxValue > 0 ? (double) newValue / maxValue : 0.0;
+            double newFraction = maxValue > 0 ?
+                ((double) newValue / maxValue) % 1.0 : 0.0;
             cultivationFraction.put(type, newFraction);
 
-            // Check for milestones
-            checkAndProcessMilestone(type, oldValue, newValue);
-
-            // Mark as dirty for synchronization
             markDirty();
 
             if (debugEnabled()) {
-                debugLog("Cultivation changed for {}: {} {} -> {} ({:.1f}%)",
+                debugLog("Cultivation changed for {}: {} {} -> {} (max: {})",
                     player != null ? player.getName().getString() : "unknown",
-                    type, oldValue, newValue, newFraction * 100.0);
+                    type, oldValue, newValue, maxValue);
+            }
+
+            // FIXED: Handle milestone processing correctly
+            if (newValue > oldValue) {
+                // Normal progression - use incremental milestone checking
+                checkAndProcessMilestone(type, oldValue, newValue);
+            } else {
+                // Value decreased or set command - recalculate all milestones
+                // This ensures consistency when using set commands
+                recalculateMilestoneBonuses(type);
             }
         }
     }
@@ -578,14 +586,14 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     /**
      * Called when a cultivation milestone is reached. Applies permanent stat bonuses
      * based on the cultivation type and milestone value.
+     *
+     * FIXED: Now properly calculates incremental bonuses instead of total bonuses
+     *
      * @param type The cultivation type that reached the milestone
      * @param milestone The milestone value reached
      */
     protected void onMilestoneReached(CultivationType type, long milestone) {
         if (player == null) return;
-
-        // Calculate how many milestones were reached (milestone / 1000)
-        long milestoneCount = milestone / MILESTONE_THRESHOLD;
 
         // Get the player's stats attachment to apply permanent bonuses
         PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
@@ -596,41 +604,64 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
             return;
         }
 
-        // Get current permanent bonuses
+        // Calculate current total milestones and previously applied milestones
+        long currentTotalMilestones = milestone / MILESTONE_THRESHOLD;
+        long lastAppliedMilestone = lastMilestone.get(type);
+        long previousTotalMilestones = lastAppliedMilestone / MILESTONE_THRESHOLD;
+
+        // Calculate ONLY the new milestones to apply
+        long newMilestonesToApply = currentTotalMilestones - previousTotalMilestones;
+
+        if (newMilestonesToApply <= 0) {
+            if (debugEnabled()) {
+                debugWarn("No new milestones to apply for {}: current={}, previous={}",
+                    type, currentTotalMilestones, previousTotalMilestones);
+            }
+            return;
+        }
+
+        if (debugEnabled()) {
+            debugLog("Applying {} new milestone bonuses for {}: total milestones {} (was {})",
+                newMilestonesToApply, type, currentTotalMilestones, previousTotalMilestones);
+        }
+
+        // Get current permanent bonuses (these already include previously applied milestone bonuses)
         long currentHealthBonus = statsAttachment.getPermanentStatBonus(IStatsData.StatType.HEALTH);
         long currentQiBonus = statsAttachment.getPermanentStatBonus(IStatsData.StatType.QI);
         long currentBodyBonus = statsAttachment.getPermanentStatBonus(IStatsData.StatType.BODY);
 
-        // Apply bonuses based on cultivation type
+        // Apply bonuses ONLY for the NEW milestones reached
         switch (type) {
             case QI -> {
                 // QI milestones: +1 health, +3 qi, +1 body per 1000 cultivation
-                long healthBonusToAdd = milestoneCount * 1L;
-                long qiBonusToAdd = milestoneCount * 3L;
-                long bodyBonusToAdd = milestoneCount * 1L;
+                long healthBonusToAdd = newMilestonesToApply * 1L;
+                long qiBonusToAdd = newMilestonesToApply * 3L;
+                long bodyBonusToAdd = newMilestonesToApply * 1L;
 
                 statsAttachment.setPermanentStatBonus(IStatsData.StatType.HEALTH, currentHealthBonus + healthBonusToAdd);
                 statsAttachment.setPermanentStatBonus(IStatsData.StatType.QI, currentQiBonus + qiBonusToAdd);
                 statsAttachment.setPermanentStatBonus(IStatsData.StatType.BODY, currentBodyBonus + bodyBonusToAdd);
 
                 if (debugEnabled()) {
-                    debugLog("Applied QI milestone bonuses for {}: +{} health, +{} qi, +{} body",
-                        player.getName().getString(), healthBonusToAdd, qiBonusToAdd, bodyBonusToAdd);
+                    debugLog("Applied {} QI milestone bonuses for {}: +{} health, +{} qi, +{} body",
+                        newMilestonesToApply, player.getName().getString(),
+                        healthBonusToAdd, qiBonusToAdd, bodyBonusToAdd);
                 }
             }
             case BODY -> {
                 // BODY milestones: +2 health, +1 qi, +2 body per 1000 cultivation
-                long healthBonusToAdd = milestoneCount * 2L;
-                long qiBonusToAdd = milestoneCount * 1L;
-                long bodyBonusToAdd = milestoneCount * 2L;
+                long healthBonusToAdd = newMilestonesToApply * 2L;
+                long qiBonusToAdd = newMilestonesToApply * 1L;
+                long bodyBonusToAdd = newMilestonesToApply * 2L;
 
                 statsAttachment.setPermanentStatBonus(IStatsData.StatType.HEALTH, currentHealthBonus + healthBonusToAdd);
                 statsAttachment.setPermanentStatBonus(IStatsData.StatType.QI, currentQiBonus + qiBonusToAdd);
                 statsAttachment.setPermanentStatBonus(IStatsData.StatType.BODY, currentBodyBonus + bodyBonusToAdd);
 
                 if (debugEnabled()) {
-                    debugLog("Applied BODY milestone bonuses for {}: +{} health, +{} qi, +{} body",
-                        player.getName().getString(), healthBonusToAdd, qiBonusToAdd, bodyBonusToAdd);
+                    debugLog("Applied {} BODY milestone bonuses for {}: +{} health, +{} qi, +{} body",
+                        newMilestonesToApply, player.getName().getString(),
+                        healthBonusToAdd, qiBonusToAdd, bodyBonusToAdd);
                 }
             }
         }
@@ -1127,6 +1158,60 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
                 getCurrentCultivation(CultivationType.BODY),
                 accumulationRate.get(CultivationType.BODY));
         }
+    }
+
+    /**
+     * Fixes milestone tracking when using set commands or loading data.
+     * This method recalculates and reapplies all milestone bonuses from scratch
+     * to ensure consistency.
+     *
+     * @param type The cultivation type to fix milestones for
+     */
+    public void recalculateMilestoneBonuses(CultivationType type) {
+        if (player == null) return;
+
+        PlayerStatsAttachment statsAttachment = player.getData(ICModAttachmentTypes.PLAYER_STATS.get());
+        if (statsAttachment == null) return;
+
+        long currentCultivation = getCurrentCultivation(type);
+        long totalMilestones = currentCultivation / MILESTONE_THRESHOLD;
+
+        if (totalMilestones <= 0) return;
+
+        if (debugEnabled()) {
+            debugLog("Recalculating milestone bonuses for {}: {} cultivation = {} milestones",
+                type, currentCultivation, totalMilestones);
+        }
+
+        // Clear existing milestone bonuses for this cultivation type
+        // (This requires using the sourced bonus system)
+        BonusSource milestoneSource = BonusSource.MILESTONES;
+
+        // Calculate what the bonuses SHOULD be for the total milestones
+        switch (type) {
+            case QI -> {
+                long healthBonus = totalMilestones * 1L;
+                long qiBonus = totalMilestones * 3L;
+                long bodyBonus = totalMilestones * 1L;
+
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.HEALTH, milestoneSource, healthBonus);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.QI, milestoneSource, qiBonus);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.BODY, milestoneSource, bodyBonus);
+            }
+            case BODY -> {
+                long healthBonus = totalMilestones * 2L;
+                long qiBonus = totalMilestones * 1L;
+                long bodyBonus = totalMilestones * 2L;
+
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.HEALTH, milestoneSource, healthBonus);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.QI, milestoneSource, qiBonus);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.BODY, milestoneSource, bodyBonus);
+            }
+        }
+
+        // Update the last milestone tracker
+        lastMilestone.put(type, totalMilestones * MILESTONE_THRESHOLD);
+        markDirty();
     }
 
     /**
