@@ -12,7 +12,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.attachment.AttachmentType;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
-import javax.annotation.Nullable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
@@ -39,19 +38,19 @@ import java.util.function.Supplier;
  * - Modular design for easy extension
  */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID)
-public class ICModNetworkManager {
+public class NetworkManager {
 
     // === SINGLETON INSTANCE === //
-    public static final ICModNetworkManager INSTANCE = new ICModNetworkManager();
+    public static final NetworkManager INSTANCE = new NetworkManager();
 
     // === CONFIGURATION CONSTANTS === //
-    private static final int TICKABLE_INTERVAL = 1; // Tick every tick for ITickable attachments
-    private static final int SYNC_CHECK_INTERVAL = 5; // Check for syncs every 5 ticks (4 times per second)
-    private static final int MAX_SYNCS_PER_TICK = 10; // Maximum syncs to process per tick
+    private static final int TICKABLE_INTERVAL = 20; // Tick every tick for ITickable attachments
+    private static final int SYNC_CHECK_INTERVAL = 20; // Check for syncs every 5 ticks (4 times per second)
+    private static final int MAX_SYNCS_PER_TICK = 5; // Maximum syncs to process per tick
     private static final int EMERGENCY_SYNC_PRIORITY = 0; // Highest priority for emergency syncs
     private static final int FULL_SYNC_PRIORITY = 1; // High priority for full syncs
     private static final int DELTA_SYNC_PRIORITY = 2; // Normal priority for delta syncs
-    private static final int CLEANUP_INTERVAL = 6000; // Cleanup every 5 minutes (6000 ticks)
+    private static final int CLEANUP_INTERVAL = 12000; // Cleanup every 5 minutes (6000 ticks)
 
     // === DEBUG AND MONITORING === //
     private static boolean DEBUG_SYNC = false;
@@ -115,7 +114,7 @@ public class ICModNetworkManager {
     private final Map<UUID, Long> lastCleanupTimes = new ConcurrentHashMap<>();
 
     // === CONSTRUCTOR === //
-    private ICModNetworkManager() {
+    private NetworkManager() {
         ImmortalCultivation.LOGGER.info("Initializing ICModNetworkManager...");
     }
 
@@ -423,7 +422,7 @@ public class ICModNetworkManager {
 
                 if (packetOptional.isPresent()) {
                     ISyncPacket packet = packetOptional.get();
-                    ICModPacketRegistry.sendToPlayer(packet, player);
+                    NetworkRegistry.sendToPlayer(packet, player);
                     syncable.clearDirty();
 
                     // Update tracking
@@ -504,7 +503,7 @@ public class ICModNetworkManager {
                 Optional<ISyncPacket> packetOptional = syncable.createPacket(sync.isFullSync);
                 if (packetOptional.isPresent()) {
                     ISyncPacket packet = packetOptional.get();
-                    ICModPacketRegistry.sendToPlayer(packet, sync.player);
+                    NetworkRegistry.sendToPlayer(packet, sync.player);
                     syncable.clearDirty();
 
                     if (DEBUG_SYNC) {

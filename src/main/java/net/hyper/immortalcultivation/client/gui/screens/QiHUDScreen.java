@@ -120,6 +120,9 @@ public class QiHUDScreen {
     // Singleton instance management
     private static QiHUDScreen instance;
 
+    private static CultivationDataSnapshot cachedSnapshot = null;
+    private static long lastSnapshotUpdate = 0;
+
     // === REGISTRATION AND LIFECYCLE === //
 
     /**
@@ -148,21 +151,26 @@ public class QiHUDScreen {
 
         if (player == null || minecraft.options.hideGui) return;
 
-        // Gather all cultivation data from the player's unified attachments
-        CultivationDataSnapshot snapshot = gatherCultivationData(player);
-        if (snapshot == null) return; // Missing critical attachments
+        // Performance optimization: Only gather data when needed
+        if (updateCounter >= UPDATE_FREQUENCY || needsUpdate || cachedSnapshot == null) {
+            cachedSnapshot = gatherCultivationData(player);
+            lastSnapshotUpdate = System.currentTimeMillis();
+            if (cachedSnapshot == null) return; // Missing critical attachments
+        } else if (cachedSnapshot == null) {
+            return; // No cached data available
+        }
 
         // Performance-optimized update cycle
         updateCounter++;
         if (updateCounter >= UPDATE_FREQUENCY || needsUpdate) {
             updateCounter = 0;
-            updateAllAnimations(snapshot);
+            updateAllAnimations(cachedSnapshot);
 
             // Update text cache less frequently to reduce string allocation
             cacheUpdateCounter++;
             if (cacheUpdateCounter >= 4 || needsUpdate) { // Update text every 32 ticks
                 cacheUpdateCounter = 0;
-                updateAllTextCache(snapshot);
+                updateAllTextCache(cachedSnapshot);
             }
             needsUpdate = false;
         }
@@ -172,7 +180,7 @@ public class QiHUDScreen {
         int centerY = PADDING + CIRCLE_RADIUS;
 
         // Render the complete unified cultivation HUD
-        renderUnifiedCultivationHUD(guiGraphics, centerX, centerY, snapshot);
+        renderUnifiedCultivationHUD(guiGraphics, centerX, centerY, cachedSnapshot);
     }
 
     // === DATA GATHERING === //
@@ -682,6 +690,9 @@ public class QiHUDScreen {
 
     // === EVENT HANDLERS === //
 
+    // === EVENT HANDLERS === //
+
+
     /**
      * Event handler for attachment updates.
      * This ensures the HUD refreshes when cultivation data changes.
@@ -692,12 +703,27 @@ public class QiHUDScreen {
     @SubscribeEvent
     public void onAttachmentUpdate(AttachmentUpdateEventHandler event) {
         if (event.getPlayer() != null && event.getPlayer().level().isClientSide) {
-            needsUpdate = true;
+            // Call the static invalidateCache method to clear cached data
+            invalidateCache();
 
             // Use debug logging if available
             if (instance != null) {
                 ImmortalCultivation.LOGGER.debug("[QIHUD] Attachment update received, marking for refresh");
             }
+        }
+    }
+
+    /**
+     * Invalidates the cached snapshot when attachments update.
+     * This forces the HUD to re-gather cultivation data on the next render.
+     */
+    public static void invalidateCache() {
+        cachedSnapshot = null;
+        needsUpdate = true;
+        updateCounter = UPDATE_FREQUENCY; // Force immediate update on next render
+
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("[QIHUD] Cache invalidated, forcing data refresh");
         }
     }
 }

@@ -2,9 +2,8 @@ package net.hyper.immortalcultivation.server.events.utils;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
-import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.server.DamageFeedbackSyncPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
@@ -387,7 +386,7 @@ public class CombatCalculationUtils {
         try {
             String sourceId = generateDamageSourceKey(damageSource);
             DamageFeedbackSyncPacket packet = DamageFeedbackSyncPacket.create(damage, sourceId);
-            ICModPacketRegistry.sendToPlayer(packet, player);
+            NetworkRegistry.sendToPlayer(packet, player);
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("[CombatCalculationUtils] Error sending damage feedback packet: {}", e.getMessage(), e);

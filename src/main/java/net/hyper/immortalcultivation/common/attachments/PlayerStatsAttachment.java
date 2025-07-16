@@ -67,6 +67,10 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     private double movementSpeedBonus = 0.0;
     private double jumpHeightBonus = 0.0;
 
+    // --- Tick Counter ---
+    private int regenTickCounter = 0;
+    private static final int REGEN_TICK_INTERVAL = 20;
+
     // === CONSTRUCTORS === //
 
     /**
@@ -719,6 +723,13 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
             return;
         }
 
+        // Only process regeneration every REGEN_TICK_INTERVAL ticks
+        regenTickCounter++;
+        if (regenTickCounter < REGEN_TICK_INTERVAL) {
+            return;
+        }
+        regenTickCounter = 0;
+
         startPerformanceTracking("tick");
         try {
             boolean anyRegenOccurred = false;
@@ -729,27 +740,21 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
                     double regenRate = getEffectiveStatRegenerationRate(type);
                     double currentFraction = getRegenFraction(type);
 
-                    // Add regeneration per tick (divide by 20 for per-second rate)
-                    currentFraction += regenRate / 20.0;
+                    // Add regeneration per second (multiply by interval/20)
+                    currentFraction += regenRate; // Already per-second rate
 
-                    // Cap the maximum regeneration per tick to prevent instant healing exploits
-                    double maxRegenPerTick = getMaxStat(type) * 0.05; // Max 5% of total health per tick
+                    // Cap the maximum regeneration per second
+                    double maxRegenPerSecond = getMaxStat(type) * 0.05; // Max 5% per second
 
                     if (currentFraction >= 1.0) {
-                        long regenAmount = Math.min((long) currentFraction, (long) maxRegenPerTick);
+                        long regenAmount = Math.min((long) currentFraction, (long) maxRegenPerSecond);
                         currentFraction -= regenAmount;
-
-                        // Additional safety check: prevent healing more than 1 point per tick for health
-                        if (type == StatType.HEALTH) {
-                            regenAmount = Math.min(regenAmount, 1L);
-                        }
 
                         long actualAdded = addStat(type, regenAmount);
                         if (actualAdded > 0) {
                             anyRegenOccurred = true;
                             onStatAdded(type, actualAdded);
 
-                            // Debug log for health regeneration to track the issue
                             if (type == StatType.HEALTH && debugEnabled()) {
                                 debugLog("Health regeneration: +{} (rate: {}, fraction: {})",
                                     actualAdded, regenRate, currentFraction);
@@ -772,6 +777,7 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
             endPerformanceTracking("tick", 2); // 2ms warning threshold
         }
     }
+
 
     // === PLAYERATTACHMENT OVERRIDES === //
 

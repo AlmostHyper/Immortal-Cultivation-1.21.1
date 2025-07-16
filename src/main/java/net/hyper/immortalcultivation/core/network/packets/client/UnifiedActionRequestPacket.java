@@ -6,7 +6,7 @@ import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttach
 import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
-import net.hyper.immortalcultivation.core.network.ICModNetworkManager;
+import net.hyper.immortalcultivation.core.network.NetworkManager;
 import net.hyper.immortalcultivation.core.network.helpers.BreakthroughFeedbackHelper;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -132,7 +132,7 @@ public record UnifiedActionRequestPacket(
         var result = breakthrough.attemptTypedBreakthrough(packet.cultivationType.get(), packet.breakthroughType.get());
 
         BreakthroughFeedbackHelper.sendBreakthroughFeedback(player, result, packet.breakthroughType.get());
-        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true);
+        NetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_BREAKTHROUGH::get, true);
     }
 
     private static void processFocusToggle(ServerPlayer player) {
@@ -155,7 +155,7 @@ public record UnifiedActionRequestPacket(
         }
         
         // This action only affects cultivation data, so a targeted sync is efficient.
-        ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, false);
+        NetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_CULTIVATION::get, false);
     }
 
     private static void processRaceSelection(ServerPlayer player, UnifiedActionRequestPacket packet) {
@@ -172,7 +172,7 @@ public record UnifiedActionRequestPacket(
             raceAttachment.assignRace(raceType);  // Remove the 'player' parameter
             player.sendSystemMessage(Component.literal("You are now a " + raceType.getDisplayName() + "!").withStyle(ChatFormatting.GOLD));
             // A full sync is appropriate after a major change like race selection.
-            ICModNetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
+            NetworkManager.INSTANCE.scheduleSync(player, ICModAttachmentTypes.PLAYER_RACE::get, true);
         } catch (IllegalArgumentException e) {
             player.sendSystemMessage(Component.literal("Invalid race selected.").withStyle(ChatFormatting.RED));
             ImmortalCultivation.LOGGER.warn("Player {} tried to select invalid race: {}", player.getName().getString(), packet.stringParam().get());

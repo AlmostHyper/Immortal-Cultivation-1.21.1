@@ -6,7 +6,7 @@ import net.hyper.immortalcultivation.common.interfaces.*;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.common.registry.ICModCultivationRealms;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
-import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -239,7 +239,7 @@ public class PlayerEventUtils {
                 // Create and send sync packet
                 Optional<ISyncPacket> packetOptional = syncable.createPacket(true); // true for full sync
                 if (packetOptional.isPresent()) {
-                    ICModPacketRegistry.sendToPlayer(packetOptional.get(), player);
+                    NetworkRegistry.sendToPlayer(packetOptional.get(), player);
                     syncable.clearDirty();
 
                     if (ImmortalCultivation.LOGGER.isDebugEnabled()) {

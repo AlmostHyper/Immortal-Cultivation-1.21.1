@@ -6,9 +6,8 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.interfaces.IPlayerInitializable;
 import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
-import net.hyper.immortalcultivation.common.interfaces.ISyncable;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
-import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.server.OpenRaceSelectionSyncPacket;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerRaceSyncPacket;
 import net.minecraft.ChatFormatting;
@@ -22,7 +21,6 @@ import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 
 import javax.annotation.Nullable;
-import java.util.Optional;
 
 /**
  * Player race attachment that manages race selection, assignment, and racial bonuses
@@ -214,7 +212,7 @@ public class PlayerRaceAttachment extends PlayerAttachment<PlayerRaceAttachment>
 
         if (!hasRaceAssigned()) {
             // Send race selection screen to new player
-            ICModPacketRegistry.sendToPlayer(new OpenRaceSelectionSyncPacket(), player);
+            NetworkRegistry.sendToPlayer(new OpenRaceSelectionSyncPacket(), player);
             player.sendSystemMessage(Component.literal("Welcome, young cultivator! Choose your race to begin your journey.")
                 .withStyle(ChatFormatting.GOLD));
 

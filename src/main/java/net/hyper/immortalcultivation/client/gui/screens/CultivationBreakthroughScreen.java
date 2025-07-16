@@ -7,7 +7,7 @@ import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -596,7 +596,7 @@ public class CultivationBreakthroughScreen extends Screen {
                 option.cultivationType(), option.type());
 
             // Send packet to server using refactored network system
-            ICModPacketRegistry.sendToServer(packet);
+            NetworkRegistry.sendToServer(packet);
 
             if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
                 ImmortalCultivation.LOGGER.debug("Sent breakthrough request - Type: {}, Cultivation: {}",

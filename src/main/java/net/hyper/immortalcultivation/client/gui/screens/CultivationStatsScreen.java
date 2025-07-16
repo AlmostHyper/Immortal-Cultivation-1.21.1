@@ -10,7 +10,7 @@ import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
-import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -253,7 +253,7 @@ public class CultivationStatsScreen extends Screen {
         String focusText = cultivationData.getCurrentFocus() == ICultivationData.CultivationType.QI ? "Focus: Qi" : "Focus: Body";
         Button focusButton = Button.builder(
                 Component.literal(focusText),
-                (button) -> ICModPacketRegistry.sendToServer(UnifiedActionRequestPacket.createFocusToggle())
+                (button) -> NetworkRegistry.sendToServer(UnifiedActionRequestPacket.createFocusToggle())
             )
             .bounds(windowX + MARGIN, buttonY, buttonWidth, BUTTON_HEIGHT)
             .build();

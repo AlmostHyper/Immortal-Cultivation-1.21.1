@@ -154,12 +154,11 @@ public class EventManager {
     }
 
     /**
-     * Tracks client-side handlers for monitoring purposes
-     * Client handlers use @EventBusSubscriber annotation for auto-registration
+     * Tracks client-side handlers that self-register via annotations
      */
     private void trackClientHandlers() {
         try {
-            // Track client-side handlers (these auto-register via annotations)
+            // Track existing client-side handlers (auto-registered via @EventBusSubscriber)
             trackHandler("GUIEvent", "Client-side (auto-registered via @EventBusSubscriber)");
             trackHandler("TooltipEventHandler", "Client-side (auto-registered via @EventBusSubscriber)");
 

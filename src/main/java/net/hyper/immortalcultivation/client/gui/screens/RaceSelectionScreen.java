@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.client.gui.screens;
 
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
-import net.hyper.immortalcultivation.core.network.ICModPacketRegistry;
+import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
@@ -185,7 +185,7 @@ public class RaceSelectionScreen extends Screen {
     private void confirmSelection() {
         if (selectedRace != null) {
             // Send packet to server using the convenience factory method
-            ICModPacketRegistry.sendToServer(UnifiedActionRequestPacket.createRaceSelection(selectedRace.name()));
+            NetworkRegistry.sendToServer(UnifiedActionRequestPacket.createRaceSelection(selectedRace.name()));
             // Close screen
             minecraft.setScreen(null);
         }
