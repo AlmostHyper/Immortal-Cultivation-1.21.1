@@ -1067,49 +1067,6 @@ public class CultivationBreakthroughScreen extends Screen {
      */
     @Override
     public boolean isPauseScreen() {
-        return false; // Don't pause the game - cultivation continues
+        return false;
     }
-
-    // === JAVADOC SUMMARY ===
-
-    /**
-     * RefactoredCultivationBreakthroughScreen provides a comprehensive interface for managing
-     * cultivation breakthroughs in the Xianxia system. This implementation preserves all
-     * original styling and functionality while utilizing the refactored codebase architecture.
-     *
-     * ## Key Features:
-     * - **Responsive Design**: Adapts to different screen sizes with preserved proportions
-     * - **Scrollable Content**: Smooth scrolling for extensive breakthrough option lists
-     * - **Color-Coded Options**: Visual indicators for breakthrough types and success rates
-     * - **Real-Time Updates**: Reflects current cultivation state and breakthrough availability
-     * - **Enhanced Error Handling**: Graceful degradation when cultivation data is unavailable
-     *
-     * ## Refactored Integration:
-     * - Uses {@link ICultivationData.CultivationType} for unified cultivation type handling
-     * - Leverages {@link PlayerBreakthroughAttachment.BreakthroughOption} for option data
-     * - Employs {@link UnifiedActionRequestPacket} for server communication
-     * - Integrates with the refactored attachment system via proper player reference setting
-     *
-     * ## Usage:
-     * ```java
-     * RefactoredCultivationBreakthroughScreen screen = new RefactoredCultivationBreakthroughScreen();
-     * Minecraft.getInstance().setScreen(screen);
-     * ```
-     *
-     * ## Visual Styling:
-     * All colors, dimensions, and layout elements are preserved from the original implementation
-     * to maintain visual consistency across the mod's interface.
-     *
-     * ## Error Handling:
-     * The screen gracefully handles missing cultivation data, network failures, and other
-     * error conditions while providing feedback to the player.
-     *
-     * @author ImmortalCultivation Team
-     * @version 2.0 (Refactored)
-     * @since 1.21.1
-     * @see PlayerBreakthroughAttachment
-     * @see PlayerCultivationAttachment
-     * @see ICultivationData
-     * @see UnifiedActionRequestPacket
-     */
 }
