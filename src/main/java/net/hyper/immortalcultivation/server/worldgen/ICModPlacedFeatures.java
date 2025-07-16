@@ -33,19 +33,19 @@ public class ICModPlacedFeatures {
         // === Spirit Stones === //
 
         register(context, LOW_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_LOW_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(9,
+            ICModOrePlacements.commonOrePlacement(10,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(480))));
 
         register(context, MEDIUM_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_MEDIUM_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(4,
+            ICModOrePlacements.commonOrePlacement(5,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(31))));
 
         register(context, HIGH_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_HIGH_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.commonOrePlacement(1,
+            ICModOrePlacements.commonOrePlacement(2,
                 HeightRangePlacement.uniform(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(0))));
 
         register(context, TOP_QUALITY_SPIRIT_STONE_ORE_PLACED_KEY, configuredFeatures.getOrThrow(ICModConfiguredFeatures.OVERWORLD_TOP_QUALITY_SPIRIT_STONE_ORE_KEY),
-            ICModOrePlacements.rareOrePlacement(50,
+            ICModOrePlacements.rareOrePlacement(75,
                 HeightRangePlacement.triangle(VerticalAnchor.absolute(-64), VerticalAnchor.absolute(-54))));
 
         // === Elemental === //

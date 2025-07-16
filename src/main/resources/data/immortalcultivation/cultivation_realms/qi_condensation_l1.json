@@ -19,11 +19,11 @@
   },
   "qi_stats": {
     "base_max_qi": 10,
-    "base_qi_regeneration_rate": 0.1
+    "base_qi_regeneration_rate": 1.0
   },
   "body_stats": {
     "base_max_body": 10,
-    "base_body_regeneration_rate": 0.1
+    "base_body_regeneration_rate": 1.0
   },
   "visual_properties": {
     "realm_color": 5635925,

@@ -8,7 +8,7 @@
   },
   "physical_stats": {
     "base_health": 5,
-    "base_health_regeneration": 0.001,
+    "base_health_regeneration": 0.01,
     "base_attack_damage": 0.1,
     "base_movement_speed": 0.05,
     "base_jump_height": 0.1
@@ -19,11 +19,11 @@
   },
   "qi_stats": {
     "base_max_qi": 100,
-    "base_qi_regeneration_rate": 0.2
+    "base_qi_regeneration_rate": 1.5
   },
   "body_stats": {
     "base_max_body": 100,
-    "base_body_regeneration_rate": 0.2
+    "base_body_regeneration_rate": 1.5
   },
   "visual_properties": {
     "realm_color": 5635925,

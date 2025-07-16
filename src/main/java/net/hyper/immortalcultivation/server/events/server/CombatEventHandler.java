@@ -39,30 +39,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class CombatEventHandler {
 
-    // === CONSTANTS === //
-
-    private static final String HANDLER_NAME = "CombatEventHandler";
-    private static final int IMMUNITY_CLEANUP_INTERVAL = 6000; // Cleanup every 5 minutes
-
-    // === TRACKING DATA === //
-
-    /**
-     * Tracks immunity per player per damage source for sophisticated multi-enemy combat.
-     * Key: Player UUID, Value: Map of damage source keys to immunity expiration times
-     */
-    private static final Map<UUID, Map<String, Long>> playerImmunityMap = new ConcurrentHashMap<>();
-
-    /**
-     * Tracks last known vanilla health values for protection system compatibility.
-     * Key: Player UUID, Value: Last recorded vanilla health
-     */
-    private static final Map<UUID, Float> lastKnownVanillaHealth = new ConcurrentHashMap<>();
-
-    /**
-     * Tracks last immunity cleanup time to prevent excessive cleanup operations
-     */
-    private static long lastCleanupTime = 0L;
-
     // === EVENT HANDLERS === //
 
     /**
@@ -188,24 +164,6 @@ public class CombatEventHandler {
         }
     }
 
-    // === UTILITY METHODS === //
-
-    /**
-     * Performs periodic cleanup of expired immunity entries to prevent memory leaks.
-     * Only runs cleanup at specified intervals to avoid performance impact.
-     */
-    private static void performPeriodicCleanup() {
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastCleanupTime > IMMUNITY_CLEANUP_INTERVAL) {
-            CombatEventUtils.cleanupExpiredImmunities(playerImmunityMap);
-            lastCleanupTime = currentTime;
-
-            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[{}] Performed immunity cleanup", HANDLER_NAME);
-            }
-        }
-    }
-
     // === GENERIC UTILITY METHODS === //
 
     /**
@@ -230,51 +188,6 @@ public class CombatEventHandler {
                     HANDLER_NAME, attachmentName, player.getName().getString(), e.getMessage());
             }
             return null;
-        }
-    }
-
-    // === DEBUG AND MONITORING === //
-
-    /**
-     * Gets current immunity statistics for debugging purposes.
-     *
-     * @return Map containing immunity statistics
-     */
-    public static Map<String, Object> getImmunityStats() {
-        Map<String, Object> stats = new ConcurrentHashMap<>();
-        stats.put("totalPlayersWithImmunity", playerImmunityMap.size());
-        stats.put("totalImmunityEntries", playerImmunityMap.values().stream()
-            .mapToInt(Map::size)
-            .sum());
-        stats.put("lastCleanupTime", lastCleanupTime);
-        return stats;
-    }
-
-    /**
-     * Clears all immunity data for a specific player.
-     * Useful for debugging or when a player logs out.
-     *
-     * @param playerId The player UUID to clear immunity for
-     */
-    public static void clearPlayerImmunity(UUID playerId) {
-        if (playerImmunityMap.remove(playerId) != null) {
-            if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-                ImmortalCultivation.LOGGER.debug("[{}] Cleared all immunity for player: {}",
-                    HANDLER_NAME, playerId);
-            }
-        }
-    }
-
-    /**
-     * Forces cleanup of all expired immunity entries.
-     * Useful for debugging or emergency cleanup.
-     */
-    public static void forceImmunityCleanup() {
-        CombatEventUtils.cleanupExpiredImmunities(playerImmunityMap);
-        lastCleanupTime = System.currentTimeMillis();
-
-        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
-            ImmortalCultivation.LOGGER.debug("[{}] Forced immunity cleanup completed", HANDLER_NAME);
         }
     }
 }
