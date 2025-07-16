@@ -937,7 +937,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
 
     /**
      * Calculates the effective cultivation rate for the specified cultivation type.
-     * Takes into account base rate, bonuses, focus, and realm modifiers.
+     * Takes into account base rate, bonuses, focus, race multipliers, and talent multipliers.
      * @param type The cultivation type to calculate for
      * @return Effective cultivation rate per tick
      */
@@ -949,11 +949,23 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
         // Apply focus bonus
         double focusMultiplier = (currentFocus == type) ? 1.5 : 1.0; // 50% bonus when focused
 
-        // Calculate effective rate: (base + additive) * multiplicative * focus
-        double effectiveRate = (baseRate + additive) * multiplicative * focusMultiplier;
+        // Apply race multiplier
+        double raceMultiplier = getRaceMultiplier(type);
+
+        // Apply talent multiplier
+        double talentMultiplier = getTalentMultiplier(type);
+
+        // Calculate effective rate: (base + additive) * multiplicative * focus * race * talent
+        double effectiveRate = (baseRate + additive) * multiplicative * focusMultiplier * raceMultiplier * talentMultiplier;
+
+        if (debugEnabled() && effectiveRate > 0) {
+            debugLog("Effective cultivation rate for {}: base={:.3f}, additive={:.3f}, mult={:.3f}, focus={:.2f}, race={:.2f}, talent={:.2f} = {:.3f}",
+                type.name(), baseRate, additive, multiplicative, focusMultiplier, raceMultiplier, talentMultiplier, effectiveRate);
+        }
 
         return Math.max(0.0, effectiveRate);
     }
+
 
     /**
      * Adds cultivation progress to the specified cultivation type.
@@ -1319,6 +1331,70 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     @Nullable
     public Player getPlayerSafe() {
         return player;
+    }
+
+    /**
+     * Gets the race cultivation multiplier for the specified cultivation type.
+     * @param type The cultivation type to get multiplier for
+     * @return Race multiplier (1.0 = no bonus, higher = better)
+     */
+    private double getRaceMultiplier(CultivationType type) {
+        if (player == null) {
+            if (debugEnabled()) {
+                debugLog("Cannot get race multiplier: player is null");
+            }
+            return 1.0;
+        }
+
+        PlayerRaceAttachment raceAttachment = player.getData(ICModAttachmentTypes.PLAYER_RACE.get());
+        if (raceAttachment == null || !raceAttachment.hasRaceAssigned()) {
+            if (debugEnabled()) {
+                debugLog("No race assigned or race attachment missing for player {}",
+                    player.getName().getString());
+            }
+            return 1.0;
+        }
+
+        return raceAttachment.getCultivationMultiplier(type);
+    }
+
+    /**
+     * Gets the talent cultivation multiplier for the specified cultivation type.
+     * @param type The cultivation type to get multiplier for
+     * @return Talent multiplier (1.0 = no bonus, higher = better)
+     */
+    private double getTalentMultiplier(CultivationType type) {
+        if (player == null) {
+            if (debugEnabled()) {
+                debugLog("Cannot get talent multiplier: player is null");
+            }
+            return 1.0;
+        }
+
+        PlayerTalentsAttachment talentsAttachment = player.getData(ICModAttachmentTypes.PLAYER_TALENTS.get());
+        if (talentsAttachment == null) {
+            if (debugEnabled()) {
+                debugLog("PlayerTalentsAttachment not found for player {}",
+                    player.getName().getString());
+            }
+            return 1.0;
+        }
+
+        // Get the appropriate talent multiplier based on cultivation type
+        PlayerTalentsAttachment.TalentType talentType = switch (type) {
+            case QI -> PlayerTalentsAttachment.TalentType.SPIRITUAL_ROOT;
+            case BODY -> PlayerTalentsAttachment.TalentType.PHYSIQUE;
+        };
+
+        if (!talentsAttachment.isTalentAssigned(talentType)) {
+            if (debugEnabled()) {
+                debugLog("Talent {} not assigned for player {}",
+                    talentType.name(), player.getName().getString());
+            }
+            return 1.0;
+        }
+
+        return talentsAttachment.getTalentMultiplier(talentType);
     }
 
     // === DEBUG SUPPORT === //
