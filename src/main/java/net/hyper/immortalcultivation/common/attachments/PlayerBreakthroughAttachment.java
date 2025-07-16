@@ -10,9 +10,11 @@ import net.hyper.immortalcultivation.common.interfaces.ITickable;
 import net.hyper.immortalcultivation.common.registry.ICModAttachmentTypes;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerBreakthroughSyncPacket;
+import net.hyper.immortalcultivation.server.events.utils.PlayerEventUtils;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
@@ -381,12 +383,41 @@ public class PlayerBreakthroughAttachment extends PlayerAttachment<PlayerBreakth
 
         if (success) {
             CultivationRealm nextRealm = cultivation.getRealm(cultivationType).getNextCultivationRealms().get(0);
+
+            // === REALM ADVANCEMENT === //
+            // Actually set the new realm on the player's cultivation data
+            cultivation.setRealm(cultivationType, nextRealm, false);
+
+            // === STAT BONUS APPLICATION === //
+            // Apply the new realm's stat bonuses using the realm's built-in method
+            if (player instanceof ServerPlayer serverPlayer) {
+                try {
+                    // Apply all current realm modifiers using the utility method
+                    // This ensures proper cumulative bonus handling
+                    PlayerEventUtils.applyCurrentRealmModifiers(serverPlayer);
+
+                    if (debugEnabled()) {
+                        debugLog("Applied current realm modifiers after breakthrough to {}", nextRealm.getId());
+                    }
+                } catch (Exception e) {
+                    if (debugEnabled()) {
+                        debugWarn("Failed to apply current realm modifiers: {}", e.getMessage());
+                    }
+                }
+            }
+
+            // Reset breakthrough attempts after successful advancement
+            setBreakthroughAttempts(cultivationType, 0);
+
             String message = String.format("%s %s breakthrough SUCCESS! Advanced to %s",
                 cultivationType.getDisplayName(), breakthroughType.getDisplayName(), nextRealm.getDisplayName());
 
-            ImmortalCultivation.LOGGER.info("{} {} breakthrough SUCCESS for {} (attempt {}, {}% chance)",
-                cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
-                player.getName().getString(), currentAttempts + 1, (int) (successChance * 100));
+            if (debugEnabled()) {
+                debugLog("{} {} breakthrough SUCCESS for {} (attempt {}, {}% chance) - Realm advanced: {} -> {}",
+                    cultivationType.getDisplayName(), breakthroughType.getDisplayName(),
+                    player.getName().getString(), currentAttempts + 1, (int) (successChance * 100),
+                    cultivation.getPreviousRealm(cultivationType).getId(), nextRealm.getId());
+            }
 
             return new BreakthroughResult(true, message, nextRealm, breakthroughType, successChance, currentAttempts + 1);
         } else {
