@@ -54,7 +54,7 @@ public class NetworkRegistry {
         REGISTRY.playToServer(
             UnifiedActionRequestPacket.TYPE,
             UnifiedActionRequestPacket.STREAM_CODEC,
-            Clientbound::handleUnifiedAction
+            UnifiedActionRequestPacket::handleServer  // Correct handler
         );
 
         ImmortalCultivation.LOGGER.info("Network packets registered successfully!");
