@@ -259,7 +259,17 @@ public class CultivationStatsScreen extends Screen {
             .build();
         addRenderableWidget(focusButton);
 
-        // Close button
+        // Meditation toggle button
+        String meditationText = cultivationData.isMeditating() ? "Stop Meditation" : "Start Meditation";
+        Button meditationButton = Button.builder(
+                Component.literal(meditationText),
+                (button) -> NetworkRegistry.sendToServer(UnifiedActionRequestPacket.createMeditationToggle())
+            )
+            .bounds(windowX + MARGIN + buttonWidth + spacing, buttonY, buttonWidth + 20, BUTTON_HEIGHT)
+            .build();
+        addRenderableWidget(meditationButton);
+
+        // Close button (moved further right to accommodate meditation button)
         Button closeButton = Button.builder(
                 Component.literal("Close"),
                 (button) -> onClose()
@@ -268,6 +278,7 @@ public class CultivationStatsScreen extends Screen {
             .build();
         addRenderableWidget(closeButton);
     }
+
 
     /**
      * Sets up error interface when data loading fails.
@@ -791,5 +802,6 @@ public class CultivationStatsScreen extends Screen {
     private void restoreNormalRendering() {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
+
     }
 }

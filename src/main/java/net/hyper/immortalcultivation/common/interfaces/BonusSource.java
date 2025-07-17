@@ -57,7 +57,19 @@ public enum BonusSource {
      * Bonuses from cultivation milestones (every 1000 cultivation points).
      * These bonuses are permanent and calculated based on total cultivation progress.
      */
-    MILESTONES("Milestones", false);
+    MILESTONES("Milestones", false),
+
+    /**
+     * Bonuses from QI cultivation milestones (every 1000 cultivation points).
+     * These bonuses are permanent and calculated based on QI cultivation progress.
+     */
+    QI_MILESTONES("Qi Milestones", false),
+
+    /**
+     * Bonuses from BODY cultivation milestones (every 1000 cultivation points).
+     * These bonuses are permanent and calculated based on BODY cultivation progress.
+     */
+    BODY_MILESTONES("Body Milestones", false);
 
     private final String displayName;
     private final boolean recalculatedOnLogin;

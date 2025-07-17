@@ -44,8 +44,8 @@ public class NetworkManager {
     public static final NetworkManager INSTANCE = new NetworkManager();
 
     // === CONFIGURATION CONSTANTS === //
-    private static final int TICKABLE_INTERVAL = 20; // Tick every tick for ITickable attachments
-    private static final int SYNC_CHECK_INTERVAL = 20; // Check for syncs every 5 ticks (4 times per second)
+    private static final int TICKABLE_INTERVAL = 1; // Tick every tick for ITickable attachments
+    private static final int SYNC_CHECK_INTERVAL = 1; // Check for syncs every 5 ticks (4 times per second)
     private static final int MAX_SYNCS_PER_TICK = 5; // Maximum syncs to process per tick
     private static final int EMERGENCY_SYNC_PRIORITY = 0; // Highest priority for emergency syncs
     private static final int FULL_SYNC_PRIORITY = 1; // High priority for full syncs

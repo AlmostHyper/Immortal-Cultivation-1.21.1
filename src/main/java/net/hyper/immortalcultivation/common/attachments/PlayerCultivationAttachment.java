@@ -13,6 +13,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
@@ -41,6 +42,9 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     private static final double DEFAULT_ACCUMULATION_RATE = 1.0;
     private static final double DEFAULT_ADDITIVE_BONUS = 0.0;
     private static final double DEFAULT_MULTIPLICATIVE_BONUS = 1.0;
+    private static final double MAX_MEDITATION_MULTIPLIER = 3.0;
+    private static final int MEDITATION_RAMP_UP_TIME = 1200; // 60 seconds at 20 TPS
+    private static final int MEDITATION_POSE_UPDATE_INTERVAL = 20; // Update pose every second
 
     // === CULTIVATION DATA FIELDS === //
 
@@ -68,6 +72,13 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
 
     private CultivationType currentFocus = CultivationType.QI;
     private long lastFocusChangeTime = -FOCUS_CHANGE_COOLDOWN;
+
+    // === MEDITATION SYSTEM FIELDS === //
+
+    private boolean isMeditating = false;
+    private int meditationTicks = 0;
+    private double currentMeditationMultiplier = 1.0;
+    private int lastPoseUpdateTick = 0;
 
     // === CONSTRUCTORS === //
 
@@ -584,9 +595,9 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
 
     /**
      * Called when a cultivation milestone is reached. Applies permanent stat bonuses
-     * based on the cultivation type and milestone value.
+     * based on the cultivation type and milestone value using source-based tracking.
      *
-     * FIXED: Now properly calculates incremental bonuses instead of total bonuses
+     * FIXED: Now uses source-based bonus system to prevent conflicts between cultivation paths
      *
      * @param type The cultivation type that reached the milestone
      * @param milestone The milestone value reached
@@ -603,7 +614,7 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
             return;
         }
 
-        // Calculate current total milestones and previously applied milestones
+        // Calculate current total milestones for this cultivation type
         long currentTotalMilestones = milestone / MILESTONE_THRESHOLD;
         long lastAppliedMilestone = lastMilestone.get(type);
         long previousTotalMilestones = lastAppliedMilestone / MILESTONE_THRESHOLD;
@@ -624,49 +635,61 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
                 newMilestonesToApply, type, currentTotalMilestones, previousTotalMilestones);
         }
 
-        // Get current permanent bonuses (these already include previously applied milestone bonuses)
-        long currentHealthBonus = statsAttachment.getPermanentStatBonus(IStatsData.StatType.HEALTH);
-        long currentQiBonus = statsAttachment.getPermanentStatBonus(IStatsData.StatType.QI);
-        long currentBodyBonus = statsAttachment.getPermanentStatBonus(IStatsData.StatType.BODY);
+        // Use source-based bonus system with separate sources for each cultivation type
+        BonusSource milestoneSource = getMilestoneSourceForType(type);
 
-        // Apply bonuses ONLY for the NEW milestones reached
+        // Calculate TOTAL bonuses for this cultivation type (not incremental)
         switch (type) {
             case QI -> {
                 // QI milestones: +1 health, +3 qi, +1 body per 1000 cultivation
-                long healthBonusToAdd = newMilestonesToApply * 1L;
-                long qiBonusToAdd = newMilestonesToApply * 3L;
-                long bodyBonusToAdd = newMilestonesToApply * 1L;
+                long totalHealthBonus = currentTotalMilestones * 1L;
+                long totalQiBonus = currentTotalMilestones * 3L;
+                long totalBodyBonus = currentTotalMilestones * 1L;
 
-                statsAttachment.setPermanentStatBonus(IStatsData.StatType.HEALTH, currentHealthBonus + healthBonusToAdd);
-                statsAttachment.setPermanentStatBonus(IStatsData.StatType.QI, currentQiBonus + qiBonusToAdd);
-                statsAttachment.setPermanentStatBonus(IStatsData.StatType.BODY, currentBodyBonus + bodyBonusToAdd);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.HEALTH, milestoneSource, totalHealthBonus);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.QI, milestoneSource, totalQiBonus);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.BODY, milestoneSource, totalBodyBonus);
 
                 if (debugEnabled()) {
-                    debugLog("Applied {} QI milestone bonuses for {}: +{} health, +{} qi, +{} body",
+                    debugLog("Applied {} QI milestone bonuses for {}: {} total health, {} total qi, {} total body",
                         newMilestonesToApply, player.getName().getString(),
-                        healthBonusToAdd, qiBonusToAdd, bodyBonusToAdd);
+                        totalHealthBonus, totalQiBonus, totalBodyBonus);
                 }
             }
             case BODY -> {
                 // BODY milestones: +2 health, +1 qi, +2 body per 1000 cultivation
-                long healthBonusToAdd = newMilestonesToApply * 2L;
-                long qiBonusToAdd = newMilestonesToApply * 1L;
-                long bodyBonusToAdd = newMilestonesToApply * 2L;
+                long totalHealthBonus = currentTotalMilestones * 2L;
+                long totalQiBonus = currentTotalMilestones * 1L;
+                long totalBodyBonus = currentTotalMilestones * 2L;
 
-                statsAttachment.setPermanentStatBonus(IStatsData.StatType.HEALTH, currentHealthBonus + healthBonusToAdd);
-                statsAttachment.setPermanentStatBonus(IStatsData.StatType.QI, currentQiBonus + qiBonusToAdd);
-                statsAttachment.setPermanentStatBonus(IStatsData.StatType.BODY, currentBodyBonus + bodyBonusToAdd);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.HEALTH, milestoneSource, totalHealthBonus);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.QI, milestoneSource, totalQiBonus);
+                statsAttachment.setSourcedStatBonus(IStatsData.StatType.BODY, milestoneSource, totalBodyBonus);
 
                 if (debugEnabled()) {
-                    debugLog("Applied {} BODY milestone bonuses for {}: +{} health, +{} qi, +{} body",
+                    debugLog("Applied {} BODY milestone bonuses for {}: {} total health, {} total qi, {} total body",
                         newMilestonesToApply, player.getName().getString(),
-                        healthBonusToAdd, qiBonusToAdd, bodyBonusToAdd);
+                        totalHealthBonus, totalQiBonus, totalBodyBonus);
                 }
             }
         }
 
         // Mark stats attachment as dirty to trigger synchronization
         statsAttachment.markDirty();
+    }
+
+    /**
+     * Gets the appropriate milestone bonus source for the given cultivation type.
+     * This ensures QI and BODY milestone bonuses are tracked separately and can stack.
+     *
+     * @param type The cultivation type
+     * @return The corresponding bonus source
+     */
+    private BonusSource getMilestoneSourceForType(CultivationType type) {
+        return switch (type) {
+            case QI -> BonusSource.QI_MILESTONES;
+            case BODY -> BonusSource.BODY_MILESTONES;
+        };
     }
 
     // === FOCUS SYSTEM === //
@@ -772,6 +795,207 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
         long elapsed = currentTime - lastFocusChangeTime;
 
         return Math.max(0L, FOCUS_CHANGE_COOLDOWN - elapsed);
+    }
+
+    // === MEDITATION SYSTEM === //
+
+    /**
+     * Toggles the meditation state for the player.
+     * Meditation gradually increases cultivation rate up to 3x normal rate and forces sitting pose.
+     *
+     * @return True if now meditating, false if meditation stopped
+     */
+    public boolean toggleMeditation() {
+        if (player == null) {
+            if (debugEnabled()) {
+                debugWarn("Cannot toggle meditation: no player reference");
+            }
+            return false;
+        }
+
+        isMeditating = !isMeditating;
+
+        if (isMeditating) {
+            startMeditation();
+        } else {
+            stopMeditation();
+        }
+
+        markDirty();
+
+        if (debugEnabled()) {
+            debugLog("Player {} {} meditation",
+                player.getName().getString(),
+                isMeditating ? "started" : "stopped");
+        }
+
+        return isMeditating;
+    }
+
+    /**
+     * Starts meditation, initializing timers and effects.
+     */
+    private void startMeditation() {
+        meditationTicks = 0;
+        currentMeditationMultiplier = 1.0;
+        lastPoseUpdateTick = 0;
+
+        // Force player into sitting pose if on server
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.setPose(Pose.SITTING);
+        }
+
+        if (debugEnabled()) {
+            debugLog("Meditation started for player: {}", player.getName().getString());
+        }
+    }
+
+    /**
+     * Stops meditation, resetting timers and restoring normal pose.
+     */
+    private void stopMeditation() {
+        meditationTicks = 0;
+        currentMeditationMultiplier = 1.0;
+
+        // Restore normal pose if on server
+        if (player instanceof ServerPlayer serverPlayer) {
+            serverPlayer.setPose(Pose.STANDING);
+        }
+
+        if (debugEnabled()) {
+            debugLog("Meditation stopped for player: {}", player.getName().getString());
+        }
+    }
+
+    /**
+     * Gets whether the player is currently meditating.
+     *
+     * @return True if player is meditating
+     */
+    public boolean isMeditating() {
+        return isMeditating;
+    }
+
+    /**
+     * Gets the current meditation cultivation rate multiplier.
+     * This gradually increases from 1.0x to 3.0x over the ramp-up period.
+     *
+     * @return Current meditation multiplier (1.0 to 3.0)
+     */
+    public double getMeditationMultiplier() {
+        return isMeditating ? currentMeditationMultiplier : 1.0;
+    }
+
+    /**
+     * Gets the current meditation duration in ticks.
+     *
+     * @return Meditation duration in ticks
+     */
+    public int getMeditationTicks() {
+        return meditationTicks;
+    }
+
+    /**
+     * Gets the meditation progress as a percentage (0.0 to 1.0).
+     *
+     * @return Progress towards maximum meditation bonus
+     */
+    public double getMeditationProgress() {
+        if (!isMeditating || MEDITATION_RAMP_UP_TIME <= 0) {
+            return 0.0;
+        }
+        return Math.min(1.0, (double) meditationTicks / MEDITATION_RAMP_UP_TIME);
+    }
+
+    /**
+     * Processes meditation tick updates, called from the main tick method.
+     */
+    private void processMeditationTick() {
+        if (!isMeditating) {
+            return;
+        }
+
+        meditationTicks++;
+
+        // Update meditation multiplier gradually
+        updateMeditationMultiplier();
+
+        // Maintain sitting pose
+        maintainMeditationPose();
+
+        // Check for meditation interruption conditions
+        checkMeditationInterruption();
+    }
+
+    /**
+     * Updates the meditation multiplier based on current progress.
+     * Gradually increases from 1.0x to 3.0x over the ramp-up period.
+     */
+    private void updateMeditationMultiplier() {
+        double progress = getMeditationProgress();
+
+        // Smooth curve: starts slow, accelerates, then slows near the end
+        double smoothProgress = 1.0 - Math.cos(progress * Math.PI / 2.0);
+
+        currentMeditationMultiplier = 1.0 + (smoothProgress * (MAX_MEDITATION_MULTIPLIER - 1.0));
+        currentMeditationMultiplier = Math.min(currentMeditationMultiplier, MAX_MEDITATION_MULTIPLIER);
+
+        if (debugEnabled() && meditationTicks % 100 == 0) { // Debug every 5 seconds
+            debugLog("Meditation progress: {:.1f}%, multiplier: {:.2f}x",
+                progress * 100, currentMeditationMultiplier);
+        }
+    }
+
+    /**
+     * Maintains the player's sitting pose during meditation.
+     */
+    private void maintainMeditationPose() {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        // Update pose periodically
+        if (meditationTicks - lastPoseUpdateTick >= MEDITATION_POSE_UPDATE_INTERVAL) {
+            if (serverPlayer.getPose() != Pose.SITTING) {
+                serverPlayer.setPose(Pose.SITTING);
+            }
+            lastPoseUpdateTick = meditationTicks;
+        }
+    }
+
+    /**
+     * Checks for conditions that should interrupt meditation.
+     */
+    private void checkMeditationInterruption() {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        // Interrupt meditation if player is moving, taking damage, or attacking
+        boolean shouldInterrupt = false;
+
+        // Check if player is moving (small threshold to account for floating point precision)
+        if (serverPlayer.getDeltaMovement().lengthSqr() > 0.001) {
+            shouldInterrupt = true;
+        }
+
+        // Check if player is not in sitting pose (forced out by external means)
+        if (serverPlayer.getPose() != Pose.SITTING) {
+            shouldInterrupt = true;
+        }
+
+        if (shouldInterrupt) {
+            isMeditating = false;
+            stopMeditation();
+            markDirty();
+
+            serverPlayer.sendSystemMessage(Component.literal("Your meditation was interrupted!")
+                .withStyle(ChatFormatting.YELLOW));
+
+            if (debugEnabled()) {
+                debugLog("Meditation interrupted for player: {}", serverPlayer.getName().getString());
+            }
+        }
     }
 
     // === CULTIVATION STATISTICS === //
@@ -935,34 +1159,34 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     // === CULTIVATION EFFICIENCY === //
 
     /**
-     * Calculates the effective cultivation rate for the specified cultivation type.
-     * Takes into account base rate, bonuses, focus, race multipliers, and talent multipliers.
-     * @param type The cultivation type to calculate for
-     * @return Effective cultivation rate per tick
+     * Gets the effective cultivation rate for a specific cultivation type.
+     * Includes base rate, focus bonus, realm bonus, and meditation bonus.
+     *
+     * @param type The cultivation type to get the rate for
+     * @return The effective cultivation rate per tick
      */
     public double getEffectiveCultivationRate(CultivationType type) {
-        double baseRate = getAccumulationRate(type);
-        double additive = getAdditiveBonus(type);
-        double multiplicative = getMultiplicativeBonus(type);
+        if (player == null) return 0.0;
 
-        // Apply focus bonus
-        double focusMultiplier = (currentFocus == type) ? 1.5 : 1.0; // 50% bonus when focused
+        // Get base rate from current realm
+        CultivationRealm realm = getRealm(type);
+        double baseRate = realm != null ? realm.getBaseCultivationRate() : 0.0005;
 
-        // Apply race multiplier
-        double raceMultiplier = getRaceMultiplier(type);
+        // Apply focus bonus (2x for focused type)
+        double focusMultiplier = (type == currentFocus) ? 2.0 : 1.0;
 
-        // Apply talent multiplier
-        double talentMultiplier = getTalentMultiplier(type);
+        // Apply meditation bonus
+        double meditationMultiplier = getMeditationMultiplier();
 
-        // Calculate effective rate: (base + additive) * multiplicative * focus * race * talent
-        double effectiveRate = (baseRate + additive) * multiplicative * focusMultiplier * raceMultiplier * talentMultiplier;
+        // Combine all multipliers
+        double effectiveRate = baseRate * focusMultiplier * meditationMultiplier;
 
-        if (debugEnabled() && effectiveRate > 0) {
-            debugLog("Effective cultivation rate for {}: base={:.3f}, additive={:.3f}, mult={:.3f}, focus={:.2f}, race={:.2f}, talent={:.2f} = {:.3f}",
-                type.name(), baseRate, additive, multiplicative, focusMultiplier, raceMultiplier, talentMultiplier, effectiveRate);
+        if (debugEnabled() && player.level().getGameTime() % 100 == 0) {
+            debugLog("Effective {} rate: base={}, focus={}x, meditation={}x, total={}",
+                type, baseRate, focusMultiplier, meditationMultiplier, effectiveRate);
         }
 
-        return Math.max(0.0, effectiveRate);
+        return effectiveRate;
     }
 
 
@@ -1088,6 +1312,9 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
                 long currentTime = timeInCurrentRealm.get(type);
                 timeInCurrentRealm.put(type, currentTime + 1);
             }
+
+            // Process meditation updates
+            processMeditationTick(); // <-- ADD THIS LINE
 
             // Process automatic cultivation if player is in a suitable state
             if (shouldAutoCultivate()) {
@@ -1595,6 +1822,26 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
                 data.currentFocus = CultivationType.QI; // Default fallback
             }
             data.lastFocusChangeTime = lastChange;
+            return data;
+        })
+    );
+
+    /**
+     * Sub-codec for focus system data
+     */
+    private static final Codec<PlayerCultivationAttachment> MEDITATION_CODEC = RecordCodecBuilder.create(instance ->
+        instance.group(
+            Codec.BOOL.fieldOf("isMeditating").forGetter(attachment -> attachment.isMeditating),
+            Codec.INT.fieldOf("meditationTicks").forGetter(attachment -> attachment.meditationTicks),
+            Codec.DOUBLE.fieldOf("currentMeditationMultiplier").forGetter(attachment -> attachment.currentMeditationMultiplier)
+        ).apply(instance, (focusName, lastChange) -> {
+            PlayerCultivationAttachment data = new PlayerCultivationAttachment();
+            try {
+                data.currentFocus = CultivationType.valueOf(focusName);
+            } catch (IllegalArgumentException e) {
+                data.currentFocus = CultivationType.QI; // Default fallback
+            }
+            data.last = lastChange;
             return data;
         })
     );

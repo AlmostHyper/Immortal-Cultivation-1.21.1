@@ -39,6 +39,7 @@ public record UnifiedActionRequestPacket(
         // --- Core Cultivation ---
         BREAKTHROUGH_REQUEST,
         CULTIVATION_FOCUS_TOGGLE,
+        MEDITATION_TOGGLE,
         // --- Player Setup ---
         SELECT_RACE,
     }
@@ -49,6 +50,7 @@ public record UnifiedActionRequestPacket(
         // Core Cultivation
         actionHandlers.put(ActionType.BREAKTHROUGH_REQUEST, UnifiedActionRequestPacket::processBreakthroughRequest);
         actionHandlers.put(ActionType.CULTIVATION_FOCUS_TOGGLE, (p, pkt) -> processFocusToggle(p));
+        actionHandlers.put(ActionType.MEDITATION_TOGGLE, (p, pkt) -> processMeditationToggle(p));
         // Player Setup
         actionHandlers.put(ActionType.SELECT_RACE, UnifiedActionRequestPacket::processRaceSelection);
     }
@@ -65,6 +67,10 @@ public record UnifiedActionRequestPacket(
 
     public static UnifiedActionRequestPacket createFocusToggle() {
         return new UnifiedActionRequestPacket(ActionType.CULTIVATION_FOCUS_TOGGLE, Optional.empty(), Optional.empty(), Optional.empty());
+    }
+
+    public static UnifiedActionRequestPacket createMeditationToggle() {
+        return new UnifiedActionRequestPacket(ActionType.MEDITATION_TOGGLE, Optional.empty(), Optional.empty(), Optional.empty());
     }
 
     public static UnifiedActionRequestPacket createRaceSelection(String raceId) {
@@ -156,6 +162,43 @@ public record UnifiedActionRequestPacket(
         
         // This action only affects cultivation data, so a targeted sync is efficient.
         NetworkManager.INSTANCE.scheduleSync(player, AttachmentRegistry.PLAYER_CULTIVATION::get, false);
+    }
+
+    /**
+     * Processes meditation toggle requests from clients.
+     * Toggles the player's meditation state and applies appropriate effects.
+     *
+     * @param player The server player requesting meditation toggle
+     */
+    private static void processMeditationToggle(ServerPlayer player) {
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Processing meditation toggle for player: {}",
+                player.getName().getString());
+        }
+
+        try {
+            var cultivationAttachment = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+            cultivationAttachment.setPlayer(player);
+
+            boolean isMeditating = cultivationAttachment.toggleMeditation();
+
+            if (isMeditating) {
+                player.sendSystemMessage(Component.literal("🧘 You begin to meditate, feeling your cultivation rate gradually increase...")
+                    .withStyle(ChatFormatting.AQUA, ChatFormatting.ITALIC));
+            } else {
+                player.sendSystemMessage(Component.literal("🚶 You cease meditation and return to normal cultivation.")
+                    .withStyle(ChatFormatting.GRAY));
+            }
+
+            // Schedule sync to update client
+            NetworkManager.INSTANCE.scheduleSync(player, AttachmentRegistry.PLAYER_CULTIVATION::get, true);
+
+        } catch (Exception e) {
+            ImmortalCultivation.LOGGER.error("Error processing meditation toggle for player {}: {}",
+                player.getName().getString(), e.getMessage(), e);
+            player.sendSystemMessage(Component.literal("Failed to toggle meditation state.")
+                .withStyle(ChatFormatting.RED));
+        }
     }
 
     private static void processRaceSelection(ServerPlayer player, UnifiedActionRequestPacket packet) {

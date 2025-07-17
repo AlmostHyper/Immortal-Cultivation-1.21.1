@@ -137,6 +137,7 @@ public class NetworkRegistry {
             switch (packet.actionType()) {
                 case BREAKTHROUGH_REQUEST -> handleBreakthroughRequest(player, packet);
                 case CULTIVATION_FOCUS_TOGGLE -> handleFocusToggle(player);
+                case MEDITATION_TOGGLE -> handleMeditationToggle(player);
                 case SELECT_RACE -> handleRaceSelection(player, packet);
             }
         }
@@ -183,6 +184,27 @@ public class NetworkRegistry {
                 player.sendSystemMessage(Component.literal("⏳ Focus change on cooldown! ").append(Component.literal(remainingMinutes + " minutes").withStyle(ChatFormatting.YELLOW)).append(" remaining.").withStyle(ChatFormatting.RED));
                 player.level().playSound(null, player.blockPosition(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0f, 1.0f);
             }
+        }
+
+        private static void handleMeditationToggle(ServerPlayer player) {
+            var cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+            cultivation.setPlayer(player);
+
+            boolean isMeditating = cultivation.toggleMeditation();
+
+            if (isMeditating) {
+                double currentMultiplier = cultivation.getMeditationMultiplier();
+                player.sendSystemMessage(Component.literal("🧘 You enter a meditative state...")
+                    .append(Component.literal(" (Current rate: " + String.format("%.1fx", currentMultiplier) + ")")
+                        .withStyle(ChatFormatting.AQUA))
+                    .withStyle(ChatFormatting.ITALIC));
+            } else {
+                player.sendSystemMessage(Component.literal("🚶 You end your meditation and return to normal cultivation.")
+                    .withStyle(ChatFormatting.GRAY));
+            }
+
+            // Schedule immediate sync for responsive UI
+            NetworkManager.INSTANCE.scheduleSync(player, AttachmentRegistry.PLAYER_CULTIVATION::get, true, 0);
         }
 
         private static void handleBreakthroughRequest(ServerPlayer player, UnifiedActionRequestPacket packet) {
