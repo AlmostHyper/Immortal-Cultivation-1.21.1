@@ -44,7 +44,7 @@ public class CombatCalculationUtils {
     private static final double IMMUNITY_DAMAGE_SCALING = 10.0;
     private static final int DEFAULT_HURT_TIME = 10;
     private static final double DEFAULT_KNOCKBACK_STRENGTH = 0.4;
-    private static final double DEFAULT_DAMAGE_CONVERSION_RATE = 10.0; // 1 vanilla damage = 10 cultivation damage
+    private static final double DEFAULT_DAMAGE_CONVERSION_RATE = 1.0;
 
     // === CACHING === //
     private static final Map<String, DamageType> damageTypeCache = new ConcurrentHashMap<>();
@@ -79,6 +79,24 @@ public class CombatCalculationUtils {
             ImmortalCultivation.LOGGER.error("[{}] Error converting vanilla damage: {}", UTILS_NAME, e.getMessage(), e);
             return 0L;
         }
+    }
+
+    public static long convertVanillaToCultivationHealing(float vanillaHeal) {
+            if (vanillaHeal <= 0.0f) {
+
+                return 0L;
+
+            } else {
+
+                long cultivationHeal = Math.round(vanillaHeal);
+
+                if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+                    ImmortalCultivation.LOGGER.debug("[{}] Converted {} vanilla heal to {} cultivation heal",
+                        UTILS_NAME, vanillaHeal, cultivationHeal);
+                }
+
+                return cultivationHeal;
+            }
     }
 
     /**

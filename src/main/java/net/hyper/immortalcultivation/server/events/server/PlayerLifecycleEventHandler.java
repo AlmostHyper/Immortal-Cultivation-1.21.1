@@ -4,6 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.common.interfaces.IStatsData;
 import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.server.events.data.CombatEventData;
 import net.hyper.immortalcultivation.server.events.utils.PlayerEventUtils;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.EventPriority;
@@ -169,7 +170,7 @@ public class PlayerLifecycleEventHandler {
 
         try {
             // Clear combat immunity on respawn
-            CombatEventHandler.clearPlayerImmunity(player.getUUID());
+            CombatEventData.getInstance().clearPlayerImmunity(player.getUUID());
 
             // Use existing PlayerEventUtils methods directly
             PlayerEventUtils.applyCurrentRealmModifiers(player);
@@ -296,7 +297,7 @@ public class PlayerLifecycleEventHandler {
     private static void cleanupPlayerDataInOtherHandlers(UUID playerId) {
         try {
             // Cleanup combat-related data
-            CombatEventHandler.clearPlayerImmunity(playerId);
+            CombatEventData.getInstance().clearPlayerImmunity(playerId);
 
             // Cleanup healing-related data
             HealingEventHandler.clearPlayerHealingData(playerId);

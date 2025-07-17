@@ -69,7 +69,7 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
 
     // --- Tick Counter ---
     private int regenTickCounter = 0;
-    private static final int REGEN_TICK_INTERVAL = 20;
+    private static final int REGEN_TICK_INTERVAL = 1;
 
     // === CONSTRUCTORS === //
 
@@ -272,6 +272,24 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     }
 
     /**
+     * Gets the effective regeneration rate including all modifiers and sourced bonuses.
+     * Fixed to properly include realm-based regeneration rates.
+     * @param type The stat type to query
+     * @return Effective regeneration rate per second
+     */
+    @Override
+    public double getEffectiveStatRegenerationRate(StatType type) {
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Calculating effective regen rate for {}: base={}, sourced={}",
+                type, getStatRegenRate(type), getTotalSourcedRegenBonus(type));
+        }
+
+        // Get base rate (legacy bonuses) + all sourced bonuses (realm, equipment, etc.)
+        return getStatRegenRate(type) + getTotalSourcedRegenBonus(type);
+    }
+
+
+    /**
      * Sets the permanent regeneration bonus for the specified stat type.
      * @param type The stat type to modify
      * @param bonus The new regeneration bonus multiplier
@@ -379,6 +397,31 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
     public long getSourcedStatBonus(IStatsData.StatType type, BonusSource source) {
         Map<BonusSource, Long> sourceMap = getStatBonusSourceMap(type);
         return sourceMap.getOrDefault(source, 0L);
+    }
+
+    /**
+     * Helper method to get total regeneration bonus from all sources.
+     * @param type The stat type to query
+     * @return Total regeneration bonus from all sources
+     */
+    private double getTotalSourcedRegenBonus(StatType type) {
+        Map<BonusSource, Double> sourceMap = getStatRegenBonusSourceMap(type);
+        return sourceMap.values().stream().mapToDouble(Double::doubleValue).sum();
+    }
+
+    /**
+     * Called during player login or realm changes to ensure sourced bonuses are properly applied.
+     * This ensures regeneration works immediately after login/realm changes.
+     */
+    public void refreshSourcedRegenerationBonuses() {
+        if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
+            ImmortalCultivation.LOGGER.debug("Refreshing sourced regeneration bonuses for player: {}",
+                player != null ? player.getName().getString() : "unknown");
+        }
+
+        // Recalculate all sourced bonuses to ensure they're properly applied
+        recalculateAllBonusesFromSources();
+        markDirty();
     }
 
     /**
@@ -740,14 +783,15 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
                     double regenRate = getEffectiveStatRegenerationRate(type);
                     double currentFraction = getRegenFraction(type);
 
-                    // Add regeneration per second (multiply by interval/20)
-                    currentFraction += regenRate; // Already per-second rate
+                    // Calculate regeneration for this interval (rate * interval_in_seconds)
+                    double intervalInSeconds = (double) REGEN_TICK_INTERVAL / 20.0;
+                    currentFraction += regenRate * intervalInSeconds;
 
-                    // Cap the maximum regeneration per second
-                    double maxRegenPerSecond = getMaxStat(type) * 0.05; // Max 5% per second
+                    // Cap the maximum regeneration per interval
+                    double maxRegenPerInterval = getMaxStat(type) * 0.025 * intervalInSeconds; // Max 2.5% per second
 
                     if (currentFraction >= 1.0) {
-                        long regenAmount = Math.min((long) currentFraction, (long) maxRegenPerSecond);
+                        long regenAmount = Math.min((long) currentFraction, Math.max(1L, (long) maxRegenPerInterval));
                         currentFraction -= regenAmount;
 
                         long actualAdded = addStat(type, regenAmount);
@@ -756,8 +800,8 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
                             onStatAdded(type, actualAdded);
 
                             if (type == StatType.HEALTH && debugEnabled()) {
-                                debugLog("Health regeneration: +{} (rate: {}, fraction: {})",
-                                    actualAdded, regenRate, currentFraction);
+                                debugLog("Health regeneration: +{} (rate: {}, fraction: {}, interval: {}s)",
+                                    actualAdded, regenRate, currentFraction, intervalInSeconds);
                             }
                         }
                     }
@@ -766,12 +810,12 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
                 }
             }
 
-            // Debug logging for regeneration
+            // Debug logging for regeneration with more detail
             if (anyRegenOccurred && debugEnabled()) {
-                debugLog("Regeneration occurred - H:{}/{} Q:{}/{} B:{}/{}",
-                    getCurrentStat(StatType.HEALTH), getMaxStat(StatType.HEALTH),
-                    getCurrentStat(StatType.QI), getMaxStat(StatType.QI),
-                    getCurrentStat(StatType.BODY), getMaxStat(StatType.BODY));
+                debugLog("Regeneration occurred - H:{}/{} (rate: {}) Q:{}/{} (rate: {}) B:{}/{} (rate: {})",
+                    getCurrentStat(StatType.HEALTH), getMaxStat(StatType.HEALTH), getEffectiveStatRegenerationRate(StatType.HEALTH),
+                    getCurrentStat(StatType.QI), getMaxStat(StatType.QI), getEffectiveStatRegenerationRate(StatType.QI),
+                    getCurrentStat(StatType.BODY), getMaxStat(StatType.BODY), getEffectiveStatRegenerationRate(StatType.BODY));
             }
         } finally {
             endPerformanceTracking("tick", 2); // 2ms warning threshold
@@ -795,6 +839,16 @@ public class PlayerStatsAttachment extends PlayerAttachment<PlayerStatsAttachmen
 
         // Ensure all calculations are up to date when player is set
         recalculateAll();
+
+        // CRITICAL FIX: Refresh sourced bonuses to ensure realm regeneration works
+        refreshSourcedRegenerationBonuses();
+
+        if (debugEnabled()) {
+            debugLog("Player stats after initialization - H:{}/{} (regen: {}) Q:{}/{} (regen: {}) B:{}/{} (regen: {})",
+                getCurrentStat(StatType.HEALTH), getMaxStat(StatType.HEALTH), getEffectiveStatRegenerationRate(StatType.HEALTH),
+                getCurrentStat(StatType.QI), getMaxStat(StatType.QI), getEffectiveStatRegenerationRate(StatType.QI),
+                getCurrentStat(StatType.BODY), getMaxStat(StatType.BODY), getEffectiveStatRegenerationRate(StatType.BODY));
+        }
     }
 
     /**

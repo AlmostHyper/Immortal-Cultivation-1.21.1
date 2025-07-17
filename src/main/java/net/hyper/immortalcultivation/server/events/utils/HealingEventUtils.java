@@ -68,7 +68,7 @@ public class HealingEventUtils {
             }
 
             // Convert vanilla healing to custom cultivation healing
-            long customHealing = CombatCalculationUtils.convertToCustomHealing(vanillaHealing, player);
+            long customHealing = CombatCalculationUtils.convertVanillaToCultivationHealing(vanillaHealing);
 
             if (customHealing <= 0) {
                 if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
