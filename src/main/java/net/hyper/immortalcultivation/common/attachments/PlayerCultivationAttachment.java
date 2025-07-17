@@ -1827,36 +1827,33 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
     );
 
     /**
-     * Sub-codec for focus system data
+     * Sub-codec for meditation system data
      */
     private static final Codec<PlayerCultivationAttachment> MEDITATION_CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
             Codec.BOOL.fieldOf("isMeditating").forGetter(attachment -> attachment.isMeditating),
             Codec.INT.fieldOf("meditationTicks").forGetter(attachment -> attachment.meditationTicks),
             Codec.DOUBLE.fieldOf("currentMeditationMultiplier").forGetter(attachment -> attachment.currentMeditationMultiplier)
-        ).apply(instance, (focusName, lastChange) -> {
+        ).apply(instance, (isMeditating, meditationTicks, currentMeditationMultiplier) -> {
             PlayerCultivationAttachment data = new PlayerCultivationAttachment();
-            try {
-                data.currentFocus = CultivationType.valueOf(focusName);
-            } catch (IllegalArgumentException e) {
-                data.currentFocus = CultivationType.QI; // Default fallback
-            }
-            data.last = lastChange;
+            data.isMeditating = isMeditating;
+            data.meditationTicks = meditationTicks;
+            data.currentMeditationMultiplier = currentMeditationMultiplier;
             return data;
         })
     );
 
-    /**
-     * Main codec that combines all sub-codecs
-     */
+
+
     public static final Codec<PlayerCultivationAttachment> CODEC = RecordCodecBuilder.create(instance ->
         instance.group(
             REALM_CODEC.fieldOf("realm_data").forGetter(d -> d),
             PROGRESS_CODEC.fieldOf("progress_data").forGetter(d -> d),
             RATE_CODEC.fieldOf("rate_data").forGetter(d -> d),
             STATISTICS_CODEC.fieldOf("statistics_data").forGetter(d -> d),
-            FOCUS_CODEC.fieldOf("focus_data").forGetter(d -> d)
-        ).apply(instance, (realmData, progressData, rateData, statisticsData, focusData) -> {
+            FOCUS_CODEC.fieldOf("focus_data").forGetter(d -> d),
+            MEDITATION_CODEC.fieldOf("meditation_data").forGetter(d -> d)
+        ).apply(instance, (realmData, progressData, rateData, statisticsData, focusData, meditationData) -> {
             PlayerCultivationAttachment data = new PlayerCultivationAttachment();
 
             // Copy realm data
@@ -1882,6 +1879,11 @@ public class PlayerCultivationAttachment extends PlayerAttachment<PlayerCultivat
             // Copy focus data
             data.currentFocus = focusData.currentFocus;
             data.lastFocusChangeTime = focusData.lastFocusChangeTime;
+
+            // Copy meditation data - ADD THESE LINES
+            data.isMeditating = meditationData.isMeditating;
+            data.meditationTicks = meditationData.meditationTicks;
+            data.currentMeditationMultiplier = meditationData.currentMeditationMultiplier;
 
             return data;
         })
