@@ -16,7 +16,6 @@ import net.minecraft.client.player.LocalPlayer;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
 import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * Enhanced HUD for the unified cultivation system.
@@ -132,7 +131,6 @@ public class QiHUDScreen {
     public static void register() {
         if (instance == null) {
             instance = new QiHUDScreen();
-            NeoForge.EVENT_BUS.register(instance);
         }
     }
 
@@ -143,9 +141,9 @@ public class QiHUDScreen {
      * This orchestrates the display of all cultivation-related information.
      *
      * @param guiGraphics The graphics context for rendering
-     * @param deltaTracker Frame delta tracking for smooth animations
+     * @param partialTick Frame delta tracking for smooth animations
      */
-    public static void renderQiScreen(GuiGraphics guiGraphics, DeltaTracker deltaTracker) {
+    public static void renderQiScreen(GuiGraphics guiGraphics, DeltaTracker partialTick) {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
 
