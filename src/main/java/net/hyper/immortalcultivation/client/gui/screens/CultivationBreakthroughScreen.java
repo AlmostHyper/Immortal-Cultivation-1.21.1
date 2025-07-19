@@ -1,12 +1,12 @@
 package net.hyper.immortalcultivation.client.gui.screens;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerTalentsAttachment;
-import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.PlayerBreakthroughAttachment;
+import net.hyper.immortalcultivation.core.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.core.attachments.PlayerStatsAttachment;
+import net.hyper.immortalcultivation.core.attachments.PlayerTalentsAttachment;
+import net.hyper.immortalcultivation.core.attachments.ICultivationData;
+import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.ChatFormatting;

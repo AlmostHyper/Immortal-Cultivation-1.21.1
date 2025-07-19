@@ -1,6 +1,6 @@
 package net.hyper.immortalcultivation.core.cultivation.realms;
 
-import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;

@@ -1,11 +1,11 @@
 package net.hyper.immortalcultivation.core.network;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.*;
-import net.hyper.immortalcultivation.common.interfaces.ISyncPacket;
-import net.hyper.immortalcultivation.common.interfaces.ISyncable;
-import net.hyper.immortalcultivation.common.interfaces.ITickable;
-import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.*;
+import net.hyper.immortalcultivation.core.interfaces.ISyncPacket;
+import net.hyper.immortalcultivation.core.interfaces.ISyncable;
+import net.hyper.immortalcultivation.core.interfaces.ITickable;
+import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;

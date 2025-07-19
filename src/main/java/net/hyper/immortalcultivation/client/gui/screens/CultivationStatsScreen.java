@@ -2,14 +2,14 @@ package net.hyper.immortalcultivation.client.gui.screens;
 
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.*;
-import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.common.interfaces.IStatsData;
+import net.hyper.immortalcultivation.core.attachments.*;
+import net.hyper.immortalcultivation.core.attachments.ICultivationData;
+import net.hyper.immortalcultivation.core.attachments.IStatsData;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.cultivation.talents.SpiritualRootType;
 import net.hyper.immortalcultivation.core.cultivation.talents.PhysiqueType;
-import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.network.NetworkRegistry;
 import net.hyper.immortalcultivation.core.network.packets.client.UnifiedActionRequestPacket;
 import net.minecraft.client.Minecraft;

@@ -1,7 +1,6 @@
 package net.hyper.immortalcultivation.core.network.helpers;
 
-import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.core.attachments.PlayerBreakthroughAttachment;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

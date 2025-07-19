@@ -1,11 +1,11 @@
 package net.hyper.immortalcultivation.core.cultivation.realms;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.PlayerStatsAttachment;
-import net.hyper.immortalcultivation.common.interfaces.BonusSource;
-import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.common.interfaces.IStatsData;
-import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.PlayerStatsAttachment;
+import net.hyper.immortalcultivation.core.attachments.BonusSource;
+import net.hyper.immortalcultivation.core.attachments.ICultivationData;
+import net.hyper.immortalcultivation.core.attachments.IStatsData;
+import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.server.events.utils.AttributeModifierUtils;
 import net.minecraft.ChatFormatting;

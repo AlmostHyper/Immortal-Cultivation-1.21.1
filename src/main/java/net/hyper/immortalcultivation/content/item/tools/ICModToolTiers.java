@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.content.item.tools;
 
 import net.hyper.immortalcultivation.content.item.ItemRegistry;
-import net.hyper.immortalcultivation.data.Tags;
+import net.hyper.immortalcultivation.datagen.Tags;
 import net.minecraft.world.item.Tier;
 import net.minecraft.world.item.crafting.Ingredient;
 import net.neoforged.neoforge.common.SimpleTier;

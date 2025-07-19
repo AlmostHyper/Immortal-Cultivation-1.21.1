@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.content.block.crafting;
 
 import com.mojang.serialization.MapCodec;
 import net.hyper.immortalcultivation.content.block.entities.PillFurnaceBlockEntity;
-import net.hyper.immortalcultivation.content.block.BlockEntityRegistry;
+import net.hyper.immortalcultivation.content.block.entities.BlockEntityRegistry;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.Containers;

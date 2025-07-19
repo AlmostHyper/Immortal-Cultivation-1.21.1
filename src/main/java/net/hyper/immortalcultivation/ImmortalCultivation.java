@@ -3,16 +3,15 @@ package net.hyper.immortalcultivation;
 import net.hyper.immortalcultivation.client.gui.CreativeTabsRegistry;
 import net.hyper.immortalcultivation.client.gui.MenuRegistry;
 import net.hyper.immortalcultivation.client.gui.screens.QiHUDScreen;
-import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.common.config.ImmortalCultivationConfig;
-import net.hyper.immortalcultivation.content.block.BlockEntityRegistry;
+import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.config.ImmortalCultivationConfig;
+import net.hyper.immortalcultivation.content.block.entities.BlockEntityRegistry;
 import net.hyper.immortalcultivation.content.block.BlockRegistry;
 import net.hyper.immortalcultivation.content.item.ArmorMaterialsRegistry;
 import net.hyper.immortalcultivation.content.item.ItemRegistry;
 import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
 import net.hyper.immortalcultivation.core.network.NetworkManager;
 import net.hyper.immortalcultivation.client.gui.screens.PillFurnaceScreen;
-import net.hyper.immortalcultivation.server.events.EventManager;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -59,7 +58,6 @@ public class ImmortalCultivation
         LOGGER.info("Registering Handlers...");
 
         NeoForge.EVENT_BUS.register(NetworkManager.class);
-        EventManager.initialize();
 
         LOGGER.info("Handlers registered successfully!");
 

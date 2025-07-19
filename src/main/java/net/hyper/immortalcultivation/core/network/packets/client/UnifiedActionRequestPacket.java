@@ -2,9 +2,9 @@ package net.hyper.immortalcultivation.core.network.packets.client;
 
 import io.netty.buffer.ByteBuf;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.common.attachments.PlayerBreakthroughAttachment;
-import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
-import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.PlayerBreakthroughAttachment;
+import net.hyper.immortalcultivation.core.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.cultivation.races.RaceType;
 import net.hyper.immortalcultivation.core.network.NetworkManager;
 import net.hyper.immortalcultivation.core.network.helpers.BreakthroughFeedbackHelper;

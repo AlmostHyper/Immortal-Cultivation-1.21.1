@@ -1,13 +1,12 @@
 package net.hyper.immortalcultivation.content.block.entities;
 
-import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
-import net.hyper.immortalcultivation.content.block.BlockEntityRegistry;
+import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.content.item.ItemRegistry;
 import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipe;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipeInput;
-import net.hyper.immortalcultivation.common.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.core.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.client.gui.menus.PillFurnaceMenu;
 import net.hyper.immortalcultivation.content.block.crafting.PillFurnaceBlock;
 import net.minecraft.core.BlockPos;

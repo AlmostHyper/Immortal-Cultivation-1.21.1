@@ -1,9 +1,9 @@
 package net.hyper.immortalcultivation.content.item.pills;
 
-import net.hyper.immortalcultivation.common.attachments.PlayerPillConsumptionAttachment;
-import net.hyper.immortalcultivation.common.interfaces.ICultivationData;
+import net.hyper.immortalcultivation.core.attachments.PlayerPillConsumptionAttachment;
+import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.content.block.entities.PillFurnaceBlockEntity;
-import net.hyper.immortalcultivation.common.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.component.DataComponents;
