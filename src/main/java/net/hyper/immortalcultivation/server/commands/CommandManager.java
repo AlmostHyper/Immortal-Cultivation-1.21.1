@@ -15,7 +15,6 @@ import net.hyper.immortalcultivation.core.attachments.IStatsData;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
-import net.hyper.immortalcultivation.server.events.utils.AttributeModifierUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
@@ -408,7 +407,6 @@ public class CommandManager {
                 applyCumulativeRealmBonuses(player, cultivationType, realm, cultivation);
 
                 // Refresh stats to apply changes
-                AttributeModifierUtils.refreshPlayerAttributes(player);
 
                 // Send success message
                 Component successMessage = Component.literal("Successfully set ")

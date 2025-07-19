@@ -7,7 +7,6 @@ import net.hyper.immortalcultivation.core.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.core.attachments.IStatsData;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -700,6 +699,7 @@ public class QiHUDScreen {
      *
      * @param event The attachment update event
      */
+
     @SubscribeEvent
     public void onAttachmentUpdate(AttachmentUpdateEventHandler event) {
         if (event.getPlayer() != null && event.getPlayer().level().isClientSide) {

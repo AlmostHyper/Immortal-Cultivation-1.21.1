@@ -5,7 +5,6 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.attachments.PlayerPillConsumptionAttachment;
 import net.hyper.immortalcultivation.core.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -48,6 +47,5 @@ public record PlayerPillConsumptionSyncPacket(
 
         attachment.applySync(pillConsumptionData);
 
-        NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, AttachmentRegistry.PLAYER_PILL_CONSUMPTION.get()));
     }
 }

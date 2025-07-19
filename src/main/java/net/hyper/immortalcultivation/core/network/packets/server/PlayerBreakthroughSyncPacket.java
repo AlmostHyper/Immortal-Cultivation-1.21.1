@@ -3,7 +3,6 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 import net.hyper.immortalcultivation.core.attachments.PlayerBreakthroughAttachment;
 import net.hyper.immortalcultivation.core.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -32,7 +31,6 @@ public record PlayerBreakthroughSyncPacket(CompoundTag breakthroughData) impleme
             if (attachment != null) {
                 attachment.applySync(this.breakthroughData);
 
-                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, AttachmentRegistry.PLAYER_BREAKTHROUGH.get()));
             }
         }
     }

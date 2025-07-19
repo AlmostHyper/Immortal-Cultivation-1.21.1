@@ -7,7 +7,6 @@ import net.hyper.immortalcultivation.core.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.core.interfaces.ITickable;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.hyper.immortalcultivation.core.network.packets.server.PlayerBreakthroughSyncPacket;
-import net.hyper.immortalcultivation.server.events.utils.PlayerEventUtils;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
@@ -390,7 +389,6 @@ public class PlayerBreakthroughAttachment extends PlayerAttachment<PlayerBreakth
                 try {
                     // Apply all current realm modifiers using the utility method
                     // This ensures proper cumulative bonus handling
-                    PlayerEventUtils.applyCurrentRealmModifiers(serverPlayer);
 
                     if (debugEnabled()) {
                         debugLog("Applied current realm modifiers after breakthrough to {}", nextRealm.getId());

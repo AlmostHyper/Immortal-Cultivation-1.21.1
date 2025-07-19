@@ -3,7 +3,6 @@ package net.hyper.immortalcultivation.core.network.packets.server;
 import net.hyper.immortalcultivation.core.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.core.interfaces.ISyncPacket;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.server.events.server.AttachmentUpdateEventHandler;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -67,7 +66,6 @@ public record PlayerCultivationSyncPacket(CompoundTag cultivationData) implement
                 attachment.applySync(this.cultivationData);
 
                 // Fire an update event to notify other systems of the change
-                NeoForge.EVENT_BUS.post(new AttachmentUpdateEventHandler(player, AttachmentRegistry.PLAYER_CULTIVATION.get()));
             }
         }
     }
