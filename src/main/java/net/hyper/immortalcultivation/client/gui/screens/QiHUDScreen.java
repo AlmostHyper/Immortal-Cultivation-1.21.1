@@ -7,6 +7,7 @@ import net.hyper.immortalcultivation.core.attachments.PlayerTalentsAttachment;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.core.attachments.IStatsData;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.server.events.OnTickEvent;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -701,8 +702,7 @@ public class QiHUDScreen {
      */
 
     @SubscribeEvent
-    public void onAttachmentUpdate(AttachmentUpdateEventHandler event) {
-        if (event.getPlayer() != null && event.getPlayer().level().isClientSide) {
+    public void onAttachmentUpdate(OnTickEvent event) {
             // Call the static invalidateCache method to clear cached data
             invalidateCache();
 
@@ -710,7 +710,6 @@ public class QiHUDScreen {
             if (instance != null) {
                 ImmortalCultivation.LOGGER.debug("[QIHUD] Attachment update received, marking for refresh");
             }
-        }
     }
 
     /**
