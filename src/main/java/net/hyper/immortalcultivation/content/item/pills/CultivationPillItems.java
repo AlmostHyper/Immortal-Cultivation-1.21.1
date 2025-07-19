@@ -1,6 +1,5 @@
 package net.hyper.immortalcultivation.content.item.pills;
 
-import net.hyper.immortalcultivation.core.attachments.PlayerPillConsumptionAttachment;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.content.block.entities.PillFurnaceBlockEntity;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
@@ -156,7 +155,7 @@ public class CultivationPillItems {
         protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
             if (!(entity instanceof Player player) || level.isClientSide()) return;
 
-            player.getExistingData(AttachmentRegistry.PLAYER_CULTIVATION).ifPresent(cultivation ->
+            player.getExistingData(AttachmentRegistry.CULTIVATION).ifPresent(cultivation ->
                 player.getExistingData(AttachmentRegistry.PLAYER_PILL_CONSUMPTION).ifPresent(pillAttachment -> {
                     PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
                     double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, this.baseRate);

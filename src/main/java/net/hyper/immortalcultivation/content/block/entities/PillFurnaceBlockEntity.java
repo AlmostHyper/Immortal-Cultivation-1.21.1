@@ -1,12 +1,12 @@
 package net.hyper.immortalcultivation.content.block.entities;
 
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.CultivationAttachment;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.content.item.ItemRegistry;
 import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipe;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipeInput;
-import net.hyper.immortalcultivation.core.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.client.gui.menus.PillFurnaceMenu;
 import net.hyper.immortalcultivation.content.block.crafting.PillFurnaceBlock;
 import net.minecraft.core.BlockPos;
@@ -552,6 +552,7 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         return rarity1.equals(rarity2);
     }
 
+
     // Get cultivation realm modifier
     private double getCultivationModifier() {
         if (lastPlayerUUID == null || level == null) return 1.0;
@@ -559,12 +560,12 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         Player player = level.getPlayerByUUID(lastPlayerUUID);
         if (player == null) return 1.0;
 
-        PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        CultivationAttachment cultivation = player.getData(AttachmentRegistry.CULTIVATION.get());
         if (cultivation == null) return 1.0;
 
         // Higher realms give better modifiers
-        int qiRealmLevel = cultivation.getRealm(ICultivationData.CultivationType.QI).getRealmLevel();
-        int bodyRealmLevel = cultivation.getRealm(ICultivationData.CultivationType.BODY).getRealmLevel();
+        int qiRealmLevel = 1;
+        int bodyRealmLevel = 1;
         return 1.0 + ((qiRealmLevel + bodyRealmLevel) * 0.1); // +10% per realm level
     }
 

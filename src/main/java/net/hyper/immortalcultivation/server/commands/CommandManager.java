@@ -11,7 +11,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.attachments.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.core.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
-import net.hyper.immortalcultivation.core.attachments.IStatsData;
+import net.hyper.immortalcultivation.core.attachments.IAttributesData;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
@@ -511,7 +511,7 @@ public class CommandManager {
                     return 1;
                 } else {
                     // Handle regular stat (existing code)
-                    IStatsData.StatType statType = (IStatsData.StatType) parsed[0];
+                    IAttributesData.StatType statType = (IAttributesData.StatType) parsed[0];
 
                     PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
                     if (stats == null) {
@@ -714,7 +714,7 @@ public class CommandManager {
                                 .withStyle(ChatFormatting.GRAY));
                     } else {
                         // Handle regular stat
-                        IStatsData.StatType statType = (IStatsData.StatType) parsed[0];
+                        IAttributesData.StatType statType = (IAttributesData.StatType) parsed[0];
 
                         long current = stats.getCurrentStat(statType);
                         long max = stats.getMaxStat(statType);
@@ -733,7 +733,7 @@ public class CommandManager {
                         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
 
                     // Show regular stats
-                    for (IStatsData.StatType statType : IStatsData.StatType.values()) {
+                    for (IAttributesData.StatType statType : IAttributesData.StatType.values()) {
                         long current = stats.getCurrentStat(statType);
                         long max = stats.getMaxStat(statType);
                         double percentage = max > 0 ? (double) current / max * 100 : 0;
@@ -804,9 +804,9 @@ public class CommandManager {
      */
     private Object[] parseStatTypeOrCultivation(String typeStr) {
         return switch (typeStr.toLowerCase()) {
-            case "health" -> new Object[]{IStatsData.StatType.HEALTH, false};
-            case "qi" -> new Object[]{IStatsData.StatType.QI, false};
-            case "body" -> new Object[]{IStatsData.StatType.BODY, false};
+            case "health" -> new Object[]{IAttributesData.StatType.HEALTH, false};
+            case "qi" -> new Object[]{IAttributesData.StatType.QI, false};
+            case "body" -> new Object[]{IAttributesData.StatType.BODY, false};
             case "qi_cultivation" -> new Object[]{ICultivationData.CultivationType.QI, true};
             case "body_cultivation" -> new Object[]{ICultivationData.CultivationType.BODY, true};
             default -> null;
@@ -1079,12 +1079,12 @@ public class CommandManager {
 
         // Reset to mortal base values (this assumes mortal realm provides no bonuses)
         // You might need to adjust this based on your specific mortal realm implementation
-        stats.setPermanentStatBonus(IStatsData.StatType.HEALTH, 0);
-        stats.setPermanentStatBonus(IStatsData.StatType.QI, 0);
-        stats.setPermanentStatBonus(IStatsData.StatType.BODY, 0);
-        stats.setPermanentStatRegenBonus(IStatsData.StatType.HEALTH, 0.0);
-        stats.setPermanentStatRegenBonus(IStatsData.StatType.QI, 0.0);
-        stats.setPermanentStatRegenBonus(IStatsData.StatType.BODY, 0.0);
+        stats.setPermanentStatBonus(IAttributesData.StatType.HEALTH, 0);
+        stats.setPermanentStatBonus(IAttributesData.StatType.QI, 0);
+        stats.setPermanentStatBonus(IAttributesData.StatType.BODY, 0);
+        stats.setPermanentStatRegenBonus(IAttributesData.StatType.HEALTH, 0.0);
+        stats.setPermanentStatRegenBonus(IAttributesData.StatType.QI, 0.0);
+        stats.setPermanentStatRegenBonus(IAttributesData.StatType.BODY, 0.0);
         stats.setPermanentAttackDamageBonus(0.0);
         stats.setPermanentMovementSpeedBonus(0.0);
         stats.setPermanentJumpHeightBonus(0.0);

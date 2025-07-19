@@ -1,4 +1,4 @@
 package net.hyper.immortalcultivation.core.attachments;
 
-public class PlayerTribulationAttachment {
+public class CultivationAttachment {
 }

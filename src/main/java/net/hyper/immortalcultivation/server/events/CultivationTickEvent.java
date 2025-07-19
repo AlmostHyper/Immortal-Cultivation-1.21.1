@@ -13,7 +13,7 @@ public class CultivationTickEvent extends Event {
     private final ICultivationData.CultivationType type;
     private final double baseRate;
     private final List<CultivationModifier> modifiers = new ArrayList<>();
-    private boolean isDirty = false;
+    private boolean needSync = false;
 
     public CultivationTickEvent(LivingEntity entity,
                                 ICultivationData.CultivationType type,
@@ -33,18 +33,18 @@ public class CultivationTickEvent extends Event {
 
     public void addModifier(CultivationModifier modifier) {
         modifiers.add(modifier);
-        isDirty = true;
+        needSync = true;
     }
 
     public void removeModifier(CultivationModifier modifier) {
         modifiers.remove(modifier);
-        isDirty = true;
+        needSync = true;
     }
 
     public double calculateFinalRate() {
-        if (isDirty) {
+        if (needSync) {
             modifiers.sort(Comparator.comparing(CultivationModifier::getPriority));
-            isDirty = false;
+            needSync = false;
         }
 
         double result = baseRate;

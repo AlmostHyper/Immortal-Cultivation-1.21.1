@@ -4,7 +4,7 @@ package net.hyper.immortalcultivation.core.attachments;
  * Unified stats interface supporting multiple resource types (Health, Qi, Body)
  * following the same pattern as ICultivationData for consistent and maintainable code.
  */
-public interface IStatsData {
+public interface IAttributesData {
 
     /**
      * Enum representing the different stat types that can be managed.

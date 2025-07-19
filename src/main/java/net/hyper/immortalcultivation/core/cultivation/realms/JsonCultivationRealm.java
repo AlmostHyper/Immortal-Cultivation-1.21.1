@@ -4,7 +4,7 @@ import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.core.attachments.BonusSource;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
-import net.hyper.immortalcultivation.core.attachments.IStatsData;
+import net.hyper.immortalcultivation.core.attachments.IAttributesData;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.minecraft.ChatFormatting;
@@ -430,13 +430,13 @@ public class JsonCultivationRealm extends CultivationRealm {
             // This preserves pill and other bonuses while adding realm bonuses
 
             // === RESOURCE STATS === //
-            long currentHealthFromRealm = stats.getSourcedStatBonus(IStatsData.StatType.HEALTH, BonusSource.REALM);
-            long currentQiFromRealm = stats.getSourcedStatBonus(IStatsData.StatType.QI, BonusSource.REALM);
-            long currentBodyFromRealm = stats.getSourcedStatBonus(IStatsData.StatType.BODY, BonusSource.REALM);
+            long currentHealthFromRealm = stats.getSourcedStatBonus(IAttributesData.StatType.HEALTH, BonusSource.REALM);
+            long currentQiFromRealm = stats.getSourcedStatBonus(IAttributesData.StatType.QI, BonusSource.REALM);
+            long currentBodyFromRealm = stats.getSourcedStatBonus(IAttributesData.StatType.BODY, BonusSource.REALM);
 
-            double currentHealthRegenFromRealm = stats.getSourcedStatRegenBonus(IStatsData.StatType.HEALTH, BonusSource.REALM);
-            double currentQiRegenFromRealm = stats.getSourcedStatRegenBonus(IStatsData.StatType.QI, BonusSource.REALM);
-            double currentBodyRegenFromRealm = stats.getSourcedStatRegenBonus(IStatsData.StatType.BODY, BonusSource.REALM);
+            double currentHealthRegenFromRealm = stats.getSourcedStatRegenBonus(IAttributesData.StatType.HEALTH, BonusSource.REALM);
+            double currentQiRegenFromRealm = stats.getSourcedStatRegenBonus(IAttributesData.StatType.QI, BonusSource.REALM);
+            double currentBodyRegenFromRealm = stats.getSourcedStatRegenBonus(IAttributesData.StatType.BODY, BonusSource.REALM);
 
             // === COMBAT STATS === //
             double currentAttackFromRealm = stats.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.ATTACK_DAMAGE, BonusSource.REALM);
@@ -447,14 +447,14 @@ public class JsonCultivationRealm extends CultivationRealm {
             // (This accumulates across realm advancements while preserving other sources)
 
             // Resource maximums
-            stats.setSourcedStatBonus(IStatsData.StatType.HEALTH, BonusSource.REALM, currentHealthFromRealm + getBaseMaxHealth());
-            stats.setSourcedStatBonus(IStatsData.StatType.QI, BonusSource.REALM, currentQiFromRealm + getBaseMaxQi());
-            stats.setSourcedStatBonus(IStatsData.StatType.BODY, BonusSource.REALM, currentBodyFromRealm + getBaseMaxBody());
+            stats.setSourcedStatBonus(IAttributesData.StatType.HEALTH, BonusSource.REALM, currentHealthFromRealm + getBaseMaxHealth());
+            stats.setSourcedStatBonus(IAttributesData.StatType.QI, BonusSource.REALM, currentQiFromRealm + getBaseMaxQi());
+            stats.setSourcedStatBonus(IAttributesData.StatType.BODY, BonusSource.REALM, currentBodyFromRealm + getBaseMaxBody());
 
             // Resource regeneration rates
-            stats.setSourcedStatRegenBonus(IStatsData.StatType.HEALTH, BonusSource.REALM, currentHealthRegenFromRealm + getBaseHealthRegenRate());
-            stats.setSourcedStatRegenBonus(IStatsData.StatType.QI, BonusSource.REALM, currentQiRegenFromRealm + getBaseQiRegenRate());
-            stats.setSourcedStatRegenBonus(IStatsData.StatType.BODY, BonusSource.REALM, currentBodyRegenFromRealm + getBaseBodyRegenRate());
+            stats.setSourcedStatRegenBonus(IAttributesData.StatType.HEALTH, BonusSource.REALM, currentHealthRegenFromRealm + getBaseHealthRegenRate());
+            stats.setSourcedStatRegenBonus(IAttributesData.StatType.QI, BonusSource.REALM, currentQiRegenFromRealm + getBaseQiRegenRate());
+            stats.setSourcedStatRegenBonus(IAttributesData.StatType.BODY, BonusSource.REALM, currentBodyRegenFromRealm + getBaseBodyRegenRate());
 
             // Combat stats
             stats.setSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.ATTACK_DAMAGE, BonusSource.REALM, currentAttackFromRealm + getBaseAttackDamage());
@@ -478,12 +478,12 @@ public class JsonCultivationRealm extends CultivationRealm {
                     String.format("%.1f", getBaseAttackDamage() * 100),
                     String.format("%.1f", getBaseMovementSpeed() * 100),
                     String.format("%.1f", getBaseJumpHeight() * 100),
-                    stats.getCurrentStat(IStatsData.StatType.HEALTH),
-                    stats.getMaxStat(IStatsData.StatType.HEALTH),
-                    stats.getCurrentStat(IStatsData.StatType.QI),
-                    stats.getMaxStat(IStatsData.StatType.QI),
-                    stats.getCurrentStat(IStatsData.StatType.BODY),
-                    stats.getMaxStat(IStatsData.StatType.BODY));
+                    stats.getCurrentStat(IAttributesData.StatType.HEALTH),
+                    stats.getMaxStat(IAttributesData.StatType.HEALTH),
+                    stats.getCurrentStat(IAttributesData.StatType.QI),
+                    stats.getMaxStat(IAttributesData.StatType.QI),
+                    stats.getCurrentStat(IAttributesData.StatType.BODY),
+                    stats.getMaxStat(IAttributesData.StatType.BODY));
             } else {
                 // Silent mode: only debug logging
                 if (ImmortalCultivation.LOGGER.isDebugEnabled()) {

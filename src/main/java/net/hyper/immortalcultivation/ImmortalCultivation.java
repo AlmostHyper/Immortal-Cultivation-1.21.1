@@ -10,7 +10,6 @@ import net.hyper.immortalcultivation.content.block.BlockRegistry;
 import net.hyper.immortalcultivation.content.item.ArmorMaterialsRegistry;
 import net.hyper.immortalcultivation.content.item.ItemRegistry;
 import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
-import net.hyper.immortalcultivation.core.network.NetworkManager;
 import net.hyper.immortalcultivation.client.gui.screens.PillFurnaceScreen;
 import org.slf4j.Logger;
 
