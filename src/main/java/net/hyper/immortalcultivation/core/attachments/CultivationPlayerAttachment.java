@@ -17,9 +17,9 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 @EventBusSubscriber
-public class CultivationPlayerAttachment implements ICultivationData, ISyncable {
+public class CultivationPlayerAttachment implements ICultivationData {
 
-    private static final Logger LOGGER = (Logger) LogUtils.getLogger();
+    private static final org.slf4j.Logger LOGGER = LogUtils.getLogger();
     public static AttachmentType<CultivationPlayerAttachment> getAttachmentType() {return AttachmentRegistry.CULTIVATION.get();}
     private static final ResourceLocation ID = ResourceLocation.fromNamespaceAndPath("immortalcultivation", "cultivation");
 
@@ -111,7 +111,6 @@ public class CultivationPlayerAttachment implements ICultivationData, ISyncable 
     public void setCurrentCultivation(CultivationType type, long value) {
         CultivationData data = getOrCreateData(type);
         data.currentCultivation = value;
-        markDirty();
     }
 
     @Override
@@ -120,8 +119,7 @@ public class CultivationPlayerAttachment implements ICultivationData, ISyncable 
     @Override
     public void setMaxCultivation(CultivationType type, long value) {
         CultivationData data = getOrCreateData(type);
-        data.currentCultivation = value;
-        markDirty();
+        data.maxCultivation = value;
     }
 
     @Override
@@ -147,7 +145,6 @@ public class CultivationPlayerAttachment implements ICultivationData, ISyncable 
             }
 
             setCurrentCultivation(type, newTotal);
-            markDirty();
         }
     }
 
@@ -177,12 +174,17 @@ public class CultivationPlayerAttachment implements ICultivationData, ISyncable 
             }
 
             setCurrentCultivation(type, newTotal);
-            markDirty();
         }
     }
 
     @Override
-    public double getProgress(CultivationType type) {return getProgress(type) * 100.0;}
+    public double getProgress(CultivationType type) {
+        CultivationData data = getOrCreateData(type);
+
+        if (data.maxCultivation <= 0) {return  0.0;}
+
+        return ((double) data.currentCultivation / data.maxCultivation) * 100.0;
+    }
 
     @Override
     public CultivationRealm getPreviousRealm(CultivationType type) {
@@ -214,8 +216,6 @@ public class CultivationPlayerAttachment implements ICultivationData, ISyncable 
                 .withStyle(ChatFormatting.GREEN);
             player.sendSystemMessage(message);
         }
-
-        markDirty();
     }
 
     @Override
@@ -240,8 +240,6 @@ public class CultivationPlayerAttachment implements ICultivationData, ISyncable 
         CultivationData data = getOrCreateData(type);
 
         data.cultivationFraction = Math.max(0.0, Math.min(0.999, fraction));
-
-        markDirty();
     }
 
     @Override
@@ -263,16 +261,5 @@ public class CultivationPlayerAttachment implements ICultivationData, ISyncable 
 
             setCurrentCultivation(type, newTotal);
         }
-
-        markDirty();
     }
-
-    @Override
-    public boolean needSync() {return false;}
-
-    @Override
-    public void markDirty() {}
-
-    @Override
-    public void clearDirty() {}
 }
