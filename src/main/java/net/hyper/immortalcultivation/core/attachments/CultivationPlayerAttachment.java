@@ -92,6 +92,7 @@ public class CultivationPlayerAttachment implements ICultivationData {
     }
 
     private final Map<CultivationType, CultivationData> cultivationData = new EnumMap<>(CultivationType.class);
+    private final Map<BonusSource, Double> cultivationRateModifiers = new EnumMap<>(BonusSource.class);
 
     private void initializeDefaults() {
         CultivationRealm mortalRealm = CultivationRealmRegistry.get(DEFAULT_MORTAL_REALM_ID);
@@ -265,6 +266,16 @@ public class CultivationPlayerAttachment implements ICultivationData {
         }
     }
 
+    public void setCultivationRateModifier(BonusSource source, double modifier) {cultivationRateModifiers.put(source, modifier);}
+
+    public double getCultivationRateModifier(BonusSource source) {return cultivationRateModifiers.getOrDefault(source, 1.0);}
+
+    public double getTotalCultivationRateMultiplier() {
+        return cultivationRateModifiers.values().stream()
+            .mapToDouble(Double::doubleValue)
+            .reduce(1.0, (a, b) -> a * b);
+    }
+
     private BonusSource getMilestoneSourceForType(CultivationType type) {
         return switch (type) {
             case QI -> BonusSource.QI_MILESTONES;
@@ -326,28 +337,11 @@ public class CultivationPlayerAttachment implements ICultivationData {
     public boolean toggleMeditation() {
         isMeditating = !isMeditating;
 
-        if (isMeditating) {
-            startMeditation();
-        } else {
-            stopMeditation();
+        if (!isMeditating) {
+            resetMeditationState();
         }
 
         return isMeditating;
-    }
-
-    private void startMeditation() {
-        meditationTicks = 0;
-        currentMeditationMultiplier = 1.0;
-        lastPoseUpdateTick = 0;
-
-        if (player instanceof ServerPlayer serverPlayer) {serverPlayer.setPose(Pose.SITTING);}
-    }
-
-    private void stopMeditation() {
-        meditationTicks = 0;
-        currentMeditationMultiplier = 1.0;
-
-        if (player instanceof ServerPlayer serverPlayer) {serverPlayer.setPose(Pose.STANDING);}
     }
 
     public boolean isMeditating() {return isMeditating;}
@@ -361,6 +355,14 @@ public class CultivationPlayerAttachment implements ICultivationData {
 
         return Math.min(1.0, (double) meditationTicks / MEDITATION_RAMP_UP_TIME);
     }
+
+    public int incrementMeditationTicks() {return meditationTicks++;}
+
+    private void resetMeditationState() {meditationTicks = 0;}
+
+
+
+    // separate to ontick
 
     private void processMeditationTick() {
         if (!isMeditating) {return;}
@@ -380,7 +382,7 @@ public class CultivationPlayerAttachment implements ICultivationData {
         currentMeditationMultiplier = Math.min(currentMeditationMultiplier, MAX_MEDITATION_MULTIPLIER);
     }
 
-    private void maintainMeditationPose(@Nullable ServerPlayer serverPlayer) {
+    private void maintainMeditationPose() {
         if (meditationTicks - lastPoseUpdateTick >= MEDITATION_POSE_UPDATE_INTERVAL) {
             if (serverPlayer.getPose() != Pose.SITTING) {serverPlayer.setPose(Pose.SITTING);}
 

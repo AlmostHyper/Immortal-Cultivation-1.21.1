@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.server.events;
+package net.hyper.immortalcultivation.server.events.server;
 
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.minecraft.world.entity.LivingEntity;
@@ -13,7 +13,6 @@ public class CultivationTickEvent extends Event {
     private final ICultivationData.CultivationType type;
     private final double baseRate;
     private final List<CultivationModifier> modifiers = new ArrayList<>();
-    private boolean needSync = false;
 
     public CultivationTickEvent(LivingEntity entity,
                                 ICultivationData.CultivationType type,
@@ -31,21 +30,12 @@ public class CultivationTickEvent extends Event {
 
     public List<CultivationModifier> getModifiers() {return new ArrayList<>(modifiers);}
 
-    public void addModifier(CultivationModifier modifier) {
-        modifiers.add(modifier);
-        needSync = true;
-    }
+    public void addModifier(CultivationModifier modifier) {modifiers.add(modifier);}
 
-    public void removeModifier(CultivationModifier modifier) {
-        modifiers.remove(modifier);
-        needSync = true;
-    }
+    public void removeModifier(CultivationModifier modifier) {modifiers.remove(modifier);}
 
     public double calculateFinalRate() {
-        if (needSync) {
-            modifiers.sort(Comparator.comparing(CultivationModifier::getPriority));
-            needSync = false;
-        }
+        modifiers.sort(Comparator.comparing(CultivationModifier::getPriority));
 
         double result = baseRate;
         for (CultivationModifier modifier : modifiers) {

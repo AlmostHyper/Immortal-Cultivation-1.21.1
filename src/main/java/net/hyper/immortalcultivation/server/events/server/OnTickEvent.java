@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.server.events;
+package net.hyper.immortalcultivation.server.events.server;
 
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
@@ -23,7 +23,7 @@ public class OnTickEvent extends Event {
         if (player.level().isClientSide()) return;
 
         if (player.tickCount % CULTIVATION_RATE == 0) {
-            player.getExistingData(AttachmentRegistry.PLAYER_CULTIVATION.get())
+            player.getExistingData(AttachmentRegistry.CULTIVATION.get())
                 .ifPresent(cultivation -> processCultivationTick(player, cultivation));
         }
 
@@ -38,9 +38,14 @@ public class OnTickEvent extends Event {
 
     private static void processCultivationTick(Player player, CultivationPlayerAttachment cultivation) {
         for (ICultivationData.CultivationType type : ICultivationData.CultivationType.values()) {
-            double baseRate = cultivation.getAccumulationRate(type);
+            double baseRate = cultivation.getBaseCultivationRate(type);
 
             CultivationTickEvent tickEvent = new CultivationTickEvent(player, type, baseRate);
+
+            double attachmentMultiplier = cultivation.getTotalCultivationRateMultiplier();
+
+            if (attachmentMultiplier != 1.0) {tickEvent.addModifier(new CultivationTickEvent.CultivationModifier.Multiplicative("Multiplicative Bonuses", 100, attachmentMultiplier));}
+
             NeoForge.EVENT_BUS.post(tickEvent);
 
             double finalRate = tickEvent.calculateFinalRate();
@@ -56,7 +61,6 @@ public class OnTickEvent extends Event {
                                                  double rate) {
 
         cultivation.addCultivation (type, (long) rate, true);
-        cultivation.markDirty();
     }
 
     // Server Logic
