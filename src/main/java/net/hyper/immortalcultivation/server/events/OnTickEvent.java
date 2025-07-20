@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.server.events;
 
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
-import net.hyper.immortalcultivation.core.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.core.attachments.CultivationPlayerAttachment;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -36,7 +36,7 @@ public class OnTickEvent extends Event {
         }
     }
 
-    private static void processCultivationTick(Player player, PlayerCultivationAttachment cultivation) {
+    private static void processCultivationTick(Player player, CultivationPlayerAttachment cultivation) {
         for (ICultivationData.CultivationType type : ICultivationData.CultivationType.values()) {
             double baseRate = cultivation.getAccumulationRate(type);
 
@@ -51,7 +51,7 @@ public class OnTickEvent extends Event {
         }
     }
 
-    private static void applyCultivationProgress(PlayerCultivationAttachment cultivation,
+    private static void applyCultivationProgress(CultivationPlayerAttachment cultivation,
                                                  ICultivationData.CultivationType type,
                                                  double rate) {
 

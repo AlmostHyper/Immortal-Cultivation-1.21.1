@@ -8,7 +8,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.core.attachments.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.core.attachments.CultivationPlayerAttachment;
 import net.hyper.immortalcultivation.core.attachments.PlayerStatsAttachment;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.core.attachments.IAttributesData;
@@ -384,7 +384,7 @@ public class CommandManager {
                 }
 
                 // Get cultivation attachment
-                PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+                CultivationPlayerAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                 if (cultivation == null) {
                     ctx.getSource().sendFailure(Component.literal("Player cultivation data not found")
                         .withStyle(ChatFormatting.RED));
@@ -474,7 +474,7 @@ public class CommandManager {
                     // Handle cultivation stat
                     ICultivationData.CultivationType cultivationType = (ICultivationData.CultivationType) parsed[0];
 
-                    PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+                    CultivationPlayerAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                     if (cultivation == null) {
                         ctx.getSource().sendFailure(Component.literal("Player cultivation data not found")
                             .withStyle(ChatFormatting.RED));
@@ -582,7 +582,7 @@ public class CommandManager {
             }
 
             try {
-                PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+                CultivationPlayerAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                 if (cultivation == null) {
                     ctx.getSource().sendFailure(Component.literal("Player cultivation data not found")
                         .withStyle(ChatFormatting.RED));
@@ -695,7 +695,7 @@ public class CommandManager {
                         // Handle cultivation stat
                         ICultivationData.CultivationType cultivationType = (ICultivationData.CultivationType) parsed[0];
 
-                        PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+                        CultivationPlayerAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                         if (cultivation == null) {
                             ctx.getSource().sendFailure(Component.literal("Player cultivation data not found")
                                 .withStyle(ChatFormatting.RED));
@@ -747,7 +747,7 @@ public class CommandManager {
                     }
 
                     // Show cultivation stats
-                    PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+                    CultivationPlayerAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
                     if (cultivation != null) {
                         for (ICultivationData.CultivationType cultivationType : ICultivationData.CultivationType.values()) {
                             long current = cultivation.getCurrentCultivation(cultivationType);
@@ -968,7 +968,7 @@ public class CommandManager {
      * @param cultivation The player's cultivation attachment
      */
     private void applyCumulativeRealmBonuses(ServerPlayer player, ICultivationData.CultivationType cultivationType,
-                                             CultivationRealm targetRealm, PlayerCultivationAttachment cultivation) {
+                                             CultivationRealm targetRealm, CultivationPlayerAttachment cultivation) {
         try {
             // Get the progression path from mortal to target realm
             List<CultivationRealm> progressionPath = getRealmProgressionPath(targetRealm);

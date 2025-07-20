@@ -1,8 +1,10 @@
 package net.hyper.immortalcultivation.core.attachments;
 
-/**
- * Unified cultivation interface supporting multiple cultivation paths
- */
+import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
+import net.minecraft.world.entity.player.Player;
+
+import javax.annotation.Nullable;
+
 public interface ICultivationData {
 
     enum CultivationType {
@@ -16,14 +18,16 @@ public interface ICultivationData {
 
     // === Core === //
 
-    long getBaseCultivation(CultivationType type);
     long getCurrentCultivation(CultivationType type);
     void setCurrentCultivation(CultivationType type, long value);
     long getMaxCultivation(CultivationType type);
     void setMaxCultivation(CultivationType type, long value);
     void addCultivation(CultivationType type, long amount, boolean respectMaximum);
-    void subtractCultivation(CultivationType type, long amount, boolean respectMinimum);
+    void removeCultivation(CultivationType type, long amount, boolean respectMinimum);
     double getProgress(CultivationType type);
+    CultivationRealm getPreviousRealm (CultivationType type);
+    CultivationRealm getCurrentRealm (CultivationType type);
+    void setCurrentRealm(CultivationType type, CultivationRealm realm, @Nullable Player player, boolean silent);
 
     // === Rates === //
 

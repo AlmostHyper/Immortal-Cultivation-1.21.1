@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.core.network.packets;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.core.attachments.CultivationAttachment;
+import net.hyper.immortalcultivation.core.attachments.CultivationPlayerAttachment;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -12,11 +12,8 @@ import net.minecraft.network.protocol.PacketFlow;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.util.StringRepresentable;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
-
-import javax.swing.*;
 
 public record CultivationPacket(Action action, ICultivationData.CultivationType cultivationType, long amount, CompoundTag data)
     implements CustomPacketPayload {
@@ -58,7 +55,7 @@ public record CultivationPacket(Action action, ICultivationData.CultivationType 
     private void handleSyncRequest (IPayloadContext context) {
         if (context.flow() == PacketFlow.SERVERBOUND) {
             ServerPlayer player = (ServerPlayer) context.player();
-            CultivationAttachment attachment = player.getData(AttachmentRegistry.CULTIVATION.get());
+            CultivationPlayerAttachment attachment = player.getData(AttachmentRegistry.CULTIVATION.get());
 
             PacketDistributor.sendToPlayer(player, new CultivationPacket(Action.SYNC_DATA,
                 cultivationType, attachment.getCurrentCultivation(cultivationType, attachment.serialize())));

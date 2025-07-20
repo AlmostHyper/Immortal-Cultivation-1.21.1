@@ -11,6 +11,8 @@ import net.hyper.immortalcultivation.content.item.ArmorMaterialsRegistry;
 import net.hyper.immortalcultivation.content.item.ItemRegistry;
 import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
 import net.hyper.immortalcultivation.client.gui.screens.PillFurnaceScreen;
+import net.hyper.immortalcultivation.core.network.NetworkRegistry;
+import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import org.slf4j.Logger;
 
 import com.mojang.logging.LogUtils;
@@ -54,11 +56,7 @@ public class ImmortalCultivation
         MenuRegistry.register(modEventBus);
         RecipeRegistry.register(modEventBus);
 
-        LOGGER.info("Registering Handlers...");
-
-        NeoForge.EVENT_BUS.register(NetworkManager.class);
-
-        LOGGER.info("Handlers registered successfully!");
+        NetworkRegistry.register((RegisterPayloadHandlersEvent) modEventBus);
 
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, ImmortalCultivationConfig.SPEC);
