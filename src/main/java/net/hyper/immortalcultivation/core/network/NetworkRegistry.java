@@ -49,8 +49,8 @@ public class NetworkRegistry {
         // Client -> Server
         registrar.playToServer(Packets.CULTIVATION_SYNC.getType(), Packets.CULTIVATION_SYNC.getCodec(),
             (packet, context) -> packet.handle(context));
-        registrar.playToServer(Packets.BREAKTHROUGH_ATTEMPT.getType(), Packets.BREAKTHROUGH_ATTEMPT.getCodec(),
-            (packet, context) -> packet.handle(context));
+        //registrar.playToServer(Packets.BREAKTHROUGH_ATTEMPT.getType(), Packets.BREAKTHROUGH_ATTEMPT.getCodec(),
+            //(packet, context) -> packet.handle(context));
 
         // Bidirectional
 

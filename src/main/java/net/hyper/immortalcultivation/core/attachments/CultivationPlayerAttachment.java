@@ -5,6 +5,8 @@ import net.hyper.immortalcultivation.core.cultivation.BonusSource;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,6 +14,8 @@ import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.attachment.AttachmentType;
+import net.neoforged.neoforge.attachment.IAttachmentHolder;
+import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 
 import javax.annotation.Nullable;
 import java.util.EnumMap;
@@ -19,7 +23,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 @EventBusSubscriber
-public class CultivationPlayerAttachment implements ICultivationData {
+public class CultivationPlayerAttachment implements IAttachmentSerializer, ICultivationData {
 
     private static final org.slf4j.Logger LOGGER = LogUtils.getLogger();
     public static AttachmentType<CultivationPlayerAttachment> getAttachmentType() {return AttachmentRegistry.CULTIVATION.get();}
@@ -402,5 +406,26 @@ public class CultivationPlayerAttachment implements ICultivationData {
             serverPlayer.sendSystemMessage(Component.literal("Meditation was interrupted!")
                 .withStyle(ChatFormatting.YELLOW));
         }
+    }
+
+    @Override
+    public Object read(IAttachmentHolder iAttachmentHolder, Tag tag, HolderLookup.Provider provider) {
+        CultivationPlayerAttachment attachment = new CultivationPlayerAttachment();
+
+
+
+
+
+
+
+
+
+
+        return null;
+    }
+
+    @Override
+    public @Nullable Tag write(Object o, HolderLookup.Provider provider) {
+        return null;
     }
 }
