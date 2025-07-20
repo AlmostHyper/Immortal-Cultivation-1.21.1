@@ -1,12 +1,14 @@
 package net.hyper.immortalcultivation.core.attachments;
 
 import com.mojang.logging.LogUtils;
+import net.hyper.immortalcultivation.core.cultivation.BonusSource;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.attachment.AttachmentType;
@@ -260,6 +262,143 @@ public class CultivationPlayerAttachment implements ICultivationData {
             long newTotal = Math.min(currentValue + wholeCultivation, maxValue);
 
             setCurrentCultivation(type, newTotal);
+        }
+    }
+
+    private BonusSource getMilestoneSourceForType(CultivationType type) {
+        return switch (type) {
+            case QI -> BonusSource.QI_MILESTONES;
+            case BODY -> BonusSource.BODY_MILESTONES;
+        };
+    }
+
+    private void checkMilestone(CultivationType type, long oldValue, long newValue) {
+        CultivationData data = getOrCreateData(type);
+        long lastMilestoneValue = data.lastMilestone;
+        long currentMilestone = (newValue / MILESTONE_THRESHOLD) * MILESTONE_THRESHOLD;
+
+        if (currentMilestone > lastMilestoneValue) {
+            data.lastMilestone = currentMilestone;
+
+            long earned = data.totalCultivationEarned;
+            data.totalCultivationEarned = earned + (newValue - oldValue);
+
+            onMilestoneReached(type, currentMilestone);
+        }
+    }
+
+    private void onMilestoneReached(CultivationType type, long milestone) {
+        // TODO: Add for stats attachment
+    }
+
+    public boolean toggleFocus() {
+        CultivationType newFocus = (currentFocus == CultivationType.QI) ? CultivationType.BODY : CultivationType.QI;
+        return setCurrentFocus(newFocus);
+    }
+
+    public CultivationType getCurrentFocus() {return currentFocus;}
+
+    public boolean setCurrentFocus(CultivationType focus) {
+        long currentTime = System.currentTimeMillis() / 50;
+        CultivationType oldFocus = currentFocus;
+        currentFocus = focus;
+        lastFocusChangeTime = currentTime;
+
+        // TODO: Check this logic
+        if (currentTime - lastFocusChangeTime < FOCUS_CHANGE_COOLDOWN) {return false;}
+
+        return true;
+    }
+
+    public boolean isFocusChangeOnCooldown() {
+        long currentTime = System.currentTimeMillis() / 50;
+
+        return (currentTime - lastFocusChangeTime) < FOCUS_CHANGE_COOLDOWN;
+    }
+
+    public long getFocusChangeCooldown() {
+        long currentTime = System.currentTimeMillis() / 50;
+        long elapsed = currentTime - lastFocusChangeTime;
+
+        return Math.max(0, FOCUS_CHANGE_COOLDOWN - elapsed);
+    }
+
+    public boolean toggleMeditation() {
+        isMeditating = !isMeditating;
+
+        if (isMeditating) {
+            startMeditation();
+        } else {
+            stopMeditation();
+        }
+
+        return isMeditating;
+    }
+
+    private void startMeditation() {
+        meditationTicks = 0;
+        currentMeditationMultiplier = 1.0;
+        lastPoseUpdateTick = 0;
+
+        if (player instanceof ServerPlayer serverPlayer) {serverPlayer.setPose(Pose.SITTING);}
+    }
+
+    private void stopMeditation() {
+        meditationTicks = 0;
+        currentMeditationMultiplier = 1.0;
+
+        if (player instanceof ServerPlayer serverPlayer) {serverPlayer.setPose(Pose.STANDING);}
+    }
+
+    public boolean isMeditating() {return isMeditating;}
+
+    public double getMeditationMultiplier() {return isMeditating ? currentMeditationMultiplier : 1.0;}
+
+    public int getMeditationTicks() {return meditationTicks;}
+
+    public double getMeditationProgress() {
+        if (!isMeditating || MEDITATION_RAMP_UP_TIME <= 0) {return 0.0;}
+
+        return Math.min(1.0, (double) meditationTicks / MEDITATION_RAMP_UP_TIME);
+    }
+
+    private void processMeditationTick() {
+        if (!isMeditating) {return;}
+
+        meditationTicks++;
+
+        updateMeditationMultiplier();
+        maintainMeditationPose();
+        checkMeditationInterruption();
+    }
+
+    private void updateMeditationMultiplier() {
+        double progress = getMeditationProgress();
+        double smoothProgress = 1.0 - Math.cos(progress * Math.PI / 2.0);
+
+        currentMeditationMultiplier = 1.0 + (smoothProgress * (MAX_MEDITATION_MULTIPLIER - 1.0));
+        currentMeditationMultiplier = Math.min(currentMeditationMultiplier, MAX_MEDITATION_MULTIPLIER);
+    }
+
+    private void maintainMeditationPose(@Nullable ServerPlayer serverPlayer) {
+        if (meditationTicks - lastPoseUpdateTick >= MEDITATION_POSE_UPDATE_INTERVAL) {
+            if (serverPlayer.getPose() != Pose.SITTING) {serverPlayer.setPose(Pose.SITTING);}
+
+            lastPoseUpdateTick = meditationTicks;
+        }
+    }
+
+    private void checkMeditationInterruption(@Nullable ServerPlayer serverPlayer) {
+        boolean shouldInterrupt = serverPlayer.getDeltaMovement().lengthSqr() > 0.001;
+
+        if (serverPlayer.getPose() != Pose.SITTING) {shouldInterrupt = true;}
+
+        if (shouldInterrupt) {
+            isMeditating = false;
+            stopMeditation();
+
+            serverPlayer.sendSystemMessage(Component.literal("Meditation was interrupted!")
+                .withStyle(ChatFormatting.YELLOW));
         }
     }
 }
