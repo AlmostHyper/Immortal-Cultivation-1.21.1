@@ -3,6 +3,10 @@ package net.hyper.immortalcultivation.server.events.server;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.core.attachments.CultivationPlayerAttachment;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -10,6 +14,8 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+
+import javax.annotation.Nullable;
 
 @EventBusSubscriber
 public class OnTickEvent extends Event {
@@ -62,6 +68,47 @@ public class OnTickEvent extends Event {
 
         cultivation.addCultivation (type, (long) rate, true);
     }
+
+    /*
+    private void processMeditationTick() {
+        if (!isMeditating) {return;}
+
+        meditationTicks++;
+
+        updateMeditationMultiplier();
+        maintainMeditationPose();
+        checkMeditationInterruption();
+    }
+
+    private void updateMeditationMultiplier() {
+        double progress = getMeditationProgress();
+        double smoothProgress = 1.0 - Math.cos(progress * Math.PI / 2.0);
+
+        currentMeditationMultiplier = 1.0 + (smoothProgress * (MAX_MEDITATION_MULTIPLIER - 1.0));
+        currentMeditationMultiplier = Math.min(currentMeditationMultiplier, MAX_MEDITATION_MULTIPLIER);
+    }
+
+    private void maintainMeditationPose() {
+        if (meditationTicks - lastPoseUpdateTick >= MEDITATION_POSE_UPDATE_INTERVAL) {
+            if (serverPlayer.getPose() != Pose.SITTING) {serverPlayer.setPose(Pose.SITTING);}
+
+            lastPoseUpdateTick = meditationTicks;
+        }
+    }
+
+    private void checkMeditationInterruption(@Nullable ServerPlayer serverPlayer) {
+        boolean shouldInterrupt = serverPlayer.getDeltaMovement().lengthSqr() > 0.001;
+
+        if (serverPlayer.getPose() != Pose.SITTING) {shouldInterrupt = true;}
+
+        if (shouldInterrupt) {
+            isMeditating = false;
+            stopMeditation();
+
+            serverPlayer.sendSystemMessage(Component.literal("Meditation was interrupted!")
+                .withStyle(ChatFormatting.YELLOW));
+        }
+    } */
 
     // Server Logic
     @SubscribeEvent
