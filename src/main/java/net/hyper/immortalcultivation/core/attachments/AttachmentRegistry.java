@@ -15,10 +15,8 @@ public class AttachmentRegistry {
     static {
         CULTIVATION = REGISTRY.register("cultivation", () ->
             AttachmentType.builder(() -> new CultivationPlayerAttachment())
-                .serialize(new CultivationPlayerAttachment.Serializer())
                 .copyOnDeath()
                 .build());
-
     }
 
     public static void register(IEventBus modBus) {
