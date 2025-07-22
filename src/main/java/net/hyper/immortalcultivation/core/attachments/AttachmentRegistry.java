@@ -10,11 +10,17 @@ import net.neoforged.neoforge.registries.NeoForgeRegistries;
 public class AttachmentRegistry {
     public static final DeferredRegister<AttachmentType<?>> REGISTRY = DeferredRegister.create(NeoForgeRegistries.ATTACHMENT_TYPES, ImmortalCultivation.MOD_ID);
 
-    public static final DeferredHolder<AttachmentType<?>, AttachmentType<CultivationPlayerAttachment>> CULTIVATION;
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<CultivationPlayerAttachment>> PLAYER_CULTIVATION;
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<AttributesPlayerAttachment>> PLAYER_ATTRIBUTES;
 
     static {
-        CULTIVATION = REGISTRY.register("cultivation", () ->
+        PLAYER_CULTIVATION = REGISTRY.register("cultivation", () ->
             AttachmentType.builder(() -> new CultivationPlayerAttachment())
+                .copyOnDeath()
+                .build());
+
+        PLAYER_ATTRIBUTES = REGISTRY.register("attribute", () ->
+            AttachmentType.builder(() -> new AttributesPlayerAttachment())
                 .copyOnDeath()
                 .build());
     }
