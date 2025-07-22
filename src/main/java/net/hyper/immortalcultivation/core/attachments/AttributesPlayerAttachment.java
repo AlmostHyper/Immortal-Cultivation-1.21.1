@@ -8,113 +8,113 @@ import org.jetbrains.annotations.Nullable;
 
 public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttributesData {
     @Override
-    public long getCurrentStat(StatType type) {
+    public long getCurrentAttribute(AttributeType type) {
         return 0;
     }
 
     @Override
-    public void setCurrentStat(StatType type, long value) {
+    public void setCurrentAttribute(AttributeType type, long value) {
 
     }
 
     @Override
-    public long getMaxStat(StatType type) {
+    public long getMaxAttribute(AttributeType type) {
         return 0;
     }
 
     @Override
-    public void setMaxStat(StatType type, long value) {
+    public void setMaxAttribute(AttributeType type, long value) {
 
     }
 
     @Override
-    public long addStat(StatType type, long amount) {
-        return IAttributesData.super.addStat(type, amount);
+    public long addAttribute(AttributeType type, long amount) {
+        return IAttributesData.super.addAttribute(type, amount);
     }
 
     @Override
-    public long consumeStat(StatType type, long amount) {
-        return IAttributesData.super.consumeStat(type, amount);
+    public long consumeAttribute(AttributeType type, long amount) {
+        return IAttributesData.super.consumeAttribute(type, amount);
     }
 
     @Override
-    public long tryConsumeStat(StatType type, long amount) {
-        return IAttributesData.super.tryConsumeStat(type, amount);
+    public long tryConsumeAttribute(AttributeType type, long amount) {
+        return IAttributesData.super.tryConsumeAttribute(type, amount);
     }
 
     @Override
-    public boolean hasStat(StatType type, long amount) {
-        return IAttributesData.super.hasStat(type, amount);
+    public boolean hasAttribute(AttributeType type, long amount) {
+        return IAttributesData.super.hasAttribute(type, amount);
     }
 
     @Override
-    public double getStatPercentage(StatType type) {
-        return IAttributesData.super.getStatPercentage(type);
+    public double getAttributePercentage(AttributeType type) {
+        return IAttributesData.super.getAttributePercentage(type);
     }
 
     @Override
-    public double getStatRegenRate(StatType type) {
+    public double getAttributeRegenRate(AttributeType type) {
         return 0;
     }
 
     @Override
-    public double getEffectiveStatRegenerationRate(StatType type) {
-        return IAttributesData.super.getEffectiveStatRegenerationRate(type);
+    public double getEffectiveAttributeRegenerationRate(AttributeType type) {
+        return IAttributesData.super.getEffectiveAttributeRegenerationRate(type);
     }
 
     @Override
-    public boolean canRegenerateStat(StatType type) {
-        return IAttributesData.super.canRegenerateStat(type);
+    public boolean canRegenerateAttribute(AttributeType type) {
+        return IAttributesData.super.canRegenerateAttribute(type);
     }
 
     @Override
-    public double getRegenFraction(StatType type) {
+    public double getRegenFraction(AttributeType type) {
         return 0;
     }
 
     @Override
-    public void setRegenFraction(StatType type, double fraction) {
+    public void setRegenFraction(AttributeType type, double fraction) {
 
     }
 
     @Override
-    public void addRegenFraction(StatType type, double amount) {
+    public void addRegenFraction(AttributeType type, double amount) {
         IAttributesData.super.addRegenFraction(type, amount);
     }
 
     @Override
-    public long getPermanentStatBonus(StatType type) {
+    public long getPermanentAttributeBonus(AttributeType type) {
         return 0;
     }
 
     @Override
-    public void setPermanentStatBonus(StatType type, long bonus) {
+    public void setPermanentAttributeBonus(AttributeType type, long bonus) {
 
     }
 
     @Override
-    public double getPermanentStatRegenBonus(StatType type) {
+    public double getPermanentAttributeRegenBonus(AttributeType type) {
         return 0;
     }
 
     @Override
-    public void setPermanentStatRegenBonus(StatType type, double bonus) {
+    public void setPermanentAttributeRegenBonus(AttributeType type, double bonus) {
 
     }
 
     @Override
-    public void onStatChanged(StatType type, long oldValue, long newValue) {
-        IAttributesData.super.onStatChanged(type, oldValue, newValue);
+    public void onAttributeChanged(AttributeType type, long oldValue, long newValue) {
+        IAttributesData.super.onAttributeChanged(type, oldValue, newValue);
     }
 
     @Override
-    public void onStatConsumed(StatType type, long amount) {
-        IAttributesData.super.onStatConsumed(type, amount);
+    public void onAttributeConsumed(AttributeType type, long amount) {
+        IAttributesData.super.onAttributeConsumed(type, amount);
     }
 
     @Override
-    public void onStatAdded(StatType type, long amount) {
-        IAttributesData.super.onStatAdded(type, amount);
+    public void onAttributeAdded(AttributeType type, long amount) {
+        IAttributesData.super.onAttributeAdded(type, amount);
     }
 
     @Override
