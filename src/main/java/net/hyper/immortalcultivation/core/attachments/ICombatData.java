@@ -17,6 +17,4 @@ public interface ICombatData {
     double getCombatStat(CombatStatType type);
     double getBonusCombatStat(CombatStatType type, BonusSource source);
     double getPermanentBonusCombatStat(CombatStatType type, BonusSource source);
-    double getMultiplier(CombatStatType type);
-    double getFinalCombatStat(CombatStatType type);
 }

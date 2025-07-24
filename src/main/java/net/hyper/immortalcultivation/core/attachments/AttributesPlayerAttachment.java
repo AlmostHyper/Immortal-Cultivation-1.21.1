@@ -17,8 +17,8 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     private static final long MORTAL_BASE_BODY = 0;
     private static final long MORTAL_BASE_ATTACK_DAMAGE = 1;
     private static final long MORTAL_BASE_SPIRITUAL_ATTACK_DAMAGE = 0;
-    private static final double MORTAL_BASE_CRITICAL_CHANCE = 0.0;
-    private static final double MORTAL_BASE_CRITICAL_DAMAGE = 0.0;
+    private static final double MORTAL_BASE_CRITICAL_CHANCE = 0.05;
+    private static final double MORTAL_BASE_CRITICAL_DAMAGE = 1.0;
     private static final double MORTAL_BASE_ATTACK_SPEED = 1.0;
 
     private long currentHealth = MORTAL_BASE_HEALTH;
@@ -236,39 +236,24 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
 
     @Override
     public double getBonusCombatStat(CombatStatType type, BonusSource source) {
+        if (!source.isRecalculatedOnLogin()) {
+            return 0;
+        }
+
         return sourcedCombatBonuses
             .getOrDefault(type, new EnumMap<>(BonusSource.class))
-            .values()
-            .stream()
-            .mapToDouble(Double::doubleValue)
-            .sum();
+            .getOrDefault(source, 0.0);
     }
 
     @Override
     public double getPermanentBonusCombatStat(CombatStatType type, BonusSource source) {
-        return switch (type) {
-            case ATTACK_DAMAGE -> this.permanentAttackDamageBonus;
-            case SPIRITUAL_DAMAGE -> this.permanentSpiritualDamageBonus;
-            case CRITICAL_CHANCE -> this.permanentCriticalChanceBonus;
-            case CRITICAL_DAMAGE -> this.permanentCriticalDamageBonus;
-            case ATTACK_SPEED -> this.permanentAttackSpeedBonus;
-        };
-    }
+        if (source.isRecalculatedOnLogin()) {
+            return 0;
+        }
 
-    @Override
-    public double getMultiplier(CombatStatType type) {
-        return 0;
-    }
-
-    @Override
-    public double getFinalCombatStat(CombatStatType type) {
-        return switch (type) {
-            case ATTACK_DAMAGE -> (currentAttackDamage + attackDamageBonus + permanentAttackDamageBonus);
-            case SPIRITUAL_DAMAGE -> (currentSpiritualDamage + spiritualDamageBonus + permanentSpiritualDamageBonus);
-            case CRITICAL_CHANCE -> (currentCriticalChance + criticalChanceBonus + permanentCriticalChanceBonus);
-            case CRITICAL_DAMAGE -> (currentCriticalDamage + criticalDamageBonus + permanentCriticalDamageBonus);
-            case ATTACK_SPEED -> (currentAttackSpeed + attackSpeedBonus + permanentAttackSpeedBonus);
-        };
+        return sourcedCombatBonuses
+            .getOrDefault(type, new EnumMap<>(BonusSource.class))
+            .getOrDefault(source, 0.0);
     }
 
     // TODO: Attributes Serialization

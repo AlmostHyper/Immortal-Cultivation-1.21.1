@@ -15,7 +15,7 @@ public enum BonusSource {
      * Bonuses from cultivation realm advancement.
      * These bonuses are recalculated and reapplied on login/respawn.
      */
-    REALM("Realm", true),
+    REALM("Realm", false),
 
     /**
      * Bonuses from consuming cultivation pills.

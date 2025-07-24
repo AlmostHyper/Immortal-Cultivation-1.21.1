@@ -1,11 +1,7 @@
 package net.hyper.immortalcultivation.core.cultivation.realms;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.core.attachments.AttributesPlayerAttachment;
-import net.hyper.immortalcultivation.core.attachments.BonusSource;
-import net.hyper.immortalcultivation.core.attachments.ICultivationData;
-import net.hyper.immortalcultivation.core.attachments.IAttributesData;
-import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.*;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
@@ -435,7 +431,7 @@ public class JsonCultivationRealm extends CultivationRealm {
             double currentBodyRegenFromRealm = attributes.getSourcedStatRegenBonus(IAttributesData.StatType.BODY, BonusSource.REALM);
 
             // === COMBAT STATS === //
-            long currentAttackFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.ATTACK_DAMAGE, BonusSource.REALM);
+            double currentAttackFromRealm = attributes.getSourcedCombatBonus(ICombatData.CombatStatType.ATTACK_DAMAGE, BonusSource.REALM);
             double currentSpeedFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.MOVEMENT_SPEED, BonusSource.REALM);
             double currentJumpFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.JUMP_HEIGHT, BonusSource.REALM);
 
