@@ -6,8 +6,6 @@ public interface IAttributesData {
         HEALTH("Health"),
         QI("Qi"),
         BODY("Body"),
-        MOVEMENT_SPEED("Movement Speed"),
-        JUMP_HEIGHT("Jump Height"),
         ATTACK_DAMAGE("Attack Damage");
 
         private final String displayName;
