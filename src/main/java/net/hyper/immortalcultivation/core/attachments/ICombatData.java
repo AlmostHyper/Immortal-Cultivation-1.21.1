@@ -16,8 +16,9 @@ public interface ICombatData {
         public String getDisplayName() {return displayName;}
     }
 
-    long getBaseCombatStat(CombatStatType type);
-    long getBonusCombatStat(CombatStatType type, BonusSource source);
+    double getBaseCombatStat(CombatStatType type);
+    double getBonusCombatStat(CombatStatType type, BonusSource source);
+    double getPermanentBonusCombatStat(CombatStatType type, BonusSource source);
     double getMultiplier(CombatStatType type);
-    long getFinalCombatStat(CombatStatType type);
+    double getFinalCombatStat(CombatStatType type);
 }

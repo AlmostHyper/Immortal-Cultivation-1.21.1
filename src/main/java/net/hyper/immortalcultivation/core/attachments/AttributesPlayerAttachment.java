@@ -13,6 +13,10 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     private static final long MORTAL_BASE_QI = 0;
     private static final long MORTAL_BASE_BODY = 0;
     private static final long MORTAL_BASE_ATTACK_DAMAGE = 1;
+    private static final long MORTAL_BASE_SPIRITUAL_ATTACK_DAMAGE = 0;
+    private static final double MORTAL_BASE_CRITICAL_CHANCE = 0.0;
+    private static final double MORTAL_BASE_CRITICAL_DAMAGE = 0.0;
+    private static final double MORTAL_BASE_ATTACK_SPEED = 1.0;
 
     private long permanentHealthBonus = 0;
     private double permanentHealthRegenBonus = 0.0;
@@ -32,12 +36,21 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     private long maxBody = MORTAL_BASE_BODY;
     private double bodyRegenFraction = 0.0;
 
-    private long permanentAttackDamageBonus = 0;
-    private long permanentSpiritualDamageBonus = 0;
+    private double permanentAttackDamageBonus = 0;
+    private double permanentSpiritualDamageBonus = 0;
     private double permanentCriticalChanceBonus = 0.0;
     private double permanentCriticalDamageBonus = 0.0;
     private double permanentAttackSpeedBonus = 0.0;
-    private long attackDamageBonus = 0;
+    private double attackDamageBonus = 0;
+    private double spiritualDamageBonus = 0;
+    private double criticalChanceBonus = 0.0;
+    private double criticalDamageBonus = 0.0;
+    private double attackSpeedBonus = 0.0;
+    private double currentAttackDamage = MORTAL_BASE_ATTACK_DAMAGE;
+    private double currentSpiritualDamage = MORTAL_BASE_SPIRITUAL_ATTACK_DAMAGE;
+    private double currentCriticalChance = MORTAL_BASE_CRITICAL_CHANCE;
+    private double currentCriticalDamage = MORTAL_BASE_CRITICAL_DAMAGE;
+    private double currentAttackSpeed = MORTAL_BASE_ATTACK_SPEED;
 
     private double permanentMovementSpeedBonus = 0.0;
     private double permanentJumpHeightBonus = 0.0;
@@ -48,7 +61,6 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     private static final int REGEN_TICK_INTERVAL = 1;
 
     public AttributesPlayerAttachment() {super();}
-
 
     @Override
     public long getCurrentAttribute(AttributeType type) {
@@ -156,47 +168,86 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
 
     @Override
     public long getPermanentAttributeBonus(AttributeType type) {
-        return 0;
+        return switch (type) {
+            case HEALTH -> permanentHealthBonus;
+            case QI -> permanentQiBonus;
+            case BODY -> permanentBodyBonus;
+        };
     }
 
     @Override
     public void setPermanentAttributeBonus(AttributeType type, long bonus) {
+        long oldBonus = getPermanentAttributeBonus(type);
 
+        switch (type) {
+            case HEALTH -> this.permanentHealthBonus = bonus;
+            case QI -> this.permanentQiBonus = bonus;
+            case BODY -> this.permanentBodyBonus = bonus;
+        }
+
+        recalculateAttributeMaximum(type);
     }
 
     @Override
     public double getPermanentAttributeRegenBonus(AttributeType type) {
-        return 0;
+        return switch (type) {
+            case HEALTH -> permanentHealthRegenBonus;
+            case QI -> permanentQiRegenBonus;
+            case BODY -> permanentBodyRegenBonus;
+        };
     }
 
     @Override
     public void setPermanentAttributeRegenBonus(AttributeType type, double bonus) {
+        double oldBonus = getPermanentAttributeRegenBonus(type);
 
+        switch (type) {
+            case HEALTH -> this.permanentHealthRegenBonus = bonus;
+            case QI -> this.permanentQiRegenBonus = bonus;
+            case BODY -> this.permanentBodyRegenBonus = bonus;
+        }
     }
 
     @Override
-    public void onAttributeChanged(AttributeType type, long oldValue, long newValue) {
-        IAttributesData.super.onAttributeChanged(type, oldValue, newValue);
+    public void onAttributeChanged(AttributeType type, long oldValue, long newValue) {IAttributesData.super.onAttributeChanged(type, oldValue, newValue);}
+
+    @Override
+    public void onAttributeConsumed(AttributeType type, long amount) {IAttributesData.super.onAttributeConsumed(type, amount);}
+
+    @Override
+    public void onAttributeAdded(AttributeType type, long amount) {IAttributesData.super.onAttributeAdded(type, amount);}
+
+    @Override
+    public double getBaseCombatStat(CombatStatType type) {
+        return switch (type) {
+            case ATTACK_DAMAGE -> this.currentAttackDamage;
+            case SPIRITUAL_DAMAGE -> this.currentSpiritualDamage;
+            case CRITICAL_CHANCE -> this.currentCriticalChance;
+            case CRITICAL_DAMAGE -> this.currentCriticalDamage;
+            case ATTACK_SPEED -> this.currentAttackSpeed;
+        };
     }
 
     @Override
-    public void onAttributeConsumed(AttributeType type, long amount) {
-        IAttributesData.super.onAttributeConsumed(type, amount);
+    public double getBonusCombatStat(CombatStatType type, BonusSource source) {
+        return switch (type) {
+            case ATTACK_DAMAGE -> this.attackDamageBonus;
+            case SPIRITUAL_DAMAGE -> this.spiritualDamageBonus;
+            case CRITICAL_CHANCE -> this.criticalChanceBonus;
+            case CRITICAL_DAMAGE -> this.criticalDamageBonus;
+            case ATTACK_SPEED -> this.attackSpeedBonus;
+        };
     }
 
     @Override
-    public void onAttributeAdded(AttributeType type, long amount) {
-        IAttributesData.super.onAttributeAdded(type, amount);
-    }
-
-    @Override
-    public long getBaseCombatStat(CombatStatType type) {
-        return 0;
-    }
-
-    @Override
-    public long getBonusCombatStat(CombatStatType type, BonusSource source) {
-        return 0;
+    public double getPermanentBonusCombatStat(CombatStatType type, BonusSource source) {
+        return switch (type) {
+            case ATTACK_DAMAGE -> this.permanentAttackDamageBonus;
+            case SPIRITUAL_DAMAGE -> this.permanentSpiritualDamageBonus;
+            case CRITICAL_CHANCE -> this.permanentCriticalChanceBonus;
+            case CRITICAL_DAMAGE -> this.permanentCriticalDamageBonus;
+            case ATTACK_SPEED -> this.permanentAttackSpeedBonus;
+        };
     }
 
     @Override
@@ -205,8 +256,14 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     }
 
     @Override
-    public long getFinalCombatStat(CombatStatType type) {
-        return 0;
+    public double getFinalCombatStat(CombatStatType type) {
+        return switch (type) {
+            case ATTACK_DAMAGE -> (currentAttackDamage + attackDamageBonus + permanentAttackDamageBonus);
+            case SPIRITUAL_DAMAGE -> (currentSpiritualDamage + spiritualDamageBonus + permanentSpiritualDamageBonus);
+            case CRITICAL_CHANCE -> (currentCriticalChance + criticalChanceBonus + permanentCriticalChanceBonus);
+            case CRITICAL_DAMAGE -> (currentCriticalDamage + criticalDamageBonus + permanentCriticalDamageBonus);
+            case ATTACK_SPEED -> (currentAttackSpeed + attackSpeedBonus + permanentAttackSpeedBonus);
+        };
     }
 
     @Override
