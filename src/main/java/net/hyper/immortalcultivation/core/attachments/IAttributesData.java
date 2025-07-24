@@ -5,18 +5,11 @@ public interface IAttributesData {
     enum AttributeType {
         HEALTH("Health"),
         QI("Qi"),
-        BODY("Body"),
-        ATTACK_DAMAGE("Attack Damage");
+        BODY("Body");
 
         private final String displayName;
-
-        AttributeType(String displayName) {
-            this.displayName = displayName;
-        }
-
-        public String getDisplayName() {
-            return displayName;
-        }
+        AttributeType(String displayName) {this.displayName = displayName;}
+        public String getDisplayName() {return displayName;}
     }
 
     // === CORE STAT MANAGEMENT === //

@@ -435,7 +435,7 @@ public class JsonCultivationRealm extends CultivationRealm {
             double currentBodyRegenFromRealm = attributes.getSourcedStatRegenBonus(IAttributesData.StatType.BODY, BonusSource.REALM);
 
             // === COMBAT STATS === //
-            double currentAttackFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.ATTACK_DAMAGE, BonusSource.REALM);
+            long currentAttackFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.ATTACK_DAMAGE, BonusSource.REALM);
             double currentSpeedFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.MOVEMENT_SPEED, BonusSource.REALM);
             double currentJumpFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.JUMP_HEIGHT, BonusSource.REALM);
 

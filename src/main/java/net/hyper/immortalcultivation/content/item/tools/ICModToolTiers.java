@@ -23,26 +23,26 @@ public class ICModToolTiers {
             999, 4f, 2.5f, 19, () -> Ingredient.of(ItemRegistry.WOOD_ASPECTED_INGOT));
 
     public static final Tier SKY_IRON = new SimpleTier(Tags.Blocks.NEEDS_SKY_IRON_TOOL,
-        3500, 4f, 4.5f, 28, () -> Ingredient.of(ItemRegistry.SKY_IRON_INGOT));
+        3500, 4f, 19.5f, 28, () -> Ingredient.of(ItemRegistry.SKY_IRON_INGOT));
 
     /*
     public static final Tier TUXING = new SimpleTier(Tags.Blocks.NEEDS_TUXING_TOOL,
-            4500, 4f, 6.5f, 29, () -> Ingredient.of(ItemRegistry.TUXING_INGOT));
+            4500, 4f, 30.5f, 29, () -> Ingredient.of(ItemRegistry.TUXING_INGOT));
 
     public static final Tier HUOXING = new SimpleTier(Tags.Blocks.NEEDS_HUOXING_TOOL,
-        4500, 4f, 6.5f, 29, () -> Ingredient.of(ItemRegistry.HUOXING_INGOT));
+        4500, 4f, 30.5f, 29, () -> Ingredient.of(ItemRegistry.HUOXING_INGOT));
 
     public static final Tier JINXING = new SimpleTier(Tags.Blocks.NEEDS_JINXING_TOOL,
-        4500, 4f, 6.5f, 29, () -> Ingredient.of(ItemRegistry.JINXING_INGOT));
+        4500, 4f, 30.5f, 29, () -> Ingredient.of(ItemRegistry.JINXING_INGOT));
 
     public static final Tier SHUIXING = new SimpleTier(Tags.Blocks.NEEDS_SHUIXING_TOOL,
-        4500, 4f, 6.5f, 29, () -> Ingredient.of(ItemRegistry.SHUIXING_INGOT));
+        4500, 4f, 30.5f, 29, () -> Ingredient.of(ItemRegistry.SHUIXING_INGOT));
 
     public static final Tier MUXING = new SimpleTier(Tags.Blocks.NEEDS_MUXING_TOOL,
-        4500, 4f, 6.5f, 29, () -> Ingredient.of(ItemRegistry.MUXING_INGOT));
+        4500, 4f, 30.5f, 29, () -> Ingredient.of(ItemRegistry.MUXING_INGOT));
 
     public static final Tier HEAVEN_STEEL = new SimpleTier(Tags.Blocks.NEEDS_HEAVEN_STEEL_TOOL,
-        9000, 4f, 9.5f, 42, () -> Ingredient.of(ItemRegistry.HEAVEN_STEEL_INGOT));
+        9000, 4f, 65.5f, 42, () -> Ingredient.of(ItemRegistry.HEAVEN_STEEL_INGOT));
 
      */
 }
