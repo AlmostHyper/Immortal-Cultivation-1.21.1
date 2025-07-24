@@ -1,4 +1,4 @@
-package net.hyper.immortalcultivation.core.cultivation;
+package net.hyper.immortalcultivation.core.attachments;
 
 import com.mojang.serialization.Codec;
 import net.hyper.immortalcultivation.ImmortalCultivation;

@@ -2,7 +2,7 @@ package net.hyper.immortalcultivation.core.cultivation.realms;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.attachments.AttributesPlayerAttachment;
-import net.hyper.immortalcultivation.core.cultivation.BonusSource;
+import net.hyper.immortalcultivation.core.attachments.BonusSource;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.core.attachments.IAttributesData;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;

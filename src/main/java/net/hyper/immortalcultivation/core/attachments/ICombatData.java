@@ -1,7 +1,5 @@
 package net.hyper.immortalcultivation.core.attachments;
 
-import net.hyper.immortalcultivation.core.cultivation.BonusSource;
-
 public interface ICombatData {
 
     enum CombatStatType {
@@ -16,7 +14,7 @@ public interface ICombatData {
         public String getDisplayName() {return displayName;}
     }
 
-    double getBaseCombatStat(CombatStatType type);
+    double getCombatStat(CombatStatType type);
     double getBonusCombatStat(CombatStatType type, BonusSource source);
     double getPermanentBonusCombatStat(CombatStatType type, BonusSource source);
     double getMultiplier(CombatStatType type);

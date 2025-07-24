@@ -1,11 +1,14 @@
 package net.hyper.immortalcultivation.core.attachments;
 
-import net.hyper.immortalcultivation.core.cultivation.BonusSource;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.Tag;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
 import net.neoforged.neoforge.attachment.IAttachmentSerializer;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.EnumMap;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttributesData, ICombatData {
 
@@ -18,29 +21,18 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     private static final double MORTAL_BASE_CRITICAL_DAMAGE = 0.0;
     private static final double MORTAL_BASE_ATTACK_SPEED = 1.0;
 
-    private long permanentHealthBonus = 0;
-    private double permanentHealthRegenBonus = 0.0;
     private long currentHealth = MORTAL_BASE_HEALTH;
     private long maxHealth = MORTAL_BASE_HEALTH;
     private double healthRegenFraction = 0.0;
 
-    private long permanentQiBonus = 0;
-    private double permanentQiRegenBonus = 0.0;
     private long currentQi = MORTAL_BASE_QI;
     private long maxQi = MORTAL_BASE_QI;
     private double qiRegenFraction = 0.0;
 
-    private long permanentBodyBonus = 0;
-    private double permanentBodyRegenBonus = 0.0;
     private long currentBody = MORTAL_BASE_BODY;
     private long maxBody = MORTAL_BASE_BODY;
     private double bodyRegenFraction = 0.0;
 
-    private double permanentAttackDamageBonus = 0;
-    private double permanentSpiritualDamageBonus = 0;
-    private double permanentCriticalChanceBonus = 0.0;
-    private double permanentCriticalDamageBonus = 0.0;
-    private double permanentAttackSpeedBonus = 0.0;
     private double attackDamageBonus = 0;
     private double spiritualDamageBonus = 0;
     private double criticalChanceBonus = 0.0;
@@ -52,8 +44,6 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     private double currentCriticalDamage = MORTAL_BASE_CRITICAL_DAMAGE;
     private double currentAttackSpeed = MORTAL_BASE_ATTACK_SPEED;
 
-    private double permanentMovementSpeedBonus = 0.0;
-    private double permanentJumpHeightBonus = 0.0;
     private double movementSpeedBonus = 0.0;
     private double jumpHeightBonus = 0.0;
 
@@ -63,17 +53,24 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     public AttributesPlayerAttachment() {super();}
 
     @Override
-    public long getCurrentAttribute(AttributeType type) {
-        return switch (type) {
-            case HEALTH -> currentHealth;
-            case QI -> currentQi;
-            case BODY -> currentBody;
+    public long getAttribute(AttributeType type) {
+        long base = switch (type) {
+            case HEALTH -> MORTAL_BASE_HEALTH;
+            case QI -> MORTAL_BASE_QI;
+            case BODY -> MORTAL_BASE_BODY;
         };
+
+        return base + sourcedAttributeBonuses
+            .getOrDefault(type, new EnumMap<>(BonusSource.class))
+            .values()
+            .stream()
+            .mapToLong(Long::longValue)
+            .sum();
     }
 
     @Override
-    public void setCurrentAttribute(AttributeType type, long value) {
-        long oldValue = getCurrentAttribute(type);
+    public void setAttribute(AttributeType type, long value) {
+        long oldValue = getAttribute(type);
         long maxValue = getMaxAttribute(type);
         long newValue = Math.max(0, Math.min(value, maxValue));
 
@@ -107,9 +104,9 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
         }
 
         if (oldValue != newValue) {
-            long currentValue = getCurrentAttribute(type);
+            long currentValue = getAttribute(type);
 
-            if (currentValue > newValue) {setCurrentAttribute(type, newValue);}
+            if (currentValue > newValue) {setAttribute(type, newValue);}
         }
     }
 
@@ -130,11 +127,16 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
 
     @Override
     public double getAttributeRegenRate(AttributeType type) {
-        return switch (type) {
-            case HEALTH -> 0.0 + permanentHealthRegenBonus;
-            case QI -> 0.0 + permanentQiRegenBonus;
-            case BODY -> 0.0 + permanentBodyRegenBonus;
+        double base = switch (type) {
+            case HEALTH, QI, BODY -> 0.0;
         };
+
+        return base + sourcedAttributeRegenBonuses
+            .getOrDefault(type, new EnumMap<>(BonusSource.class))
+            .values()
+            .stream()
+            .mapToDouble(Double::doubleValue)
+            .sum();
     }
 
     @Override
@@ -162,51 +164,7 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     }
 
     @Override
-    public void addRegenFraction(AttributeType type, double amount) {
-        IAttributesData.super.addRegenFraction(type, amount);
-    }
-
-    @Override
-    public long getPermanentAttributeBonus(AttributeType type) {
-        return switch (type) {
-            case HEALTH -> permanentHealthBonus;
-            case QI -> permanentQiBonus;
-            case BODY -> permanentBodyBonus;
-        };
-    }
-
-    @Override
-    public void setPermanentAttributeBonus(AttributeType type, long bonus) {
-        long oldBonus = getPermanentAttributeBonus(type);
-
-        switch (type) {
-            case HEALTH -> this.permanentHealthBonus = bonus;
-            case QI -> this.permanentQiBonus = bonus;
-            case BODY -> this.permanentBodyBonus = bonus;
-        }
-
-        recalculateAttributeMaximum(type);
-    }
-
-    @Override
-    public double getPermanentAttributeRegenBonus(AttributeType type) {
-        return switch (type) {
-            case HEALTH -> permanentHealthRegenBonus;
-            case QI -> permanentQiRegenBonus;
-            case BODY -> permanentBodyRegenBonus;
-        };
-    }
-
-    @Override
-    public void setPermanentAttributeRegenBonus(AttributeType type, double bonus) {
-        double oldBonus = getPermanentAttributeRegenBonus(type);
-
-        switch (type) {
-            case HEALTH -> this.permanentHealthRegenBonus = bonus;
-            case QI -> this.permanentQiRegenBonus = bonus;
-            case BODY -> this.permanentBodyRegenBonus = bonus;
-        }
-    }
+    public void addRegenFraction(AttributeType type, double amount) {IAttributesData.super.addRegenFraction(type, amount);}
 
     @Override
     public void onAttributeChanged(AttributeType type, long oldValue, long newValue) {IAttributesData.super.onAttributeChanged(type, oldValue, newValue);}
@@ -217,26 +175,73 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     @Override
     public void onAttributeAdded(AttributeType type, long amount) {IAttributesData.super.onAttributeAdded(type, amount);}
 
+    private final Map<AttributeType, EnumMap<BonusSource, Long>> sourcedAttributeBonuses = new HashMap<>();
+    private final Map<AttributeType, EnumMap<BonusSource, Double>> sourcedAttributeRegenBonuses = new HashMap<>();
+    private final Map<CombatStatType, EnumMap<BonusSource, Double>> sourcedCombatBonuses = new HashMap<>();
+    private final Map<AttributeType, EnumMap<BonusSource, Double>> sourcedMovementBonuses = new HashMap<>();
+
+    public long getSourcedAttributeBonus(AttributeType type, BonusSource source) {
+        return sourcedAttributeBonuses
+            .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
+            .getOrDefault(source, 0L);
+    }
+
+    public void setSourcedAttributeBonus(AttributeType type, BonusSource source, long bonus) {
+        sourcedAttributeBonuses
+            .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
+            .put(source, bonus);
+    }
+
+    public double getSourcedAttributeRegenBonus(AttributeType type, BonusSource source) {
+        return sourcedAttributeRegenBonuses
+            .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
+            .getOrDefault(source, 0.0);
+    }
+
+    public void setSourcedAttributeRegenBonus(AttributeType type, BonusSource source, double bonus) {
+        sourcedAttributeRegenBonuses
+            .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
+            .put(source, bonus);
+    }
+
+    public double getSourcedCombatBonus(CombatStatType type, BonusSource source) {
+        return sourcedCombatBonuses
+            .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
+            .getOrDefault(source, 0.0);
+    }
+
+    public void setSourcedCombatBonus(CombatStatType type, BonusSource source, double bonus) {
+        sourcedCombatBonuses
+            .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
+            .put(source, bonus);
+    }
+
     @Override
-    public double getBaseCombatStat(CombatStatType type) {
-        return switch (type) {
-            case ATTACK_DAMAGE -> this.currentAttackDamage;
-            case SPIRITUAL_DAMAGE -> this.currentSpiritualDamage;
-            case CRITICAL_CHANCE -> this.currentCriticalChance;
-            case CRITICAL_DAMAGE -> this.currentCriticalDamage;
-            case ATTACK_SPEED -> this.currentAttackSpeed;
+    public double getCombatStat(CombatStatType type) {
+        double base = switch (type) {
+            case ATTACK_DAMAGE -> MORTAL_BASE_ATTACK_DAMAGE;
+            case SPIRITUAL_DAMAGE -> MORTAL_BASE_SPIRITUAL_ATTACK_DAMAGE;
+            case CRITICAL_CHANCE -> MORTAL_BASE_CRITICAL_CHANCE;
+            case CRITICAL_DAMAGE -> MORTAL_BASE_CRITICAL_DAMAGE;
+            case ATTACK_SPEED -> MORTAL_BASE_ATTACK_SPEED;
         };
+
+        return base + sourcedCombatBonuses
+            .getOrDefault(type, new EnumMap<>(BonusSource.class))
+            .values()
+            .stream()
+            .mapToDouble(Double::doubleValue)
+            .sum();
     }
 
     @Override
     public double getBonusCombatStat(CombatStatType type, BonusSource source) {
-        return switch (type) {
-            case ATTACK_DAMAGE -> this.attackDamageBonus;
-            case SPIRITUAL_DAMAGE -> this.spiritualDamageBonus;
-            case CRITICAL_CHANCE -> this.criticalChanceBonus;
-            case CRITICAL_DAMAGE -> this.criticalDamageBonus;
-            case ATTACK_SPEED -> this.attackSpeedBonus;
-        };
+        return sourcedCombatBonuses
+            .getOrDefault(type, new EnumMap<>(BonusSource.class))
+            .values()
+            .stream()
+            .mapToDouble(Double::doubleValue)
+            .sum();
     }
 
     @Override
@@ -266,6 +271,7 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
         };
     }
 
+    // TODO: Attributes Serialization
     @Override
     public Object read(IAttachmentHolder iAttachmentHolder, Tag tag, HolderLookup.Provider provider) {
         return null;
