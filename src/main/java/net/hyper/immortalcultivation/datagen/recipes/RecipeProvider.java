@@ -1,6 +1,5 @@
 package net.hyper.immortalcultivation.datagen.recipes;
 
-import net.hyper.immortalcultivation.datagen.recipes.helper.ICModPillFurnaceRecipeHelper;
 import net.hyper.immortalcultivation.datagen.recipes.helper.ICModShapedRecipeHelper;
 import net.hyper.immortalcultivation.datagen.recipes.helper.ICModShapelessRecipeHelper;
 import net.hyper.immortalcultivation.datagen.recipes.helper.ICModSmeltingRecipeHelper;
@@ -26,7 +25,9 @@ public class RecipeProvider extends net.minecraft.data.recipes.RecipeProvider im
         ICModShapedRecipeHelper.buildShapedRecipes(recipeOutput, helper);
         ICModShapelessRecipeHelper.buildShapelessRecipes(recipeOutput, helper);
         ICModSmeltingRecipeHelper.buildSmeltingRecipes(recipeOutput, helper);
+        /*
         ICModPillFurnaceRecipeHelper.buildPillFurnaceRecipes(recipeOutput, helper);
+        */
     }
 
     // Wrapper class to expose protected methods

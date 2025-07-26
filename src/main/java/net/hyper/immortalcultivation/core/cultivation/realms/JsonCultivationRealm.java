@@ -20,10 +20,6 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * A data-driven implementation of CultivationRealm that loads its properties from JSON.
- * Updated to work with the unified ICultivationData interface.
- */
 public class JsonCultivationRealm extends CultivationRealm {
 
     private final CultivationRealmData data;

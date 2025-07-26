@@ -5,13 +5,13 @@ import net.hyper.immortalcultivation.datagen.recipes.RecipeProvider;
 import net.hyper.immortalcultivation.content.item.ItemRegistry;
 import net.minecraft.data.recipes.RecipeOutput;
 import net.minecraft.world.item.Items;
-
+/*
 public class ICModPillFurnaceRecipeHelper {
 
     public static void buildPillFurnaceRecipes(RecipeOutput recipeOutput, RecipeProvider.RecipeHelper helper) {
         // === MORTAL REALM PILLS === //
 
-        /* == QI CULTIVATION PILLS == */
+
 
         // Low Quality Qi Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ItemRegistry.LOW_QUALITY_QI_CULTIVATION_PILL.get())
@@ -52,8 +52,6 @@ public class ICModPillFurnaceRecipeHelper {
             .successChance(0.2)
             .unlockedBy("has_top_quality_spirit_stone", helper.has(ItemRegistry.TOP_QUALITY_SPIRIT_STONE.get()))
             .save(recipeOutput, "top_quality_qi_absorption_pill");
-
-        /* == BODY CULTIVATION PILLS == */
 
         // Low Quality Body Cultivation Pills
         PillFurnaceRecipeBuilder.pillRecipe(ItemRegistry.LOW_QUALITY_BODY_CULTIVATION_PILL.get())
@@ -97,7 +95,7 @@ public class ICModPillFurnaceRecipeHelper {
 
 
 
-        /*
+
         // Healing Pill - simpler recipe with only one input
         PillFurnaceRecipeBuilder.pillRecipe(ICModItems.HEALING_PILL.get(), 2)
             .input1(ICModItems.BLOOD_GINSENG.get(), 3)
@@ -124,6 +122,6 @@ public class ICModPillFurnaceRecipeHelper {
             .successChance(0.6)
             .unlockedBy("has_spirit_herbs", helper.has(ICModTags.Items.SPIRIT_HERBS))
             .save(recipeOutput); // This will auto-generate the name from the result item
-        */
+
     }
-}
+} */

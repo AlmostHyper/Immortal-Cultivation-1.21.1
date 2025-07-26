@@ -55,8 +55,7 @@ public class ImmortalCultivation
         MenuRegistry.register(modEventBus);
         RecipeRegistry.register(modEventBus);
 
-        NetworkRegistry.register((RegisterPayloadHandlersEvent) modEventBus);
-
+        modEventBus.addListener(NetworkRegistry::register);
         // Register our mod's ModConfigSpec so that FML can create and load the config file for us
         modContainer.registerConfig(ModConfig.Type.COMMON, ImmortalCultivationConfig.SPEC);
 

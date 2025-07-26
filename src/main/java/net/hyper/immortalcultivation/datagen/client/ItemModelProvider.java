@@ -124,7 +124,7 @@ public class ItemModelProvider extends net.neoforged.neoforge.client.model.gener
         basicItem(ItemRegistry.BLUE_WOOD_ROOTS.get());
 
         // === PILLS === //
-
+        /*
         // Qi Cultivation Pills
         basicItem(ItemRegistry.LOW_QUALITY_QI_CULTIVATION_PILL.get());
         basicItem(ItemRegistry.MEDIUM_QUALITY_QI_CULTIVATION_PILL.get());
@@ -136,5 +136,7 @@ public class ItemModelProvider extends net.neoforged.neoforge.client.model.gener
         basicItem(ItemRegistry.MEDIUM_QUALITY_BODY_CULTIVATION_PILL.get());
         basicItem(ItemRegistry.HIGH_QUALITY_BODY_CULTIVATION_PILL.get());
         basicItem(ItemRegistry.TOP_QUALITY_BODY_CULTIVATION_PILL.get());
+    */
     }
+
 }

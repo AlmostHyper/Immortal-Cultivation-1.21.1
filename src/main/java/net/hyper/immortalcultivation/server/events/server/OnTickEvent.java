@@ -29,7 +29,7 @@ public class OnTickEvent extends Event {
         if (player.level().isClientSide()) return;
 
         if (player.tickCount % CULTIVATION_RATE == 0) {
-            player.getExistingData(AttachmentRegistry.CULTIVATION.get())
+            player.getExistingData(AttachmentRegistry.PLAYER_CULTIVATION.get())
                 .ifPresent(cultivation -> processCultivationTick(player, cultivation));
         }
 

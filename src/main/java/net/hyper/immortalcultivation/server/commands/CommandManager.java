@@ -473,8 +473,9 @@ public class CommandManager {
 
                     // FIXED: Ensure milestones are properly recalculated after set command
                     // This prevents double-application and ensures consistency
+                    /*
                     cultivation.recalculateMilestoneBonuses(cultivationType);
-
+                     */
                     ctx.getSource().sendSuccess(() -> Component.literal("Set " + cultivationType.getDisplayName() +
                             " cultivation to " + value + " (was " + oldValue + ")")
                         .withStyle(ChatFormatting.GREEN), false);

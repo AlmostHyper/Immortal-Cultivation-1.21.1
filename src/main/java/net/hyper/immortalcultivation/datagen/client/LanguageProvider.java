@@ -71,6 +71,7 @@ public class LanguageProvider extends net.neoforged.neoforge.common.data.Languag
         add(ItemRegistry.WOOD_ASPECTED_SWORD.get(), "木属性剑");
         add(ItemRegistry.SKY_IRON_SWORD.get(), "天铁剑");
 
+        /*
         // === PILLS === //
         add(ItemRegistry.LOW_QUALITY_QI_CULTIVATION_PILL.get(), "低品练气丹");
         add(ItemRegistry.MEDIUM_QUALITY_QI_CULTIVATION_PILL.get(), "中品练气丹");
@@ -81,9 +82,7 @@ public class LanguageProvider extends net.neoforged.neoforge.common.data.Languag
         add(ItemRegistry.MEDIUM_QUALITY_BODY_CULTIVATION_PILL.get(), "中品炼体丹");
         add(ItemRegistry.HIGH_QUALITY_BODY_CULTIVATION_PILL.get(), "高品炼体丹");
         add(ItemRegistry.TOP_QUALITY_BODY_CULTIVATION_PILL.get(), "极品炼体丹");
-
-        // Note: For a full Chinese localization, you'd want to translate all items
-        // For now, this provides essential Chinese translations for key items
+        */
     }
 
     private void addCreativeTabTranslations() {
@@ -190,9 +189,11 @@ public class LanguageProvider extends net.neoforged.neoforge.common.data.Languag
 
         // === PLANTS === //
         addPlantTranslations();
-
+        /*
         // === PILLS === //
         addPillTranslations();
+
+         */
     }
 
     private void addSpiritStoneItemTranslations() {
@@ -312,7 +313,7 @@ public class LanguageProvider extends net.neoforged.neoforge.common.data.Languag
         add(ItemRegistry.BLACK_WATER_ROOTS.get(), "Black Water Roots");
         add(ItemRegistry.BLUE_WOOD_ROOTS.get(), "Blue Wood Roots");
     }
-
+    /*
     private void addPillTranslations() {
         // Qi Cultivation Pills
         add(ItemRegistry.LOW_QUALITY_QI_CULTIVATION_PILL.get(), "Low Quality Qi Cultivation Pill");
@@ -326,4 +327,6 @@ public class LanguageProvider extends net.neoforged.neoforge.common.data.Languag
         add(ItemRegistry.HIGH_QUALITY_BODY_CULTIVATION_PILL.get(), "High Quality Body Cultivation Pill");
         add(ItemRegistry.TOP_QUALITY_BODY_CULTIVATION_PILL.get(), "Top Quality Body Cultivation Pill");
     }
+
+     */
 }
