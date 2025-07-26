@@ -8,11 +8,8 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.SuggestionProvider;
 import net.hyper.immortalcultivation.ImmortalCultivation;
-import net.hyper.immortalcultivation.core.attachments.CultivationPlayerAttachment;
-import net.hyper.immortalcultivation.core.attachments.PlayerStatsAttachment;
-import net.hyper.immortalcultivation.core.attachments.ICultivationData;
-import net.hyper.immortalcultivation.core.attachments.IAttributesData;
-import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.*;
+import net.hyper.immortalcultivation.core.attachments.AttributesPlayerAttachment;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.hyper.immortalcultivation.core.cultivation.realms.CultivationRealm;
 import net.minecraft.ChatFormatting;
@@ -29,27 +26,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
-/**
- * Unified Command Manager for the Immortal Cultivation Mod
- *
- * This class serves as the central hub for all command registration and execution
- * logic, following the same architectural principles as ICModNetworkManager with
- * singleton pattern, performance monitoring, and comprehensive debug capabilities.
- *
- * Key Features:
- * - Centralized command registration and management
- * - Performance monitoring for command execution
- * - Comprehensive debug and logging capabilities
- * - Modular command handler system
- * - Permission and validation management
- * - Consistent error handling and user feedback
- *
- * Architecture:
- * - Singleton pattern for global access
- * - Event-driven registration through RegisterCommandsEvent
- * - Modular design for easy command addition
- * - Performance optimization through caching and monitoring
- */
 @EventBusSubscriber(modid = ImmortalCultivation.MOD_ID, bus = EventBusSubscriber.Bus.GAME)
 public class CommandManager {
 
@@ -392,7 +368,7 @@ public class CommandManager {
                 }
 
                 // Get stats attachment for bonus calculation
-                PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
+                AttributesPlayerAttachment stats = player.getData(AttachmentRegistry.PLAYER_ATTRIBUTES.get());
                 if (stats == null) {
                     ctx.getSource().sendFailure(Component.literal("Player stats data not found")
                         .withStyle(ChatFormatting.RED));
@@ -400,8 +376,8 @@ public class CommandManager {
                 }
 
                 // Set the realm
-                CultivationRealm oldRealm = cultivation.getRealm(cultivationType);
-                cultivation.setRealm(cultivationType, realm, false);
+                CultivationRealm oldRealm = cultivation.getCurrentRealm(cultivationType);
+                cultivation.setCurrentRealm(cultivationType, realm, player, false);
 
                 // Apply CUMULATIVE realm modifiers - calculate all bonuses from mortal to target realm
                 applyCumulativeRealmBonuses(player, cultivationType, realm, cultivation);
@@ -511,9 +487,9 @@ public class CommandManager {
                     return 1;
                 } else {
                     // Handle regular stat (existing code)
-                    IAttributesData.StatType statType = (IAttributesData.StatType) parsed[0];
+                    IAttributesData.AttributeType statType = (IAttributesData.AttributeType) parsed[0];
 
-                    PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
+                    AttributesPlayerAttachment stats = player.getData(AttachmentRegistry.PLAYER_ATTRIBUTES.get());
                     if (stats == null) {
                         ctx.getSource().sendFailure(Component.literal("Player stats data not found")
                             .withStyle(ChatFormatting.RED));
@@ -521,7 +497,7 @@ public class CommandManager {
                     }
 
                     // Validate value against maximum
-                    long maxValue = stats.getMaxStat(statType);
+                    long maxValue = stats.getMaxAttribute(statType);
                     if (value > maxValue) {
                         ctx.getSource().sendFailure(Component.literal("Value " + value + " exceeds maximum " + statType.getDisplayName() + " (" + maxValue + ")")
                             .withStyle(ChatFormatting.RED));
@@ -529,8 +505,8 @@ public class CommandManager {
                     }
 
                     // Set the stat
-                    long oldValue = stats.getCurrentStat(statType);
-                    stats.setCurrentStat(statType, value);
+                    long oldValue = stats.getAttribute(statType);
+                    stats.setAttribute(statType, value);
 
                     // Send success message
                     Component successMessage = Component.literal("Successfully set ")
@@ -607,7 +583,7 @@ public class CommandManager {
                         return 0;
                     }
 
-                    CultivationRealm realm = cultivation.getRealm(cultivationType);
+                    CultivationRealm realm = cultivation.getCurrentRealm(cultivationType);
                     message = Component.literal(cultivationType.getDisplayName() + " Realm: ")
                         .withStyle(ChatFormatting.YELLOW)
                         .append(Component.literal(realm.getDisplayName())
@@ -616,8 +592,8 @@ public class CommandManager {
                             .withStyle(ChatFormatting.GRAY));
                 } else {
                     // Show both cultivation types
-                    CultivationRealm qiRealm = cultivation.getRealm(ICultivationData.CultivationType.QI);
-                    CultivationRealm bodyRealm = cultivation.getRealm(ICultivationData.CultivationType.BODY);
+                    CultivationRealm qiRealm = cultivation.getCurrentRealm(ICultivationData.CultivationType.QI);
+                    CultivationRealm bodyRealm = cultivation.getCurrentRealm(ICultivationData.CultivationType.BODY);
 
                     message = Component.literal("=== Current Cultivation Realms ===")
                         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD)
@@ -662,7 +638,7 @@ public class CommandManager {
             }
 
             try {
-                PlayerStatsAttachment stats = player.getData(AttachmentRegistry.PLAYER_STATS.get());
+                AttributesPlayerAttachment stats = player.getData(AttachmentRegistry.PLAYER_ATTRIBUTES.get());
                 if (stats == null) {
                     ctx.getSource().sendFailure(Component.literal("Player stats data not found")
                         .withStyle(ChatFormatting.RED));
@@ -714,10 +690,10 @@ public class CommandManager {
                                 .withStyle(ChatFormatting.GRAY));
                     } else {
                         // Handle regular stat
-                        IAttributesData.StatType statType = (IAttributesData.StatType) parsed[0];
+                        IAttributesData.AttributeType statType = (IAttributesData.AttributeType) parsed[0];
 
-                        long current = stats.getCurrentStat(statType);
-                        long max = stats.getMaxStat(statType);
+                        long current = stats.getAttribute(statType);
+                        long max = stats.getMaxAttribute(statType);
                         double percentage = max > 0 ? (double) current / max * 100 : 0;
 
                         message = Component.literal(statType.getDisplayName() + ": ")
@@ -733,9 +709,9 @@ public class CommandManager {
                         .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD);
 
                     // Show regular stats
-                    for (IAttributesData.StatType statType : IAttributesData.StatType.values()) {
-                        long current = stats.getCurrentStat(statType);
-                        long max = stats.getMaxStat(statType);
+                    for (IAttributesData.AttributeType statType : IAttributesData.AttributeType.values()) {
+                        long current = stats.getAttribute(statType);
+                        long max = stats.getMaxAttribute(statType);
                         double percentage = max > 0 ? (double) current / max * 100 : 0;
 
                         builder.append(Component.literal("\n" + statType.getDisplayName() + ": ")
@@ -804,9 +780,9 @@ public class CommandManager {
      */
     private Object[] parseStatTypeOrCultivation(String typeStr) {
         return switch (typeStr.toLowerCase()) {
-            case "health" -> new Object[]{IAttributesData.StatType.HEALTH, false};
-            case "qi" -> new Object[]{IAttributesData.StatType.QI, false};
-            case "body" -> new Object[]{IAttributesData.StatType.BODY, false};
+            case "health" -> new Object[]{IAttributesData.AttributeType.HEALTH, false};
+            case "qi" -> new Object[]{IAttributesData.AttributeType.QI, false};
+            case "body" -> new Object[]{IAttributesData.AttributeType.BODY, false};
             case "qi_cultivation" -> new Object[]{ICultivationData.CultivationType.QI, true};
             case "body_cultivation" -> new Object[]{ICultivationData.CultivationType.BODY, true};
             default -> null;
@@ -964,24 +940,24 @@ public class CommandManager {
      *
      * @param player The player
      * @param cultivationType The cultivation type being set
-     * @param targetRealm The target realm to set
+     * @param targetCurrentRealm The target realm to set
      * @param cultivation The player's cultivation attachment
      */
     private void applyCumulativeRealmBonuses(ServerPlayer player, ICultivationData.CultivationType cultivationType,
-                                             CultivationRealm targetRealm, CultivationPlayerAttachment cultivation) {
+                                             CultivationRealm targetCurrentRealm, CultivationPlayerAttachment cultivation) {
         try {
             // Get the progression path from mortal to target realm
-            List<CultivationRealm> progressionPath = getRealmProgressionPath(targetRealm);
+            List<CultivationRealm> progressionPath = getCurrentRealmProgressionPath(targetCurrentRealm);
 
             if (progressionPath.isEmpty()) {
-                ImmortalCultivation.LOGGER.warn("No progression path found for realm: {}", targetRealm.getId());
+                ImmortalCultivation.LOGGER.warn("No progression path found for realm: {}", targetCurrentRealm.getId());
                 return;
             }
 
             // Apply each realm's bonuses in sequence (this simulates natural progression)
             for (CultivationRealm realm : progressionPath) {
                 // Set realm temporarily and apply its modifiers
-                cultivation.setRealm(cultivationType, realm, false);
+                cultivation.setCurrentRealm(cultivationType, realm, player, false);
                 realm.applyRealmModifiers(player, cultivation, cultivationType, false);
 
                 if (DEBUG_COMMANDS) {
@@ -992,7 +968,7 @@ public class CommandManager {
 
             if (DEBUG_COMMANDS) {
                 ImmortalCultivation.LOGGER.info("Applied {} realms in progression to reach {}",
-                    progressionPath.size(), targetRealm.getDisplayName());
+                    progressionPath.size(), targetCurrentRealm.getDisplayName());
             }
 
         } catch (Exception e) {
@@ -1005,18 +981,18 @@ public class CommandManager {
      * This uses the realm level system to include ALL realms that should be traversed,
      * including different stages and special realms nested between regular realms.
      *
-     * @param targetRealm The target realm
+     * @param targetCurrentRealm The target realm
      * @return List of realms in progression order (including target)
      */
-    private List<CultivationRealm> getRealmProgressionPath(CultivationRealm targetRealm) {
+    private List<CultivationRealm> getCurrentRealmProgressionPath(CultivationRealm targetCurrentRealm) {
         List<CultivationRealm> path = new ArrayList<>();
 
         try {
-            int targetLevel = targetRealm.getRealmLevel();
+            int targetLevel = targetCurrentRealm.getRealmLevel();
 
             if (DEBUG_COMMANDS) {
                 ImmortalCultivation.LOGGER.debug("Building progression path to realm: {} (Level {})",
-                    targetRealm.getId(), targetLevel);
+                    targetCurrentRealm.getId(), targetLevel);
             }
 
             // Get all available realms as a collection
@@ -1043,13 +1019,13 @@ public class CommandManager {
 
             if (DEBUG_COMMANDS) {
                 ImmortalCultivation.LOGGER.info("Generated complete progression path with {} realms for target: {} (Level {})",
-                    path.size(), targetRealm.getId(), targetLevel);
+                    path.size(), targetCurrentRealm.getId(), targetLevel);
 
                 // Log the complete path for debugging
                 StringBuilder pathStr = new StringBuilder("Progression path: ");
                 for (int i = 0; i < path.size(); i++) {
                     CultivationRealm realm = path.get(i);
-                    pathStr.append(realm.getId()).append("(L").append(realm.getRealmLevel()).append(")");
+                    pathStr.append(realm.getId()).append("(L").append(realm.getId()).append(")");
                     if (i < path.size() - 1) pathStr.append(" -> ");
                 }
                 ImmortalCultivation.LOGGER.debug(pathStr.toString());
@@ -1057,9 +1033,9 @@ public class CommandManager {
 
         } catch (Exception e) {
             ImmortalCultivation.LOGGER.error("Error building progression path for realm {}: {}",
-                targetRealm.getId(), e.getMessage(), e);
+                targetCurrentRealm.getId(), e.getMessage(), e);
             // Fallback: just add the target realm
-            path.add(targetRealm);
+            path.add(targetCurrentRealm);
         }
 
         return path;
@@ -1072,22 +1048,20 @@ public class CommandManager {
      * @param stats The player stats attachment
      * @param cultivationType The cultivation type being reset
      */
-    private void clearCultivationTypeBonuses(PlayerStatsAttachment stats, ICultivationData.CultivationType cultivationType) {
+    private void clearCultivationTypeBonuses(AttributesPlayerAttachment stats, ICultivationData.CultivationType cultivationType) {
         // Note: This is a simplified approach. In a more sophisticated system,
         // you might track which bonuses came from which sources.
         // For now, we'll reset to mortal base values and re-apply everything.
 
         // Reset to mortal base values (this assumes mortal realm provides no bonuses)
         // You might need to adjust this based on your specific mortal realm implementation
-        stats.setPermanentStatBonus(IAttributesData.StatType.HEALTH, 0);
-        stats.setPermanentStatBonus(IAttributesData.StatType.QI, 0);
-        stats.setPermanentStatBonus(IAttributesData.StatType.BODY, 0);
-        stats.setPermanentStatRegenBonus(IAttributesData.StatType.HEALTH, 0.0);
-        stats.setPermanentStatRegenBonus(IAttributesData.StatType.QI, 0.0);
-        stats.setPermanentStatRegenBonus(IAttributesData.StatType.BODY, 0.0);
-        stats.setPermanentAttackDamageBonus(0.0);
-        stats.setPermanentMovementSpeedBonus(0.0);
-        stats.setPermanentJumpHeightBonus(0.0);
+        stats.setSourcedAttributeBonus(IAttributesData.AttributeType.HEALTH, BonusSource.REALM, 0);
+        stats.setSourcedAttributeBonus(IAttributesData.AttributeType.QI, BonusSource.REALM, 0);
+        stats.setSourcedAttributeBonus(IAttributesData.AttributeType.BODY, BonusSource.REALM, 0);
+        stats.setSourcedAttributeRegenBonus(IAttributesData.AttributeType.HEALTH, BonusSource.REALM, 0.0);
+        stats.setSourcedAttributeRegenBonus(IAttributesData.AttributeType.QI, BonusSource.REALM, 0.0);
+        stats.setSourcedAttributeRegenBonus(IAttributesData.AttributeType.BODY, BonusSource.REALM, 0.0);
+        stats.setSourcedCombatBonus(ICombatData.CombatStatType.ATTACK_DAMAGE, BonusSource.REALM, 0.0);
 
         if (DEBUG_COMMANDS) {
             ImmortalCultivation.LOGGER.debug("Cleared existing bonuses for cultivation type: {}", cultivationType);

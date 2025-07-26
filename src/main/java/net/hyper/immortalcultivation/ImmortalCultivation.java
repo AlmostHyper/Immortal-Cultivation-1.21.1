@@ -2,7 +2,6 @@ package net.hyper.immortalcultivation;
 
 import net.hyper.immortalcultivation.client.gui.CreativeTabsRegistry;
 import net.hyper.immortalcultivation.client.gui.MenuRegistry;
-import net.hyper.immortalcultivation.client.gui.screens.QiHUDScreen;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.config.ImmortalCultivationConfig;
 import net.hyper.immortalcultivation.content.block.entities.BlockEntityRegistry;
@@ -82,7 +81,6 @@ public class ImmortalCultivation
             // Some client setup code
             LOGGER.info("HELLO FROM CLIENT SETUP");
             LOGGER.info("MINECRAFT NAME >> {}", Minecraft.getInstance().getUser().getName());
-            QiHUDScreen.register();
 
         }
 
