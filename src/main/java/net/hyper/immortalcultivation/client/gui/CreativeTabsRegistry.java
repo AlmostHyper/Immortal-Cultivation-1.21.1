@@ -76,7 +76,7 @@ public class CreativeTabsRegistry {
                         output.accept(ItemRegistry.BLUE_WOOD_ROOTS);
 
                         // === Pills === //
-
+                        /*
                         output.accept(ItemRegistry.LOW_QUALITY_QI_CULTIVATION_PILL);
                         output.accept(ItemRegistry.MEDIUM_QUALITY_QI_CULTIVATION_PILL);
                         output.accept(ItemRegistry.HIGH_QUALITY_QI_CULTIVATION_PILL);
@@ -85,7 +85,9 @@ public class CreativeTabsRegistry {
                         output.accept(ItemRegistry.MEDIUM_QUALITY_BODY_CULTIVATION_PILL);
                         output.accept(ItemRegistry.HIGH_QUALITY_BODY_CULTIVATION_PILL);
                         output.accept(ItemRegistry.TOP_QUALITY_BODY_CULTIVATION_PILL);
+                    */
                     }).build());
+
 
     public static final Supplier<CreativeModeTab> immortalcultivation_TOOLS_TAB = REGISTRY.register("immortalcultivation_tools_tab",
             () -> CreativeModeTab.builder().icon(() -> new ItemStack(ItemRegistry.SKY_IRON_PICKAXE.get()))

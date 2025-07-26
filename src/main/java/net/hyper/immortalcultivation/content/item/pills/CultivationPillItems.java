@@ -21,7 +21,7 @@ import net.neoforged.api.distmarker.OnlyIn;
 
 import java.util.List;
 import java.util.function.Supplier;
-
+/*
 public class CultivationPillItems {
 
     // Base cultivation rate bonuses for each pill tier (per second)
@@ -129,7 +129,7 @@ public class CultivationPillItems {
 
     /**
      * A generalized pill item that handles effects and tooltips based on its configured properties.
-     */
+     *
     private static class CultivationPillItem extends BaseConsumableItem {
 
         private final ICultivationData.CultivationType cultivationType;
@@ -155,7 +155,7 @@ public class CultivationPillItems {
         protected void applyEffects(Level level, LivingEntity entity, ItemStack consumedStack) {
             if (!(entity instanceof Player player) || level.isClientSide()) return;
 
-            player.getExistingData(AttachmentRegistry.CULTIVATION).ifPresent(cultivation ->
+            player.getExistingData(AttachmentRegistry.PLAYER_CULTIVATION).ifPresent(cultivation ->
                 player.getExistingData(AttachmentRegistry.PLAYER_PILL_CONSUMPTION).ifPresent(pillAttachment -> {
                     PillFurnaceBlockEntity.PillRarity rarity = getRarity(consumedStack);
                     double rarityMultipliedBonus = applyRarityMultiplier(consumedStack, this.baseRate);
@@ -229,5 +229,4 @@ public class CultivationPillItems {
             PillFurnaceBlockEntity.PillRarity rarity = getRarity(stack);
             return rarity == PillFurnaceBlockEntity.PillRarity.CELESTIAL || rarity == PillFurnaceBlockEntity.PillRarity.HEAVENLY;
         }
-    }
-}
+    } */

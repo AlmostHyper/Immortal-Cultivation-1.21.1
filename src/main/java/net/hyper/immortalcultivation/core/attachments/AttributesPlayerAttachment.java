@@ -10,7 +10,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttributesData, ICombatData {
+public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttributesData, ICombatData, IMovementData {
 
     private static final long MORTAL_BASE_HEALTH = 20;
     private static final long MORTAL_BASE_QI = 0;
@@ -178,7 +178,7 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     private final Map<AttributeType, EnumMap<BonusSource, Long>> sourcedAttributeBonuses = new HashMap<>();
     private final Map<AttributeType, EnumMap<BonusSource, Double>> sourcedAttributeRegenBonuses = new HashMap<>();
     private final Map<CombatStatType, EnumMap<BonusSource, Double>> sourcedCombatBonuses = new HashMap<>();
-    private final Map<AttributeType, EnumMap<BonusSource, Double>> sourcedMovementBonuses = new HashMap<>();
+    private final Map<MovementType, EnumMap<BonusSource, Double>> sourcedMovementBonuses = new HashMap<>();
 
     public long getSourcedAttributeBonus(AttributeType type, BonusSource source) {
         return sourcedAttributeBonuses
@@ -212,6 +212,18 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
 
     public void setSourcedCombatBonus(CombatStatType type, BonusSource source, double bonus) {
         sourcedCombatBonuses
+            .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
+            .put(source, bonus);
+    }
+
+    public double getSourcedMovementBonus(MovementType type, BonusSource source) {
+        return sourcedMovementBonuses
+            .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
+            .getOrDefault(source, 0.0);
+    }
+
+    public void setSourcedMovementBonus(MovementType type, BonusSource source, double bonus) {
+        sourcedMovementBonuses
             .computeIfAbsent(type, k -> new EnumMap<>(BonusSource.class))
             .put(source, bonus);
     }
@@ -265,5 +277,20 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     @Override
     public @Nullable Tag write(Object o, HolderLookup.Provider provider) {
         return null;
+    }
+
+    @Override
+    public double getMovementType(MovementType type) {
+        return 0;
+    }
+
+    @Override
+    public double getBonusMovementType(MovementType type, BonusSource source) {
+        return 0;
+    }
+
+    @Override
+    public double getPermanentBonusMovementType(MovementType type, BonusSource source) {
+        return 0;
     }
 }

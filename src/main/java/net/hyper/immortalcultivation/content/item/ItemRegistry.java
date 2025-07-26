@@ -2,7 +2,6 @@ package net.hyper.immortalcultivation.content.item;
 
 import net.hyper.immortalcultivation.content.item.crops.*;
 import net.hyper.immortalcultivation.content.item.metals.*;
-import net.hyper.immortalcultivation.content.item.pills.CultivationPillItems;
 import net.hyper.immortalcultivation.content.item.spirit_stones.*;
 import net.minecraft.world.item.*;
 import net.neoforged.bus.api.IEventBus;
@@ -136,7 +135,7 @@ public class ItemRegistry {
     // Poison Plants
 
     // === PILLS === //
-
+    /*
     // Qi Cultivation Pills
     public static final DeferredItem<Item> LOW_QUALITY_QI_CULTIVATION_PILL;
     public static final DeferredItem<Item> MEDIUM_QUALITY_QI_CULTIVATION_PILL;
@@ -148,7 +147,7 @@ public class ItemRegistry {
     public static final DeferredItem<Item> MEDIUM_QUALITY_BODY_CULTIVATION_PILL;
     public static final DeferredItem<Item> HIGH_QUALITY_BODY_CULTIVATION_PILL;
     public static final DeferredItem<Item> TOP_QUALITY_BODY_CULTIVATION_PILL;
-
+    */
     static {
         // Spirit Stones
         LOW_QUALITY_SPIRIT_STONE = REGISTRY.register("low_quality_spirit_stone", R1SpiritStoneItems.LOW_QUALITY_SPIRIT_STONE());
@@ -262,7 +261,7 @@ public class ItemRegistry {
         BLUE_WOOD_ROOTS = REGISTRY.register("blue_wood_roots", WoodCropItems.BLUE_WOOD_ROOTS());
 
         // === PILLS === //
-
+    /*
         // Qi Cultivation Pills
         LOW_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("low_quality_qi_absorption_pill", CultivationPillItems.LOW_QUALITY_QI_CULTIVATION_PILL());
         MEDIUM_QUALITY_QI_CULTIVATION_PILL = REGISTRY.register("medium_quality_qi_absorption_pill", CultivationPillItems.MEDIUM_QUALITY_QI_CULTIVATION_PILL());
@@ -274,7 +273,7 @@ public class ItemRegistry {
         MEDIUM_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("medium_quality_body_absorption_pill", CultivationPillItems.MEDIUM_QUALITY_BODY_CULTIVATION_PILL());
         HIGH_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("high_quality_body_absorption_pill", CultivationPillItems.HIGH_QUALITY_BODY_CULTIVATION_PILL());
         TOP_QUALITY_BODY_CULTIVATION_PILL = REGISTRY.register("top_quality_body_absorption_pill", CultivationPillItems.TOP_QUALITY_BODY_CULTIVATION_PILL());
-
+    */
     }
 
     public static void register(IEventBus eventBus) {

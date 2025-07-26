@@ -559,7 +559,7 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         Player player = level.getPlayerByUUID(lastPlayerUUID);
         if (player == null) return 1.0;
 
-        CultivationPlayerAttachment cultivation = player.getData(AttachmentRegistry.CULTIVATION.get());
+        CultivationPlayerAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
         if (cultivation == null) return 1.0;
 
         // Higher realms give better modifiers

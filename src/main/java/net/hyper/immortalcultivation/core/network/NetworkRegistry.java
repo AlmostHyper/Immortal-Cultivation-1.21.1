@@ -14,7 +14,6 @@ public class NetworkRegistry {
 
     public enum Packets {
         // Client -> Server
-        BREAKTHROUGH_ATTEMPT(BreakthroughPacket.class, BreakthroughPacket.STREAM_CODEC),
 
         // Bidirectional
 

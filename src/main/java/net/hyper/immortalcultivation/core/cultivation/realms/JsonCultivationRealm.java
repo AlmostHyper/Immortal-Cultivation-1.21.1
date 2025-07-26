@@ -422,36 +422,36 @@ public class JsonCultivationRealm extends CultivationRealm {
             // This preserves pill and other bonuses while adding realm bonuses
 
             // === RESOURCE STATS === //
-            long currentHealthFromRealm = attributes.getSourcedStatBonus(IAttributesData.StatType.HEALTH, BonusSource.REALM);
-            long currentQiFromRealm = attributes.getSourcedStatBonus(IAttributesData.StatType.QI, BonusSource.REALM);
-            long currentBodyFromRealm = attributes.getSourcedStatBonus(IAttributesData.StatType.BODY, BonusSource.REALM);
+            long currentHealthFromRealm = attributes.getSourcedAttributeBonus(IAttributesData.AttributeType.HEALTH, BonusSource.REALM);
+            long currentQiFromRealm = attributes.getSourcedAttributeBonus(IAttributesData.AttributeType.QI, BonusSource.REALM);
+            long currentBodyFromRealm = attributes.getSourcedAttributeBonus(IAttributesData.AttributeType.BODY, BonusSource.REALM);
+            double currentHealthRegenFromRealm = attributes.getSourcedAttributeRegenBonus(IAttributesData.AttributeType.HEALTH, BonusSource.REALM);
+            double currentQiRegenFromRealm = attributes.getSourcedAttributeRegenBonus(IAttributesData.AttributeType.QI, BonusSource.REALM);
+            double currentBodyRegenFromRealm = attributes.getSourcedAttributeRegenBonus(IAttributesData.AttributeType.BODY, BonusSource.REALM);
 
-            double currentHealthRegenFromRealm = attributes.getSourcedStatRegenBonus(IAttributesData.StatType.HEALTH, BonusSource.REALM);
-            double currentQiRegenFromRealm = attributes.getSourcedStatRegenBonus(IAttributesData.StatType.QI, BonusSource.REALM);
-            double currentBodyRegenFromRealm = attributes.getSourcedStatRegenBonus(IAttributesData.StatType.BODY, BonusSource.REALM);
-
-            // === COMBAT STATS === //
             double currentAttackFromRealm = attributes.getSourcedCombatBonus(ICombatData.CombatStatType.ATTACK_DAMAGE, BonusSource.REALM);
-            double currentSpeedFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.MOVEMENT_SPEED, BonusSource.REALM);
-            double currentJumpFromRealm = attributes.getSourcedCombatBonus(PlayerStatsAttachment.CombatBonusType.JUMP_HEIGHT, BonusSource.REALM);
+
+            double currentSpeedFromRealm = attributes.getSourcedMovementBonus(IMovementData.MovementType.WALK_SPEED, BonusSource.REALM);
+            double currentJumpFromRealm = attributes.getSourcedMovementBonus(IMovementData.MovementType.JUMP_HEIGHT, BonusSource.REALM);
 
             // Apply new realm bonuses by adding realm values to existing realm bonuses
             // (This accumulates across realm advancements while preserving other sources)
 
             // Resource maximums
-            attributes.setSourcedStatBonus(IAttributesData.StatType.HEALTH, BonusSource.REALM, currentHealthFromRealm + getBaseMaxHealth());
-            attributes.setSourcedStatBonus(IAttributesData.StatType.QI, BonusSource.REALM, currentQiFromRealm + getBaseMaxQi());
-            attributes.setSourcedStatBonus(IAttributesData.StatType.BODY, BonusSource.REALM, currentBodyFromRealm + getBaseMaxBody());
+            attributes.setSourcedAttributeBonus(IAttributesData.AttributeType.HEALTH, BonusSource.REALM, currentHealthFromRealm + getBaseMaxHealth());
+            attributes.setSourcedAttributeBonus(IAttributesData.AttributeType.QI, BonusSource.REALM, currentQiFromRealm + getBaseMaxQi());
+            attributes.setSourcedAttributeBonus(IAttributesData.AttributeType.BODY, BonusSource.REALM, currentBodyFromRealm + getBaseMaxBody());
 
             // Resource regeneration rates
-            attributes.setSourcedStatRegenBonus(IAttributesData.StatType.HEALTH, BonusSource.REALM, currentHealthRegenFromRealm + getBaseHealthRegenRate());
-            attributes.setSourcedStatRegenBonus(IAttributesData.StatType.QI, BonusSource.REALM, currentQiRegenFromRealm + getBaseQiRegenRate());
-            attributes.setSourcedStatRegenBonus(IAttributesData.StatType.BODY, BonusSource.REALM, currentBodyRegenFromRealm + getBaseBodyRegenRate());
+            attributes.setSourcedAttributeRegenBonus(IAttributesData.AttributeType.HEALTH, BonusSource.REALM, currentHealthRegenFromRealm + getBaseHealthRegenRate());
+            attributes.setSourcedAttributeRegenBonus(IAttributesData.AttributeType.QI, BonusSource.REALM, currentQiRegenFromRealm + getBaseQiRegenRate());
+            attributes.setSourcedAttributeRegenBonus(IAttributesData.AttributeType.BODY, BonusSource.REALM, currentBodyRegenFromRealm + getBaseBodyRegenRate());
 
             // Combat stats
-            attributes.setSourcedCombatBonus(AttributesPlayerAttachment.CombatBonusType.ATTACK_DAMAGE, BonusSource.REALM, currentAttackFromRealm + getBaseAttackDamage());
-            attributes.setSourcedCombatBonus(AttributesPlayerAttachment.CombatBonusType.MOVEMENT_SPEED, BonusSource.REALM, currentSpeedFromRealm + getBaseMovementSpeed());
-            attributes.setSourcedCombatBonus(AttributesPlayerAttachment.CombatBonusType.JUMP_HEIGHT, BonusSource.REALM, currentJumpFromRealm + getBaseJumpHeight());
+            attributes.setSourcedCombatBonus(ICombatData.CombatStatType.ATTACK_DAMAGE, BonusSource.REALM, currentAttackFromRealm + getBaseAttackDamage());
+
+            attributes.setSourcedMovementBonus(IMovementData.MovementType.WALK_SPEED, BonusSource.REALM, currentSpeedFromRealm + getBaseMovementSpeed());
+            attributes.setSourcedMovementBonus(IMovementData.MovementType.JUMP_HEIGHT, BonusSource.REALM, currentJumpFromRealm + getBaseJumpHeight());
 
             // Force refresh all stats to apply the new permanent bonuses immediately
 
@@ -470,12 +470,12 @@ public class JsonCultivationRealm extends CultivationRealm {
                     String.format("%.1f", getBaseAttackDamage() * 100),
                     String.format("%.1f", getBaseMovementSpeed() * 100),
                     String.format("%.1f", getBaseJumpHeight() * 100),
-                    attributes.getCurrentStat(IAttributesData.StatType.HEALTH),
-                    attributes.getMaxStat(IAttributesData.StatType.HEALTH),
-                    attributes.getCurrentStat(IAttributesData.StatType.QI),
-                    attributes.getMaxStat(IAttributesData.StatType.QI),
-                    attributes.getCurrentStat(IAttributesData.StatType.BODY),
-                    attributes.getMaxStat(IAttributesData.StatType.BODY));
+                    attributes.getAttribute(IAttributesData.AttributeType.HEALTH),
+                    attributes.getMaxAttribute(IAttributesData.AttributeType.HEALTH),
+                    attributes.getAttribute(IAttributesData.AttributeType.QI),
+                    attributes.getMaxAttribute(IAttributesData.AttributeType.QI),
+                    attributes.getAttribute(IAttributesData.AttributeType.BODY),
+                    attributes.getMaxAttribute(IAttributesData.AttributeType.BODY));
             } else {
                 // Silent mode: only debug logging
                 if (ImmortalCultivation.LOGGER.isDebugEnabled()) {
