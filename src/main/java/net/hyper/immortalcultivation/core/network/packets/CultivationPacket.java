@@ -42,25 +42,4 @@ public record CultivationPacket(Action action, ICultivationData.CultivationType 
     public Type<CultivationPacket> type() {
         return TYPE;
     }
-
-    public void handle(IPayloadContext context) {
-        switch (action) {
-            case REQUEST_SYNC -> handleSyncRequest(context);
-            case SYNC_DATA -> handleSyncData(context);
-            case ADD_CULTIVATION -> handleAddCultivation(context);
-            case SET_CULTIVATION -> handleSetCultivation(context);
-        }
-    }
-
-    private void handleSyncRequest (IPayloadContext context) {
-        if (context.flow() == PacketFlow.SERVERBOUND) {
-            ServerPlayer player = (ServerPlayer) context.player();
-            CultivationPlayerAttachment attachment = player.getData(AttachmentRegistry.CULTIVATION.get());
-
-            PacketDistributor.sendToPlayer(player, new CultivationPacket(Action.SYNC_DATA,
-                cultivationType, attachment.getCurrentCultivation(cultivationType, attachment.serialize())));
-        }
-    }
-
-
 }
