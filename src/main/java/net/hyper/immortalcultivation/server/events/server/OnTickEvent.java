@@ -48,12 +48,22 @@ public class OnTickEvent extends Event {
 
             CultivationTickEvent tickEvent = new CultivationTickEvent(player, type, baseRate);
 
-            double attachmentMultiplier = cultivation.getTotalCultivationRateMultiplier();
+            double focusMultiplier = (type == cultivation.getCurrentFocus()) ? 2.0 : 1.0;
+            if (focusMultiplier != 1.0) {
+                tickEvent.addModifier(new CultivationTickEvent.CultivationModifier.Multiplicative(
+                    "Focus Bonus", 50, focusMultiplier));
+            }
 
+            double meditationMultiplier = cultivation.getMeditationMultiplier();
+            if (meditationMultiplier != 1.0) {
+                tickEvent.addModifier(new CultivationTickEvent.CultivationModifier.Multiplicative(
+                    "Meditation Bonus", 60, meditationMultiplier));
+            }
+
+            double attachmentMultiplier = cultivation.getTotalCultivationRateMultiplier();
             if (attachmentMultiplier != 1.0) {
-                tickEvent.addModifier
-                    (new CultivationTickEvent.CultivationModifier.Multiplicative
-                        ("Multiplicative Bonuses", 100, attachmentMultiplier));
+                tickEvent.addModifier(new CultivationTickEvent.CultivationModifier.Multiplicative(
+                    "Multiplicative Bonuses", 100, attachmentMultiplier));
             }
 
             NeoForge.EVENT_BUS.post(tickEvent);
@@ -63,26 +73,32 @@ public class OnTickEvent extends Event {
             if (finalRate > 0) {
                 long oldValue = cultivation.getCurrentCultivation(type);
                 applyCultivationProgress(cultivation, type, finalRate);
-                if (cultivation.getCurrentCultivation(type) != oldValue) {hasChanges = true;}
+                if (cultivation.getCurrentCultivation(type) != oldValue) {
+                    hasChanges = true;
+                }
             }
         }
 
-        if (hasChanges && player instanceof ServerPlayer serverPlayer) {syncToClient(serverPlayer, cultivation);}
+        if (hasChanges && player instanceof ServerPlayer serverPlayer) {
+            syncToClient(serverPlayer, cultivation);
+        }
     }
 
     private static void syncToClient(ServerPlayer player, PlayerCultivationAttachment cultivation) {
         CompoundTag data = PlayerCultivationAttachment.serialize(cultivation, player.level().registryAccess());
         PacketDistributor.sendToPlayer(player, new CultivationPacket(
             CultivationPacket.Action.SYNC_DATA,
-            null, 0, data
+            ICultivationData.CultivationType.QI,
+            0, data
         ));
     }
 
     private static void applyCultivationProgress(PlayerCultivationAttachment cultivation,
                                                  ICultivationData.CultivationType type,
-                                                 double rate) {
+                                                 double ratePerSecond) {
 
-        cultivation.addCultivation (type, (long) rate, true);
+        double ratePerTick = ratePerSecond / 20.0;
+        cultivation.addRegenFraction (type, ratePerTick);
     }
 
     /*

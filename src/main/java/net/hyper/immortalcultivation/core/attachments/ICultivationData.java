@@ -32,7 +32,6 @@ public interface ICultivationData {
     // === Rates === //
 
     double getBaseCultivationRate(CultivationType type);
-    double getEffectiveCultivationRate(CultivationType type);
 
     // === Fractional Accumulation === //
 
