@@ -3,6 +3,9 @@ package net.hyper.immortalcultivation.server.events.server;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.core.attachments.player.PlayerCultivationAttachment;
+import net.hyper.immortalcultivation.core.network.packets.CultivationPacket;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -10,6 +13,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 
 @EventBusSubscriber
 public class OnTickEvent extends Event {
@@ -37,6 +41,8 @@ public class OnTickEvent extends Event {
     }
 
     private static void processCultivationTick(Player player, PlayerCultivationAttachment cultivation) {
+        boolean hasChanges = false;
+
         for (ICultivationData.CultivationType type : ICultivationData.CultivationType.values()) {
             double baseRate = cultivation.getBaseCultivationRate(type);
 
@@ -44,16 +50,32 @@ public class OnTickEvent extends Event {
 
             double attachmentMultiplier = cultivation.getTotalCultivationRateMultiplier();
 
-            if (attachmentMultiplier != 1.0) {tickEvent.addModifier(new CultivationTickEvent.CultivationModifier.Multiplicative("Multiplicative Bonuses", 100, attachmentMultiplier));}
+            if (attachmentMultiplier != 1.0) {
+                tickEvent.addModifier
+                    (new CultivationTickEvent.CultivationModifier.Multiplicative
+                        ("Multiplicative Bonuses", 100, attachmentMultiplier));
+            }
 
             NeoForge.EVENT_BUS.post(tickEvent);
 
             double finalRate = tickEvent.calculateFinalRate();
 
             if (finalRate > 0) {
+                long oldValue = cultivation.getCurrentCultivation(type);
                 applyCultivationProgress(cultivation, type, finalRate);
+                if (cultivation.getCurrentCultivation(type) != oldValue) {hasChanges = true;}
             }
         }
+
+        if (hasChanges && player instanceof ServerPlayer serverPlayer) {syncToClient(serverPlayer, cultivation);}
+    }
+
+    private static void syncToClient(ServerPlayer player, PlayerCultivationAttachment cultivation) {
+        CompoundTag data = PlayerCultivationAttachment.serialize(cultivation, player.level().registryAccess());
+        PacketDistributor.sendToPlayer(player, new CultivationPacket(
+            CultivationPacket.Action.SYNC_DATA,
+            null, 0, data
+        ));
     }
 
     private static void applyCultivationProgress(PlayerCultivationAttachment cultivation,

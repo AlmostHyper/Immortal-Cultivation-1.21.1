@@ -1,6 +1,8 @@
 package net.hyper.immortalcultivation.core.network;
 
+import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
+import net.hyper.immortalcultivation.core.attachments.ICultivationData;
 import net.hyper.immortalcultivation.core.attachments.player.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.core.network.packets.CultivationPacket;
 import net.minecraft.nbt.CompoundTag;
@@ -13,6 +15,9 @@ import net.neoforged.neoforge.network.handling.IPayloadContext;
 public class NetworkManager {
 
     public static void handleCultivationPacket(CultivationPacket packet, IPayloadContext context) {
+        ImmortalCultivation.LOGGER.info("NETWORK: Received packet with action {} on side {}",
+            packet.action(), context.flow());
+
         if (context.flow() == PacketFlow.SERVERBOUND) {
             handleCultivationServerSide(packet, context);
         } else {
@@ -21,6 +26,8 @@ public class NetworkManager {
     }
 
     private static void handleCultivationServerSide(CultivationPacket packet, IPayloadContext context) {
+        ImmortalCultivation.LOGGER.info("CLIENT: Handling packet with action {}", packet.action());
+
         context.enqueueWork(() -> {
             switch (packet.action()) {
                 case REQUEST_SYNC -> handleSyncRequest(packet, context);
@@ -58,11 +65,23 @@ public class NetworkManager {
     private static void handleSyncData(CultivationPacket packet, IPayloadContext context) {
         LocalPlayer localPlayer = (LocalPlayer) context.player();
 
+        ImmortalCultivation.LOGGER.info("CLIENT: Received sync packet with data size: {}",
+            packet.data() != null ? packet.data().size() : "null");
+
         PlayerCultivationAttachment newAttachment = PlayerCultivationAttachment.deserialize(
             localPlayer, packet.data(), localPlayer.level().registryAccess()
         );
 
+        ImmortalCultivation.LOGGER.info("CLIENT: Deserialized attachment with QI: {}, BODY: {}",
+            newAttachment.getCurrentCultivation(ICultivationData.CultivationType.QI),
+            newAttachment.getCurrentCultivation(ICultivationData.CultivationType.BODY));
+
         localPlayer.setData(AttachmentRegistry.PLAYER_CULTIVATION.get(), newAttachment);
+
+        PlayerCultivationAttachment verifyAttachment = localPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        ImmortalCultivation.LOGGER.info("CLIENT: After setData - QI: {}, BODY: {}",
+            verifyAttachment.getCurrentCultivation(ICultivationData.CultivationType.QI),
+            verifyAttachment.getCurrentCultivation(ICultivationData.CultivationType.BODY));
     }
 
     private static void handleAddCultivation(CultivationPacket packet, IPayloadContext context) {
@@ -104,6 +123,9 @@ public class NetworkManager {
         attachment.setCurrentCultivation(packet.cultivationType(), packet.amount());
 
         CompoundTag attachmentData = PlayerCultivationAttachment.serialize(attachment, serverPlayer.level().registryAccess());
+
+        ImmortalCultivation.LOGGER.info("SERVER: Sending sync packet to player {} with data size: {}",
+            serverPlayer.getName().getString(), attachmentData.size());
 
         PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
             CultivationPacket.Action.SYNC_DATA,

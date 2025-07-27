@@ -383,6 +383,14 @@ public class CommandManager {
                 CultivationRealm oldRealm = cultivation.getCurrentRealm(cultivationType);
                 cultivation.setCurrentRealm(cultivationType, realm, player, false);
 
+                CompoundTag attachmentData = PlayerCultivationAttachment.serialize(cultivation, player.level().registryAccess());
+                PacketDistributor.sendToPlayer(player, new CultivationPacket(
+                    CultivationPacket.Action.SYNC_DATA,
+                    cultivationType,
+                    cultivation.getCurrentCultivation(cultivationType),
+                    attachmentData
+                ));
+
                 // Apply CUMULATIVE realm modifiers - calculate all bonuses from mortal to target realm
                 applyCumulativeRealmBonuses(player, cultivationType, realm, cultivation);
 
@@ -474,6 +482,14 @@ public class CommandManager {
 
                     // Set the new cultivation value (this will trigger milestone processing)
                     cultivation.setCurrentCultivation(cultivationType, value);
+
+                    CompoundTag attachmentData = PlayerCultivationAttachment.serialize(cultivation, player.level().registryAccess());
+                    PacketDistributor.sendToPlayer(player, new CultivationPacket(
+                        CultivationPacket.Action.SYNC_DATA,
+                        cultivationType,
+                        value,
+                        attachmentData
+                    ));
 
                     // FIXED: Ensure milestones are properly recalculated after set command
                     // This prevents double-application and ensures consistency
