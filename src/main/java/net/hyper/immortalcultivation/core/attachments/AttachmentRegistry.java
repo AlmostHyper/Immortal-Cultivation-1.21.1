@@ -16,7 +16,6 @@ public class AttachmentRegistry {
     static {
         PLAYER_CULTIVATION = REGISTRY.register("cultivation", () ->
             AttachmentType.builder(() -> new CultivationPlayerAttachment())
-                .serialize(() -> new CultivationPlayerAttachment())
                 .copyOnDeath()
                 .build());
 

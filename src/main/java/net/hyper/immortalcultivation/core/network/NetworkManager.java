@@ -42,91 +42,75 @@ public class NetworkManager {
     }
 
     private static void handleSyncRequest(CultivationPacket packet, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer serverPlayer) {
-            CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        ServerPlayer serverPlayer = (ServerPlayer) context.player();
+        CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
-            // Serialize current attachment data using write method
-            CompoundTag attachmentData = (CompoundTag) attachment.write(attachment, serverPlayer.level().registryAccess());
+        CompoundTag attachmentData = CultivationPlayerAttachment.serialize(attachment, serverPlayer.level().registryAccess());
 
-            // Send sync response back to client
-            PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
-                CultivationPacket.Action.SYNC_DATA,
-                packet.cultivationType(),
-                attachment.getCurrentCultivation(packet.cultivationType()),
-                attachmentData
-            ));
-        }
+        PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
+            CultivationPacket.Action.SYNC_DATA,
+            packet.cultivationType(),
+            attachment.getCurrentCultivation(packet.cultivationType()),
+            attachmentData
+        ));
     }
 
     private static void handleSyncData(CultivationPacket packet, IPayloadContext context) {
-        if (context.player() instanceof LocalPlayer localPlayer) {
-            CultivationPlayerAttachment attachment = localPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        LocalPlayer localPlayer = (LocalPlayer) context.player();
+        CultivationPlayerAttachment attachment = localPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
-            // Apply synced data from server using read method
-            // Note: The read method creates a new attachment, so we need to copy the data
-            CultivationPlayerAttachment newAttachment = (CultivationPlayerAttachment) attachment.read(
-                localPlayer, packet.data(), localPlayer.level().registryAccess()
-            );
+        CultivationPlayerAttachment newAttachment = CultivationPlayerAttachment.deserialize(
+            localPlayer, packet.data(), localPlayer.level().registryAccess()
+        );
 
-            // Update current cultivation for the specific type
-            attachment.setCurrentCultivation(packet.cultivationType(), packet.amount());
-        }
+        attachment.setCurrentCultivation(packet.cultivationType(), packet.amount());
     }
 
     private static void handleAddCultivation(CultivationPacket packet, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer serverPlayer) {
-            CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        ServerPlayer serverPlayer = (ServerPlayer) context.player();
+        CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
-            // Add cultivation points using the correct method signature
-            attachment.addCultivation(packet.cultivationType(), packet.amount(), true);
+        attachment.addCultivation(packet.cultivationType(), packet.amount(), true);
 
-            // Serialize updated data and sync back to client
-            CompoundTag attachmentData = (CompoundTag) attachment.write(attachment, serverPlayer.level().registryAccess());
+        CompoundTag attachmentData = CultivationPlayerAttachment.serialize(attachment, serverPlayer.level().registryAccess());
 
-            PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
-                CultivationPacket.Action.SYNC_DATA,
-                packet.cultivationType(),
-                attachment.getCurrentCultivation(packet.cultivationType()),
-                attachmentData
-            ));
-        }
+        PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
+            CultivationPacket.Action.SYNC_DATA,
+            packet.cultivationType(),
+            attachment.getCurrentCultivation(packet.cultivationType()),
+            attachmentData
+        ));
     }
 
     private static void handleRemoveCultivation(CultivationPacket packet, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer serverPlayer) {
-            CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        ServerPlayer serverPlayer = (ServerPlayer) context.player();
+        CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
-            // Remove cultivation points using the correct method signature
-            attachment.removeCultivation(packet.cultivationType(), packet.amount(), true);
+        attachment.removeCultivation(packet.cultivationType(), packet.amount(), true);
 
-            // Serialize updated data and sync back to client
-            CompoundTag attachmentData = (CompoundTag) attachment.write(attachment, serverPlayer.level().registryAccess());
+        CompoundTag attachmentData = CultivationPlayerAttachment.serialize(attachment, serverPlayer.level().registryAccess());
 
-            PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
-                CultivationPacket.Action.SYNC_DATA,
-                packet.cultivationType(),
-                attachment.getCurrentCultivation(packet.cultivationType()),
-                attachmentData
-            ));
-        }
+        PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
+            CultivationPacket.Action.SYNC_DATA,
+            packet.cultivationType(),
+            attachment.getCurrentCultivation(packet.cultivationType()),
+            attachmentData
+        ));
     }
 
     private static void handleSetCultivation(CultivationPacket packet, IPayloadContext context) {
-        if (context.player() instanceof ServerPlayer serverPlayer) {
-            CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        ServerPlayer serverPlayer = (ServerPlayer) context.player();
+        CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
-            // Set cultivation to specific value
-            attachment.setCurrentCultivation(packet.cultivationType(), packet.amount());
+        attachment.setCurrentCultivation(packet.cultivationType(), packet.amount());
 
-            // Serialize updated data and sync back to client
-            CompoundTag attachmentData = (CompoundTag) attachment.write(attachment, serverPlayer.level().registryAccess());
+        CompoundTag attachmentData = CultivationPlayerAttachment.serialize(attachment, serverPlayer.level().registryAccess());
 
-            PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
-                CultivationPacket.Action.SYNC_DATA,
-                packet.cultivationType(),
-                attachment.getCurrentCultivation(packet.cultivationType()),
-                attachmentData
-            ));
-        }
+        PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
+            CultivationPacket.Action.SYNC_DATA,
+            packet.cultivationType(),
+            attachment.getCurrentCultivation(packet.cultivationType()),
+            attachmentData
+        ));
     }
 }
