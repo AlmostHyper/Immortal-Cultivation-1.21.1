@@ -13,40 +13,13 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 
 public class NetworkRegistry {
 
-    public enum Packets {
-        // Client -> Server
-
-
-        // Bidirectional
-
-
-        // Server -> Client
-        CULTIVATION_SYNC(CultivationPacket.class, CultivationPacket.STREAM_CODEC);
-
-        private final CustomPacketPayload.Type<?> type;
-        private final StreamCodec<? super RegistryFriendlyByteBuf, ?> codec;
-
-        <T extends CustomPacketPayload> Packets(Class<T> clazz, StreamCodec<? super RegistryFriendlyByteBuf, T> codec) {
-            this.type = new CustomPacketPayload.Type<>(
-                ResourceLocation.fromNamespaceAndPath(ImmortalCultivation.MOD_ID, name().toLowerCase())
-            );
-            this.codec = codec;
-        }
-
-        @SuppressWarnings("unchecked")
-        public <T extends CustomPacketPayload> CustomPacketPayload.Type<T> getType() {
-            return (CustomPacketPayload.Type<T>) type;
-        }
-
-        @SuppressWarnings("unchecked")
-        public <T extends CustomPacketPayload> StreamCodec<? super RegistryFriendlyByteBuf, T> getCodec() {
-            return (StreamCodec<? super RegistryFriendlyByteBuf, T>) codec;
-        }
-    }
-
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(ImmortalCultivation.MOD_ID);
 
-        registrar.playToServer(Packets.CULTIVATION_SYNC.getType(), Packets.CULTIVATION_SYNC.getCodec(),
-            NetworkManager::handleCultivationPacket);    }
+        registrar.playBidirectional(
+            CultivationPacket.TYPE,
+            CultivationPacket.STREAM_CODEC,
+            NetworkManager::handleCultivationPacket
+        );
+    }
 }
