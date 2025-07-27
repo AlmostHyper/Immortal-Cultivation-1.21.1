@@ -36,6 +36,7 @@ public class CultivationOverlay {
     }
 
     private int renderRealmInfo(GuiGraphics guiGraphics, PlayerCultivationAttachment cultivation, int x, int y) {
+
         CultivationRealm currentRealm = cultivation.getCurrentRealm(ICultivationData.CultivationType.QI);
 
         String realmText = currentRealm.getDisplayName();

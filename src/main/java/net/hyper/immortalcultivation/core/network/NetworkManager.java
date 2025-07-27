@@ -57,13 +57,12 @@ public class NetworkManager {
 
     private static void handleSyncData(CultivationPacket packet, IPayloadContext context) {
         LocalPlayer localPlayer = (LocalPlayer) context.player();
-        PlayerCultivationAttachment attachment = localPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
         PlayerCultivationAttachment newAttachment = PlayerCultivationAttachment.deserialize(
             localPlayer, packet.data(), localPlayer.level().registryAccess()
         );
 
-        attachment.setCurrentCultivation(packet.cultivationType(), packet.amount());
+        localPlayer.setData(AttachmentRegistry.PLAYER_CULTIVATION.get(), newAttachment);
     }
 
     private static void handleAddCultivation(CultivationPacket packet, IPayloadContext context) {
