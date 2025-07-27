@@ -3,6 +3,7 @@ package net.hyper.immortalcultivation.core.cultivation.realms;
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.attachments.*;
 import net.hyper.immortalcultivation.core.attachments.player.PlayerAttributesAttachment;
+import net.hyper.immortalcultivation.core.attachments.player.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
@@ -411,6 +412,10 @@ public class JsonCultivationRealm extends CultivationRealm {
         if (!(player instanceof ServerPlayer serverPlayer)) {
             return;
         }
+
+        PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        double currentCultivationRateFromRealm = cultivation.getSourcedCultivationRateBonus(type, BonusSource.REALM);
+        cultivation.setSourcedCultivationRateBonus(type, BonusSource.REALM, currentCultivationRateFromRealm + getBaseCultivationRate());
 
         try {
             PlayerAttributesAttachment attributes = serverPlayer.getData(AttachmentRegistry.PLAYER_ATTRIBUTES.get());

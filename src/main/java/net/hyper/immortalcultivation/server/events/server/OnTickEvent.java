@@ -97,8 +97,7 @@ public class OnTickEvent extends Event {
                                                  ICultivationData.CultivationType type,
                                                  double ratePerSecond) {
 
-        double ratePerTick = ratePerSecond / 20.0;
-        cultivation.addRegenFraction (type, ratePerTick);
+        cultivation.addRegenFraction (type, ratePerSecond);
     }
 
     /*
