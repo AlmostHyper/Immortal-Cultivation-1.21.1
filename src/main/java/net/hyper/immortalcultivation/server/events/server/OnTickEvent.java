@@ -2,11 +2,7 @@ package net.hyper.immortalcultivation.server.events.server;
 
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
 import net.hyper.immortalcultivation.core.attachments.ICultivationData;
-import net.hyper.immortalcultivation.core.attachments.CultivationPlayerAttachment;
-import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.entity.Pose;
+import net.hyper.immortalcultivation.core.attachments.player.PlayerCultivationAttachment;
 import net.minecraft.world.entity.player.Player;
 import net.neoforged.bus.api.Event;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -14,8 +10,6 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.tick.EntityTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
-
-import javax.annotation.Nullable;
 
 @EventBusSubscriber
 public class OnTickEvent extends Event {
@@ -42,7 +36,7 @@ public class OnTickEvent extends Event {
         }
     }
 
-    private static void processCultivationTick(Player player, CultivationPlayerAttachment cultivation) {
+    private static void processCultivationTick(Player player, PlayerCultivationAttachment cultivation) {
         for (ICultivationData.CultivationType type : ICultivationData.CultivationType.values()) {
             double baseRate = cultivation.getBaseCultivationRate(type);
 
@@ -62,7 +56,7 @@ public class OnTickEvent extends Event {
         }
     }
 
-    private static void applyCultivationProgress(CultivationPlayerAttachment cultivation,
+    private static void applyCultivationProgress(PlayerCultivationAttachment cultivation,
                                                  ICultivationData.CultivationType type,
                                                  double rate) {
 

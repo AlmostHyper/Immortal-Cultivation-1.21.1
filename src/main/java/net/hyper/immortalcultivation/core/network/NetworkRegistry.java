@@ -47,15 +47,6 @@ public class NetworkRegistry {
     public static void register(RegisterPayloadHandlersEvent event) {
         PayloadRegistrar registrar = event.registrar(ImmortalCultivation.MOD_ID);
 
-        // Client -> Server
         registrar.playToServer(Packets.CULTIVATION_SYNC.getType(), Packets.CULTIVATION_SYNC.getCodec(),
-            NetworkManager::handleCultivationPacket);
-
-        // Bidirectional
-
-        // Server -> Client
-        registrar.playToClient(Packets.CULTIVATION_SYNC.getType(), Packets.CULTIVATION_SYNC.getCodec(),
-            NetworkManager::handleCultivationPacket);
-    }
-
+            NetworkManager::handleCultivationPacket);    }
 }

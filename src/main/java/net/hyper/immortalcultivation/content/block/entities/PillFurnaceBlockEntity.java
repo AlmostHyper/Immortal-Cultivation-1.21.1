@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.content.block.entities;
 
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.core.attachments.CultivationPlayerAttachment;
+import net.hyper.immortalcultivation.core.attachments.player.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.content.item.ItemRegistry;
 import net.hyper.immortalcultivation.content.recipe.RecipeRegistry;
 import net.hyper.immortalcultivation.content.recipe.types.PillFurnaceRecipe;
@@ -559,7 +559,7 @@ public class PillFurnaceBlockEntity extends BlockEntity implements Container, Me
         Player player = level.getPlayerByUUID(lastPlayerUUID);
         if (player == null) return 1.0;
 
-        CultivationPlayerAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        PlayerCultivationAttachment cultivation = player.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
         if (cultivation == null) return 1.0;
 
         // Higher realms give better modifiers

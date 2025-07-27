@@ -2,6 +2,7 @@ package net.hyper.immortalcultivation.core.cultivation.realms;
 
 import net.hyper.immortalcultivation.ImmortalCultivation;
 import net.hyper.immortalcultivation.core.attachments.*;
+import net.hyper.immortalcultivation.core.attachments.player.PlayerAttributesAttachment;
 import net.hyper.immortalcultivation.core.cultivation.CultivationRealmRegistry;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.particles.ParticleOptions;
@@ -412,7 +413,7 @@ public class JsonCultivationRealm extends CultivationRealm {
         }
 
         try {
-            AttributesPlayerAttachment attributes = serverPlayer.getData(AttachmentRegistry.PLAYER_ATTRIBUTES.get());
+            PlayerAttributesAttachment attributes = serverPlayer.getData(AttachmentRegistry.PLAYER_ATTRIBUTES.get());
 
             // ADD the realm bonuses using source-based tracking
             // This preserves pill and other bonuses while adding realm bonuses

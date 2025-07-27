@@ -1,7 +1,7 @@
 package net.hyper.immortalcultivation.core.network;
 
 import net.hyper.immortalcultivation.core.attachments.AttachmentRegistry;
-import net.hyper.immortalcultivation.core.attachments.CultivationPlayerAttachment;
+import net.hyper.immortalcultivation.core.attachments.player.PlayerCultivationAttachment;
 import net.hyper.immortalcultivation.core.network.packets.CultivationPacket;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.protocol.PacketFlow;
@@ -43,9 +43,9 @@ public class NetworkManager {
 
     private static void handleSyncRequest(CultivationPacket packet, IPayloadContext context) {
         ServerPlayer serverPlayer = (ServerPlayer) context.player();
-        CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        PlayerCultivationAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
-        CompoundTag attachmentData = CultivationPlayerAttachment.serialize(attachment, serverPlayer.level().registryAccess());
+        CompoundTag attachmentData = PlayerCultivationAttachment.serialize(attachment, serverPlayer.level().registryAccess());
 
         PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
             CultivationPacket.Action.SYNC_DATA,
@@ -57,9 +57,9 @@ public class NetworkManager {
 
     private static void handleSyncData(CultivationPacket packet, IPayloadContext context) {
         LocalPlayer localPlayer = (LocalPlayer) context.player();
-        CultivationPlayerAttachment attachment = localPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        PlayerCultivationAttachment attachment = localPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
-        CultivationPlayerAttachment newAttachment = CultivationPlayerAttachment.deserialize(
+        PlayerCultivationAttachment newAttachment = PlayerCultivationAttachment.deserialize(
             localPlayer, packet.data(), localPlayer.level().registryAccess()
         );
 
@@ -68,11 +68,11 @@ public class NetworkManager {
 
     private static void handleAddCultivation(CultivationPacket packet, IPayloadContext context) {
         ServerPlayer serverPlayer = (ServerPlayer) context.player();
-        CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        PlayerCultivationAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
         attachment.addCultivation(packet.cultivationType(), packet.amount(), true);
 
-        CompoundTag attachmentData = CultivationPlayerAttachment.serialize(attachment, serverPlayer.level().registryAccess());
+        CompoundTag attachmentData = PlayerCultivationAttachment.serialize(attachment, serverPlayer.level().registryAccess());
 
         PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
             CultivationPacket.Action.SYNC_DATA,
@@ -84,11 +84,11 @@ public class NetworkManager {
 
     private static void handleRemoveCultivation(CultivationPacket packet, IPayloadContext context) {
         ServerPlayer serverPlayer = (ServerPlayer) context.player();
-        CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        PlayerCultivationAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
         attachment.removeCultivation(packet.cultivationType(), packet.amount(), true);
 
-        CompoundTag attachmentData = CultivationPlayerAttachment.serialize(attachment, serverPlayer.level().registryAccess());
+        CompoundTag attachmentData = PlayerCultivationAttachment.serialize(attachment, serverPlayer.level().registryAccess());
 
         PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
             CultivationPacket.Action.SYNC_DATA,
@@ -100,11 +100,11 @@ public class NetworkManager {
 
     private static void handleSetCultivation(CultivationPacket packet, IPayloadContext context) {
         ServerPlayer serverPlayer = (ServerPlayer) context.player();
-        CultivationPlayerAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
+        PlayerCultivationAttachment attachment = serverPlayer.getData(AttachmentRegistry.PLAYER_CULTIVATION.get());
 
         attachment.setCurrentCultivation(packet.cultivationType(), packet.amount());
 
-        CompoundTag attachmentData = CultivationPlayerAttachment.serialize(attachment, serverPlayer.level().registryAccess());
+        CompoundTag attachmentData = PlayerCultivationAttachment.serialize(attachment, serverPlayer.level().registryAccess());
 
         PacketDistributor.sendToPlayer(serverPlayer, new CultivationPacket(
             CultivationPacket.Action.SYNC_DATA,

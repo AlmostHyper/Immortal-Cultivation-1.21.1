@@ -1,5 +1,9 @@
-package net.hyper.immortalcultivation.core.attachments;
+package net.hyper.immortalcultivation.core.attachments.player;
 
+import net.hyper.immortalcultivation.core.attachments.BonusSource;
+import net.hyper.immortalcultivation.core.attachments.IAttributesData;
+import net.hyper.immortalcultivation.core.attachments.ICombatData;
+import net.hyper.immortalcultivation.core.attachments.IMovementData;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.Tag;
 import net.neoforged.neoforge.attachment.IAttachmentHolder;
@@ -10,7 +14,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
-public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttributesData, ICombatData, IMovementData {
+public class PlayerAttributesAttachment implements IAttachmentSerializer, IAttributesData, ICombatData, IMovementData {
 
     private static final long MORTAL_BASE_HEALTH = 20;
     private static final long MORTAL_BASE_QI = 0;
@@ -50,7 +54,7 @@ public class AttributesPlayerAttachment implements IAttachmentSerializer, IAttri
     private int regenTickCounter = 0;
     private static final int REGEN_TICK_INTERVAL = 1;
 
-    public AttributesPlayerAttachment() {super();}
+    public PlayerAttributesAttachment() {super();}
 
     @Override
     public long getAttribute(AttributeType type) {
